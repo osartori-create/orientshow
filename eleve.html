@@ -10,13 +10,11 @@
     <style>
         body { background-color: #0f172a; touch-action: manipulation; }
         .btn-tap:active { transform: scale(0.95); }
-        .btn-num { background-color: #1e293b; border: 1px solid #334155; transition: all 0.2s; }
-        .btn-num.selected { background-color: #3b82f6; border-color: #60a5fa; font-weight: 900; }
+        .btn-num { background-color: #1e293b; border: 2px solid #334155; transition: all 0.2s; }
+        .btn-num.selected { background-color: #3b82f6; border-color: #60a5fa; font-weight: 900; transform: scale(1.05); }
         input { text-transform: uppercase; border: 2px solid #334155; }
-        input:focus { border-color: #3b82f6; outline: none; }
         
-        /* Couleurs dynamiques pour l'étape 2 */
-        .bg-session-NOIR { background-color: #000000; border: 2px solid #334155; }
+        .bg-session-NOIR { background-color: #000; border: 2px solid #334155; }
         .bg-session-ROUGE { background-color: #991b1b; }
         .bg-session-BLEU { background-color: #1e40af; }
         .bg-session-VERT { background-color: #166534; }
@@ -27,50 +25,48 @@
 
     <div id="app" class="max-w-md mx-auto p-4 min-h-screen flex flex-col">
         
-        <div id="step1" class="space-y-6">
+        <div id="step1" class="space-y-8">
             <h2 class="text-2xl font-black uppercase text-center py-4 border-b border-slate-800 text-blue-500 italic">Orient'Show</h2>
             
             <div>
-                <p class="text-center text-[10px] uppercase font-black mb-3 opacity-50 tracking-widest">1. Choisis ton numéro</p>
-                <div id="gridNumeros" class="grid grid-cols-5 gap-2">
+                <p class="text-center text-xs uppercase font-black mb-4 opacity-50 tracking-widest">1. Ton numéro (1 à 6)</p>
+                <div id="gridNumeros" class="grid grid-cols-3 gap-4">
                     </div>
             </div>
 
-            <div class="pt-4 border-t border-slate-800">
-                <p class="text-center text-[10px] uppercase font-black mb-3 opacity-50 tracking-widest">2. Choisis ta couleur</p>
+            <div class="pt-6 border-t border-slate-800">
+                <p class="text-center text-xs uppercase font-black mb-4 opacity-50 tracking-widest">2. Ta couleur</p>
                 <div class="grid grid-cols-2 gap-3">
-                    <button onclick="selectColor('NOIR')" class="bg-black border-2 border-slate-600 p-4 rounded-2xl font-black btn-tap uppercase">Noir</button>
-                    <button onclick="selectColor('ROUGE')" class="bg-red-600 p-4 rounded-2xl font-black btn-tap uppercase">Rouge</button>
-                    <button onclick="selectColor('BLEU')" class="bg-blue-600 p-4 rounded-2xl font-black btn-tap uppercase">Bleu</button>
-                    <button onclick="selectColor('VERT')" class="bg-green-600 p-4 rounded-2xl font-black btn-tap uppercase">Vert</button>
-                    <button onclick="selectColor('JAUNE')" class="bg-yellow-500 text-black p-4 rounded-2xl font-black btn-tap uppercase">Jaune</button>
-                    <button onclick="location.href='index.html'" class="bg-slate-700 p-4 rounded-2xl font-bold btn-tap text-[10px] uppercase text-center">Menu</button>
+                    <button onclick="selectColor('NOIR')" class="bg-black border-2 border-slate-600 p-5 rounded-2xl font-black btn-tap uppercase">Noir</button>
+                    <button onclick="selectColor('ROUGE')" class="bg-red-600 p-5 rounded-2xl font-black btn-tap uppercase">Rouge</button>
+                    <button onclick="selectColor('BLEU')" class="bg-blue-600 p-5 rounded-2xl font-black btn-tap uppercase">Bleu</button>
+                    <button onclick="selectColor('VERT')" class="bg-green-600 p-5 rounded-2xl font-black btn-tap uppercase">Vert</button>
+                    <button onclick="selectColor('JAUNE')" class="bg-yellow-500 text-black p-5 rounded-2xl font-black btn-tap uppercase">Jaune</button>
+                    <button onclick="location.href='index.html'" class="bg-slate-700 p-5 rounded-2xl font-bold btn-tap text-xs uppercase">Menu</button>
                 </div>
             </div>
         </div>
 
-        <div id="step2" class="hidden space-y-6 animate-in slide-in-from-bottom duration-300">
-            <div id="bannerSession" class="flex justify-between items-center p-5 rounded-3xl shadow-2xl transition-colors duration-500">
+        <div id="step2" class="hidden space-y-6 animate-in slide-in-from-bottom">
+            <div id="bannerSession" class="flex justify-between items-center p-6 rounded-3xl shadow-2xl transition-colors">
                 <div>
-                    <p class="text-[10px] opacity-70 uppercase font-black">Session en cours :</p>
-                    <span id="displayUser" class="font-black text-3xl tracking-tighter"></span>
+                    <p class="text-[10px] opacity-70 uppercase font-black text-white">Équipe :</p>
+                    <span id="displayUser" class="font-black text-4xl tracking-tighter"></span>
                 </div>
-                <button onclick="location.reload()" class="bg-white/20 px-4 py-2 rounded-xl text-[10px] uppercase font-black backdrop-blur-sm">Changer</button>
+                <button onclick="location.reload()" class="bg-white/20 px-4 py-2 rounded-xl text-[10px] uppercase font-black">Changer</button>
             </div>
 
             <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-2xl">
-                <label class="block mb-4 font-black uppercase text-center text-sm opacity-80">Parcours à valider :</label>
-                <select id="circuitNum" class="w-full p-5 bg-slate-900 rounded-2xl text-4xl font-black mb-8 border-2 border-blue-600 text-center text-white appearance-none">
-                    </select>
+                <label class="block mb-4 font-black uppercase text-center text-sm opacity-80">Parcours :</label>
+                <select id="circuitNum" class="w-full p-5 bg-slate-900 rounded-2xl text-4xl font-black mb-8 border-2 border-blue-600 text-center text-white appearance-none"></select>
 
                 <div id="formSaisie">
                     <div class="flex gap-4 justify-center mb-8">
                         <input type="text" id="l1" maxlength="1" class="w-20 h-20 text-center text-5xl font-black bg-white text-slate-900 rounded-2xl shadow-xl uppercase" autocomplete="off">
                         <input type="text" id="l2" maxlength="1" class="w-20 h-20 text-center text-5xl font-black bg-white text-slate-900 rounded-2xl shadow-xl uppercase" autocomplete="off">
                     </div>
-                    <button onclick="validerSaisie()" class="w-full bg-blue-600 p-6 rounded-2xl text-2xl font-black uppercase btn-tap shadow-lg">Vérifier</button>
+                    <button onclick="validerSaisie()" class="w-full bg-blue-600 p-6 rounded-2xl text-2xl font-black uppercase btn-tap">Vérifier</button>
                 </div>
-                
                 <div id="msgDejaFait" class="hidden text-center py-4 text-red-400 font-bold uppercase italic">Tous les parcours validés !</div>
             </div>
         </div>
@@ -86,16 +82,13 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let CORRECTION = {};
-        let selectedNum = "";
-        let selectedColor = "";
+        let CORRECTION = {}; let selectedNum = ""; let selectedColor = "";
 
-        // Générer la grille de numéros
         const grid = document.getElementById('gridNumeros');
-        for(let i=1; i<=30; i++) {
+        for(let i=1; i<=6; i++) { // Changement à 6 numéros
             const btn = document.createElement('button');
             btn.innerText = i;
-            btn.className = "btn-num p-3 rounded-xl font-bold text-sm btn-tap";
+            btn.className = "btn-num p-6 rounded-2xl font-black text-2xl btn-tap";
             btn.onclick = () => {
                 document.querySelectorAll('.btn-num').forEach(b => b.classList.remove('selected'));
                 btn.classList.add('selected');
@@ -107,44 +100,31 @@
         db.ref('settings/matrix').on('value', (snap) => { CORRECTION = snap.val(); });
 
         async function selectColor(color) {
-            if(!selectedNum) { alert("Choisis d'abord ton numéro !"); return; }
+            if(!selectedNum) { alert("Choisis ton numéro !"); return; }
             selectedColor = color;
-            
             const userKey = `${color}_${selectedNum}`;
             const snapshot = await db.ref(`sessions/${userKey}`).once('value');
             const data = snapshot.val() || {};
-            const circuitsFaits = Object.keys(data).map(k => k.replace('C', ''));
+            const faits = Object.keys(data).map(k => k.replace('C', ''));
 
-            // Mise à jour interface
             document.getElementById('displayUser').innerText = `${color} ${selectedNum}`;
-            const banner = document.getElementById('bannerSession');
-            banner.className = `flex justify-between items-center p-5 rounded-3xl shadow-2xl transition-colors duration-500 bg-session-${color}`;
-            
-            updateCircuitSelect(circuitsFaits);
-
+            document.getElementById('bannerSession').className = `flex justify-between items-center p-6 rounded-3xl shadow-2xl transition-colors bg-session-${color}`;
+            updateCircuitSelect(faits);
             document.getElementById('step1').classList.add('hidden');
             document.getElementById('step2').classList.remove('hidden');
         }
 
         function updateCircuitSelect(faits) {
             const select = document.getElementById('circuitNum');
-            select.innerHTML = "";
-            let dispo = 0;
+            select.innerHTML = ""; let dispo = 0;
             for(let i=1; i<=12; i++) {
                 const isFait = faits.includes(i.toString());
                 const opt = new Option(isFait ? `N°${i} ✔️` : `PARCOURS N°${i}`, i);
                 if(isFait) opt.disabled = true; else dispo++;
                 select.add(opt);
             }
-            if(dispo === 0) {
-                document.getElementById('formSaisie').classList.add('hidden');
-                document.getElementById('msgDejaFait').classList.remove('hidden');
-            } else {
-                // Sélectionne le premier non-désactivé
-                for(let i=0; i<select.options.length; i++) {
-                    if(!select.options[i].disabled) { select.selectedIndex = i; break; }
-                }
-            }
+            if(dispo === 0) { document.getElementById('formSaisie').classList.add('hidden'); document.getElementById('msgDejaFait').classList.remove('hidden'); }
+            else { for(let i=0; i<select.options.length; i++) { if(!select.options[i].disabled) { select.selectedIndex = i; break; } } }
         }
 
         function validerSaisie() {
@@ -152,18 +132,12 @@
             const l1 = document.getElementById('l1').value.toUpperCase().trim();
             const l2 = document.getElementById('l2').value.toUpperCase().trim();
             if(!l1 || !l2) return;
-
             const sol = CORRECTION[cNum][selectedColor];
             let count = 0; let tempSol = [...sol];
-            [l1, l2].forEach(l => { 
-                const idx = tempSol.indexOf(l); 
-                if(idx > -1) { count++; tempSol.splice(idx, 1); } 
-            });
-            
+            [l1, l2].forEach(l => { const idx = tempSol.indexOf(l); if(idx > -1) { count++; tempSol.splice(idx, 1); } });
             let pts = (count === 2) ? 5 : (count === 1) ? 2 : 0;
             db.ref(`sessions/${selectedColor}_${selectedNum}/C${cNum}`).set({ score: pts, timestamp: Date.now() });
-
-            document.getElementById('msgPoints').innerText = `+${pts} POINTS`;
+            document.getElementById('msgPoints').innerText = `+${pts} PT`;
             document.getElementById('iconScore').innerText = (pts === 5) ? "⭐" : (pts === 2) ? "🆗" : "❌";
             document.getElementById('feedback').classList.remove('hidden');
             setTimeout(() => { location.reload(); }, 3500);
