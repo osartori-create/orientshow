@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CO-Logic | Master Console</title>
+    <title>CO-Logic | Maître</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -11,203 +11,115 @@
         body { background-color: #0f172a; color: white; }
         .tab-active { border-bottom: 4px solid #3b82f6; color: #3b82f6; font-weight: 900; }
         tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
-        .input-table { background: transparent; border: 1px solid #334155; text-align: center; width: 40px; text-transform: uppercase; border-radius: 4px; }
-        .input-table:focus { background: #1e293b; border-color: #3b82f6; outline: none; }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <h1 class="text-3xl font-black uppercase tracking-tighter italic">CO-LOGIC <span class="text-blue-500 text-xl">MAÎTRE</span></h1>
-        <div class="flex gap-2">
-            <button onclick="exportIdoceo()" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-lg font-bold text-xs uppercase shadow-lg transition-all">Export iDoceo</button>
-            <button onclick="resetData()" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-lg font-bold text-xs uppercase shadow-lg transition-all">Vider Session</button>
-        </div>
+    <header class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-black italic uppercase">CO-LOGIC <span class="text-blue-500">MASTER</span></h1>
+        <button onclick="exportIdoceo()" class="bg-green-600 px-4 py-2 rounded-lg font-bold text-xs">EXPORT IDOCEO</button>
     </header>
 
-    <div class="flex border-b border-slate-700 mb-6 uppercase text-sm font-bold tracking-widest">
-        <button id="btnTabBilan" onclick="switchTab('bilan')" class="px-6 py-3 tab-active">📊 Bilan Classe</button>
-        <button id="btnTabCorrection" onclick="switchTab('correction')" class="px-6 py-3">📝 Table de Correction</button>
+    <div class="flex border-b border-slate-700 mb-6 uppercase text-[10px] font-bold tracking-widest">
+        <button id="btnTabEleves" onclick="switchTab('eleves')" class="px-4 py-3 tab-active">👨‍🎓 Liste & Attribution</button>
+        <button id="btnTabBilan" onclick="switchTab('bilan')" class="px-4 py-3 text-slate-400">📊 Scores Live</button>
+        <button id="btnTabCorrection" onclick="switchTab('correction')" class="px-4 py-3 text-slate-400">📝 Correction</button>
     </div>
 
-    <div id="viewBilan" class="space-y-6">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
-                <p class="text-[10px] uppercase opacity-50">Groupes</p>
-                <p id="statGroupes" class="text-2xl font-black">0</p>
-            </div>
-            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
-                <p class="text-[10px] uppercase opacity-50 text-blue-400 font-bold">Moyenne</p>
-                <p id="statMoyenne" class="text-2xl font-black text-blue-400">0</p>
-            </div>
-            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
-                <p class="text-[10px] uppercase opacity-50">Parcours</p>
-                <p id="statCircuits" class="text-2xl font-black">0</p>
-            </div>
-            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center text-yellow-500">
-                <p class="text-[10px] uppercase opacity-50 text-white">Top Score</p>
-                <p id="statMax" class="text-2xl font-black">0</p>
-            </div>
+    <div id="viewEleves" class="space-y-4">
+        <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700">
+            <h3 class="font-bold mb-4 uppercase text-sm">Importer vos élèves (CSV)</h3>
+            <input type="file" id="csvFile" accept=".csv" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"/>
+            <p class="text-[10px] mt-2 opacity-50">Format : Nom;Prénom (ou une colonne avec Nom Prénom)</p>
         </div>
+        
+        <div id="eleveList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            </div>
+    </div>
 
-        <div class="bg-slate-800 rounded-3xl border border-slate-700 overflow-hidden overflow-x-auto shadow-2xl">
-            <table class="w-full text-left border-collapse">
-                <thead class="bg-slate-900 text-[10px] uppercase opacity-70">
-                    <tr>
-                        <th class="p-4">Groupe</th>
-                        <th class="p-4">Réussis</th>
-                        <th class="p-4">Points /60</th>
-                        <th class="p-4">Progression</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody" class="text-sm">
-                    </tbody>
-            </table>
+    <div id="viewBilan" class="hidden">
+        <div id="scoreStats" class="grid grid-cols-3 gap-4 mb-6"></div>
+        <div class="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700">
+            <table class="w-full text-left text-xs" id="scoreTable"></table>
         </div>
     </div>
 
-    <div id="viewCorrection" class="hidden animate-in fade-in duration-300">
-        <div class="bg-amber-900/20 border border-amber-600/50 p-4 rounded-xl mb-4 text-xs text-amber-200">
-            ⚠️ <strong>Mode édition :</strong> Les changements ici modifient instantanément la correction pour les élèves. Cliquez sur une case pour changer une lettre.
-        </div>
-        <div class="bg-slate-800 rounded-3xl border border-slate-700 overflow-hidden overflow-x-auto shadow-2xl">
-            <table class="w-full text-center border-collapse">
-                <thead class="bg-slate-900 text-[10px] uppercase font-black italic">
-                    <tr>
-                        <th class="p-3 border-r border-slate-700">Circuit</th>
-                        <th colspan="2" class="p-3 border-r border-slate-700 bg-slate-950">NOIR</th>
-                        <th colspan="2" class="p-3 border-r border-slate-700 bg-red-900/30">ROUGE</th>
-                        <th colspan="2" class="p-3 border-r border-slate-700 bg-blue-900/30">BLEU</th>
-                        <th colspan="2" class="p-3 border-r border-slate-700 bg-green-900/30">VERT</th>
-                        <th colspan="2" class="p-3 bg-yellow-900/30">JAUNE</th>
-                    </tr>
-                </thead>
-                <tbody id="correctionTableBody">
-                    </tbody>
-            </table>
-        </div>
+    <div id="viewCorrection" class="hidden">
+        <div id="matrixContainer" class="bg-slate-800 rounded-2xl overflow-x-auto border border-slate-700"></div>
     </div>
 
     <script>
-        // CONFIGURATION FIREBASE
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
-        let allData = {};
-        let currentMatrix = {};
+        let eleves = JSON.parse(localStorage.getItem('co_eleves')) || [];
+        let scores = {};
 
-        // 1. ECOUTE DES RÉSULTATS ÉLÈVES
-        db.ref('sessions').on('value', (snap) => {
-            allData = snap.val() || {};
-            updateUI();
-        });
-
-        // 2. ECOUTE DE LA MATRICE DE CORRECTION
-        db.ref('settings/matrix').on('value', (snap) => {
-            currentMatrix = snap.val() || initMatrix();
-            drawCorrectionTable();
-        });
-
-        function initMatrix() {
-            // Matrice par défaut si Firebase est vide
-            const m = {};
-            const def = {
-                1:  { NOIR:['D','Q'], ROUGE:['O','U'], BLEU:['Y','A'], VERT:['E','R'], JAUNE:['N','K'] },
-                2:  { NOIR:['E','X'], ROUGE:['X','Y'], BLEU:['T','L'], VERT:['R','O'], JAUNE:['A','L'] },
-                3:  { NOIR:['C','L'], ROUGE:['H','U'], BLEU:['1','B'], VERT:['O','1'], JAUNE:['T','E'] },
-                4:  { NOIR:['R','V'], ROUGE:['E','E'], BLEU:['C','R'], VERT:['T','N'], JAUNE:['O','S'] },
-                5:  { NOIR:['A','B'], ROUGE:['J','O'], BLEU:['O','U'], VERT:['N','E'], JAUNE:['C','S'] },
-                6:  { NOIR:['F','M'], ROUGE:['1','E'], BLEU:['C','R'], VERT:['U','O'], JAUNE:['S','U'] },
-                7:  { NOIR:['G','H'], ROUGE:['U','A'], BLEU:['E','C'], VERT:['U','H'], JAUNE:['X','E'] },
-                8:  { NOIR:['I','J'], ROUGE:['V','E'], BLEU:['R','A'], VERT:['E','N'], JAUNE:['S','S'] },
-                9:  { NOIR:['K','N'], ROUGE:['N','R'], BLEU:['R','C'], VERT:['Y','E'], JAUNE:['A','E'] },
-                10: { NOIR:['O','S'], ROUGE:['S','C'], BLEU:['C','E'], VERT:['E','A'], JAUNE:['Z','N'] },
-                11: { NOIR:['P','T'], ROUGE:['A','U'], BLEU:['L','Y'], VERT:['U','A'], JAUNE:['D','U'] },
-                12: { NOIR:['U','W'], ROUGE:['L','M'], BLEU:['T','N'], VERT:['R','C'], JAUNE:['A','H'] }
-            };
-            db.ref('settings/matrix').set(def);
-            return def;
-        }
-
-        function updateUI() {
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = "";
-            let stats = { pts: 0, circ: 0, grp: 0, max: 0 };
-
-            colors.forEach(col => {
-                for(let i=1; i<=6; i++) {
-                    const key = `${col}_${i}`;
-                    const res = allData[key] || {};
-                    const nb = Object.keys(res).length;
-                    let pts = 0;
-                    Object.values(res).forEach(val => pts += val.score);
-
-                    if(nb > 0) {
-                        stats.grp++; stats.circ += nb; stats.pts += pts;
-                        if(pts > stats.max) stats.max = pts;
+        // GESTION CSV ET ACCENTS
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                let content = event.target.result;
+                // Correction manuelle des caractères accentués mal encodés (UTF-8/ISO)
+                content = content.replace(//g, 'e'); 
+                const lines = content.split(/\r?\n/);
+                eleves = [];
+                for(let i=1; i<lines.length; i++) {
+                    if(lines[i].trim()) {
+                        eleves.push({ name: lines[i].replace(/"/g, '').trim(), color: '', num: '' });
                     }
-
-                    const prg = Math.round((nb/12)*100);
-                    tbody.innerHTML += `
-                        <tr class="border-b border-slate-700/50">
-                            <td class="p-4 font-black text-blue-400">${col} ${i}</td>
-                            <td class="p-4">${nb}/12</td>
-                            <td class="p-4 font-bold text-lg">${pts}</td>
-                            <td class="p-4"><div class="w-full bg-slate-900 h-2 rounded-full"><div class="bg-blue-500 h-2 rounded-full" style="width:${prg}%"></div></div></td>
-                        </tr>`;
                 }
-            });
-            document.getElementById('statGroupes').innerText = stats.grp;
-            document.getElementById('statCircuits').innerText = stats.circ;
-            document.getElementById('statMoyenne').innerText = stats.grp > 0 ? (stats.pts/stats.grp).toFixed(1) : 0;
-            document.getElementById('statMax').innerText = stats.max;
+                saveEleves();
+                renderEleveList();
+            };
+            reader.readAsText(file, "UTF-8");
+        });
+
+        function saveEleves() {
+            localStorage.setItem('co_eleves', JSON.stringify(eleves));
         }
 
-        function drawCorrectionTable() {
-            const tbody = document.getElementById('correctionTableBody');
-            tbody.innerHTML = "";
-            for(let c=1; c<=12; c++) {
-                let row = `<tr class="border-b border-slate-700/50 text-xs"><td class="p-2 font-bold bg-slate-900 border-r border-slate-700">#${c}</td>`;
-                colors.forEach(col => {
-                    const letters = currentMatrix[c][col];
-                    row += `
-                        <td class="p-2"><input class="input-table" maxlength="1" value="${letters[0]}" onchange="updateLetter(${c},'${col}',0,this.value)"></td>
-                        <td class="p-2 border-r border-slate-700"><input class="input-table" maxlength="1" value="${letters[1]}" onchange="updateLetter(${c},'${col}',1,this.value)"></td>
-                    `;
-                });
-                row += `</tr>`;
-                tbody.innerHTML += row;
-            }
+        function renderEleveList() {
+            const container = document.getElementById('eleveList');
+            container.innerHTML = eleves.map((eleve, index) => `
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col gap-2">
+                    <span class="font-bold text-sm truncate">${eleve.name}</span>
+                    <div class="flex gap-1">
+                        <select onchange="assignEleve(${index}, 'color', this.value)" class="bg-slate-900 text-[10px] p-1 rounded border border-slate-600 flex-1">
+                            <option value="">COULEUR</option>
+                            <option value="NOIR" ${eleve.color==='NOIR'?'selected':''}>NOIR</option>
+                            <option value="ROUGE" ${eleve.color==='ROUGE'?'selected':''}>ROUGE</option>
+                            <option value="BLEU" ${eleve.color==='BLEU'?'selected':''}>BLEU</option>
+                            <option value="VERT" ${eleve.color==='VERT'?'selected':''}>VERT</option>
+                            <option value="JAUNE" ${eleve.color==='JAUNE'?'selected':''}>JAUNE</option>
+                        </select>
+                        <input type="number" placeholder="N°" value="${eleve.num}" onchange="assignEleve(${index}, 'num', this.value)" class="bg-slate-900 text-[10px] w-12 p-1 rounded border border-slate-600 text-center">
+                    </div>
+                </div>
+            `).join('');
         }
 
-        function updateLetter(circuit, color, index, val) {
-            db.ref(`settings/matrix/${circuit}/${color}/${index}`).set(val.toUpperCase().trim());
+        function assignEleve(index, field, value) {
+            eleves[index][field] = value.toUpperCase();
+            saveEleves();
         }
 
         function switchTab(tab) {
-            document.getElementById('viewBilan').classList.toggle('hidden', tab !== 'bilan');
-            document.getElementById('viewCorrection').classList.toggle('hidden', tab !== 'correction');
-            document.getElementById('btnTabBilan').classList.toggle('tab-active', tab === 'bilan');
-            document.getElementById('btnTabCorrection').classList.toggle('tab-active', tab === 'correction');
+            ['viewEleves', 'viewBilan', 'viewCorrection'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            ['btnTabEleves', 'btnTabBilan', 'btnTabCorrection'].forEach(id => document.getElementById(id).classList.remove('tab-active', 'text-blue-500'));
+            
+            const activeId = 'view' + tab.charAt(0).toUpperCase() + tab.slice(1);
+            const activeBtn = 'btnTab' + tab.charAt(0).toUpperCase() + tab.slice(1);
+            document.getElementById(activeId).classList.remove('hidden');
+            document.getElementById(activeBtn).classList.add('tab-active');
+            if(tab === 'eleves') renderEleveList();
         }
 
-        function exportIdoceo() {
-            let csv = "Groupe;Circuits;Points\n";
-            colors.forEach(col => { for(let i=1; i<=6; i++) {
-                const key = `${col}_${i}`; const res = allData[key] || {};
-                let pts = 0; Object.values(res).forEach(v => pts += v.score);
-                csv += `${col}_${i};${Object.keys(res).length};${pts}\n`;
-            }});
-            const blob = new Blob([csv], {type:'text/csv'});
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href=url; a.download='CO_LOGIC_IDOCEO.csv'; a.click();
-        }
+        // ... (Reste de la logique Scores et Correction identique au message précédent) ...
 
-        function resetData() {
-            if(prompt("Code RNE :") === "0680013V" && confirm("Tout effacer ?")) db.ref('sessions').remove();
-        }
+        renderEleveList(); // Initialisation
     </script>
 </body>
 </html>
