@@ -12,8 +12,24 @@
         .tab-active { border-bottom: 4px solid #3b82f6; color: #3b82f6; font-weight: 900; }
         tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
         .input-table { background: transparent; border: 1px solid #334155; text-align: center; width: 40px; text-transform: uppercase; border-radius: 4px; color: white; }
-        .eleve-row { display: grid; grid-template-columns: 1fr 120px 70px; gap: 10px; align-items: center; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* Styles des boutons de couleur */
+        .color-dot { width: 24px; height: 24px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.1s; }
+        .color-dot:active { transform: scale(0.8); }
+        .dot-NOIR { background-color: #000; border-color: #444; }
+        .dot-ROUGE { background-color: #ef4444; }
+        .dot-BLEU { background-color: #3b82f6; }
+        .dot-VERT { background-color: #22c55e; }
+        .dot-JAUNE { background-color: #eab308; }
+        
+        /* Fond de ligne dynamique */
+        .row-NOIR { background-color: rgba(0,0,0,0.4) !important; border-left: 4px solid #000; }
+        .row-ROUGE { background-color: rgba(239,68,68,0.1) !important; border-left: 4px solid #ef4444; }
+        .row-BLEU { background-color: rgba(59,130,246,0.1) !important; border-left: 4px solid #3b82f6; }
+        .row-VERT { background-color: rgba(34,197,94,0.1) !important; border-left: 4px solid #22c55e; }
+        .row-JAUNE { background-color: rgba(234,179,8,0.1) !important; border-left: 4px solid #eab308; }
+
+        .eleve-row { display: grid; grid-template-columns: 1fr 140px 60px; gap: 10px; align-items: center; transition: all 0.3s; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -26,8 +42,8 @@
         </div>
     </header>
 
-    <div class="flex border-b border-slate-700 mb-6 uppercase text-[10px] font-bold tracking-widest overflow-x-auto no-scrollbar">
-        <button id="btnTabEleves" onclick="switchTab('eleves')" class="px-4 py-3 tab-active whitespace-nowrap">👨‍🎓 Liste & Classes</button>
+    <div class="flex border-b border-slate-700 mb-6 uppercase text-[10px] font-bold tracking-widest overflow-x-auto">
+        <button id="btnTabEleves" onclick="switchTab('eleves')" class="px-4 py-3 tab-active whitespace-nowrap">👨‍🎓 Liste & Attribution</button>
         <button id="btnTabBilan" onclick="switchTab('bilan')" class="px-4 py-3 text-slate-400 whitespace-nowrap">📊 Résultats & Notes</button>
         <button id="btnTabCorrection" onclick="switchTab('correction')" class="px-4 py-3 text-slate-400 whitespace-nowrap">📝 Correction</button>
     </div>
@@ -48,30 +64,24 @@
                     <input type="file" id="csvFile" accept=".csv" class="block w-full text-xs text-slate-400 file:bg-slate-700 file:text-white file:px-3 file:py-1 file:rounded-full file:border-0 cursor-pointer"/>
                 </div>
             </div>
-            <button onclick="ajouterEleveManuel()" class="w-full bg-slate-700 hover:bg-slate-600 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-slate-600">+ Ajouter un élève manuellement</button>
+            <button onclick="ajouterEleveManuel()" class="w-full bg-slate-700 hover:bg-slate-600 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-slate-600">+ Ajouter un élève</button>
         </div>
         
-        <div id="eleveList" class="flex flex-col gap-2">
-            </div>
+        <div id="eleveList" class="flex flex-col gap-2"></div>
     </div>
 
-    <div id="viewBilan" class="hidden animate-in fade-in">
+    <div id="viewBilan" class="hidden">
         <div class="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl">
             <table class="w-full text-left text-[11px]">
                 <thead class="bg-slate-900 uppercase opacity-70 font-bold">
-                    <tr>
-                        <th class="p-4">Élève</th>
-                        <th class="p-4 text-center">Score /60</th>
-                        <th class="p-4 text-center text-blue-400">Note /20</th>
-                        <th class="p-4">Progression (12 circ.)</th>
-                    </tr>
+                    <tr><th class="p-4">Élève</th><th class="p-4 text-center">Score /60</th><th class="p-4 text-center text-blue-400">Note /20</th><th class="p-4">Progression</th></tr>
                 </thead>
                 <tbody id="tableBody"></tbody>
             </table>
         </div>
     </div>
 
-    <div id="viewCorrection" class="hidden animate-in fade-in">
+    <div id="viewCorrection" class="hidden">
         <div id="matrixContainer" class="bg-slate-800 rounded-2xl overflow-x-auto border border-slate-700 shadow-2xl"></div>
     </div>
 
@@ -94,18 +104,14 @@
             renderEleveList();
         }
 
-        // IMPORT CSV IDOCEO
+        // IMPORT IDOCEO
         document.getElementById('csvFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
             const reader = new FileReader();
             reader.onload = function(event) {
-                const raw = event.target.result;
-                const lines = raw.split(/\r?\n/).filter(l => l.trim() !== "");
-                if(lines.length < 2) return;
-
-                const newName = prompt("Nom de la classe pour cet import ?", "402");
+                const lines = event.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
+                const newName = prompt("Nom de la classe ?", "402");
                 if (!newName) return;
-
                 const header = lines[0].replace(/"/g, '').split(lines[0].includes(';') ? ';' : ',');
                 const idxName = header.indexOf('@name');
                 const idxLast = header.indexOf('@lastname');
@@ -113,38 +119,51 @@
                 const imported = lines.slice(1).map(line => {
                     const sep = line.includes(';') ? ';' : ',';
                     const parts = line.split(sep).map(p => p.replace(/"/g, '').trim());
-                    // On prend NOM en majuscule + Prénom
-                    const nom = parts[idxLast] ? parts[idxLast].toUpperCase() : "";
-                    const prenom = parts[idxName] || "";
-                    return { name: nom + " " + prenom, color: '', num: '' };
-                });
+                    return { name: (parts[idxLast] || "").toUpperCase() + " " + (parts[idxName] || ""), color: '', num: '' };
+                }).sort((a,b) => a.name.localeCompare(b.name));
 
-                toutesLesClasses[newName] = imported.sort((a, b) => a.name.localeCompare(b.name));
+                toutesLesClasses[newName] = imported;
                 classeActive = newName;
-                saveGlobal();
-                initGestionnaire();
-                alert(imported.length + " élèves importés et triés.");
+                saveGlobal(); initGestionnaire();
             };
             reader.readAsText(file, "ISO-8859-1");
         });
 
+        function renderEleveList() {
+            const container = document.getElementById('eleveList');
+            const liste = toutesLesClasses[classeActive] || [];
+            container.innerHTML = liste.map((e, i) => `
+                <div class="bg-slate-800 p-3 px-4 rounded-xl border border-slate-700/50 eleve-row row-${e.color}">
+                    <span class="font-bold text-[11px] truncate uppercase">${e.name}</span>
+                    <div class="flex gap-1 justify-center">
+                        ${colors.map(c => `
+                            <button onclick="updateE(${i},'color','${c}')" class="color-dot dot-${c} ${e.color === c ? 'ring-2 ring-white scale-110' : 'opacity-40'}"></button>
+                        `).join('')}
+                        <button onclick="updateE(${i},'color','')" class="color-dot bg-slate-700 text-[8px] flex items-center justify-center opacity-40">❌</button>
+                    </div>
+                    <input type="number" placeholder="N°" value="${e.num}" onchange="updateE(${i},'num',this.value)" class="bg-slate-900 text-xs w-full p-2 rounded border border-slate-600 text-center font-bold">
+                </div>`).join('');
+        }
+
+        function updateE(i, f, v) { 
+            toutesLesClasses[classeActive][i][f] = (f === 'num') ? v : v; 
+            saveGlobal(); renderEleveList(); 
+        }
+
         function ajouterEleveManuel() {
-            const nom = prompt("Nom et Prénom de l'élève :");
+            const nom = prompt("NOM Prénom :");
             if (nom) {
                 toutesLesClasses[classeActive].push({ name: nom.toUpperCase(), color: '', num: '' });
                 toutesLesClasses[classeActive].sort((a, b) => a.name.localeCompare(b.name));
-                saveGlobal();
-                renderEleveList();
+                saveGlobal(); renderEleveList();
             }
         }
 
         function ajouterClasse() {
             const nom = prompt("Nom de la classe :");
             if (nom && !toutesLesClasses[nom]) {
-                toutesLesClasses[nom] = [];
-                classeActive = nom;
-                saveGlobal();
-                initGestionnaire();
+                toutesLesClasses[nom] = []; classeActive = nom;
+                saveGlobal(); initGestionnaire();
             }
         }
 
@@ -153,40 +172,19 @@
             if (confirm(`Supprimer ${classeActive} ?`)) {
                 delete toutesLesClasses[classeActive];
                 classeActive = Object.keys(toutesLesClasses)[0];
-                saveGlobal();
-                initGestionnaire();
+                saveGlobal(); initGestionnaire();
             }
         }
 
         function changeClasse(nom) {
             classeActive = nom;
             localStorage.setItem('co_logic_active_name', nom);
-            renderEleveList();
-            updateBilan();
+            renderEleveList(); updateBilan();
         }
 
         function saveGlobal() {
             localStorage.setItem('co_logic_classes', JSON.stringify(toutesLesClasses));
             localStorage.setItem('co_logic_active_name', classeActive);
-        }
-
-        function renderEleveList() {
-            const container = document.getElementById('eleveList');
-            const liste = toutesLesClasses[classeActive] || [];
-            container.innerHTML = liste.map((e, i) => `
-                <div class="bg-slate-800 p-3 px-6 rounded-xl border border-slate-700/50 eleve-row shadow-sm">
-                    <span class="font-bold text-xs truncate text-slate-200">${e.name}</span>
-                    <select onchange="updateE(${i},'color',this.value)" class="bg-slate-900 text-[10px] p-2 rounded border border-slate-600 font-bold w-full uppercase">
-                        <option value="">Couleur</option>
-                        ${colors.map(c => `<option value="${c}" ${e.color===c?'selected':''}>${c}</option>`).join('')}
-                    </select>
-                    <input type="number" placeholder="N°" value="${e.num}" onchange="updateE(${i},'num',this.value)" class="bg-slate-900 text-xs w-full p-2 rounded border border-slate-600 text-center font-bold">
-                </div>`).join('');
-        }
-
-        function updateE(i, f, v) { 
-            toutesLesClasses[classeActive][i][f] = v.toUpperCase(); 
-            saveGlobal(); 
         }
 
         function switchTab(tab) {
@@ -209,63 +207,39 @@
             liste.forEach(e => {
                 if(!e.color || !e.num) return;
                 const data = sessions[`${e.color}_${e.num}`] || {};
-                const pts60 = Object.values(data).reduce((acc, c) => acc + c.score, 0);
-                const pts20 = (pts60 / 3).toFixed(1); // Ramené sur 20
+                const p60 = Object.values(data).reduce((acc, c) => acc + c.score, 0);
                 const nb = Object.keys(data).length;
                 tbody.innerHTML += `
                     <tr class="border-b border-slate-700/50">
-                        <td class="p-4 font-bold uppercase text-xs">${e.name} <br><span class="text-[9px] opacity-40 font-normal">${e.color} ${e.num}</span></td>
-                        <td class="p-4 text-center font-bold text-sm">${pts60}</td>
-                        <td class="p-4 text-center font-black text-blue-400 text-lg">${pts20}</td>
-                        <td class="p-4">
-                            <div class="flex items-center gap-2">
-                                <div class="flex-1 bg-slate-900 h-1.5 rounded-full overflow-hidden">
-                                    <div class="bg-blue-500 h-1.5 rounded-full" style="width:${(nb/12)*100}%"></div>
-                                </div>
-                                <span class="text-[9px] opacity-50">${nb}/12</span>
-                            </div>
-                        </td>
+                        <td class="p-4 font-bold uppercase text-xs">${e.name} <br><span class="text-[9px] opacity-40">${e.color} ${e.num}</span></td>
+                        <td class="p-4 text-center font-bold">${p60}</td>
+                        <td class="p-4 text-center font-black text-blue-400 text-lg">${(p60/3).toFixed(1)}</td>
+                        <td class="p-4"><div class="bg-slate-900 h-1.5 rounded-full overflow-hidden"><div class="bg-blue-500 h-1.5 rounded-full" style="width:${(nb/12)*100}%"></div></div></td>
                     </tr>`;
             });
         }
 
         function drawMatrix() {
             const container = document.getElementById('matrixContainer');
-            let html = `<table class="w-full text-center border-collapse text-[10px]">
-                <thead class="bg-slate-900 font-bold uppercase italic">
-                    <tr><th class="p-3 border-r border-slate-700">#</th>`;
+            let html = `<table class="w-full text-center border-collapse text-[10px]"><thead class="bg-slate-900 font-bold uppercase italic"><tr><th class="p-3 border-r border-slate-700">#</th>`;
             colors.forEach(col => { html += `<th colspan="2" class="p-3 border-r border-slate-700">${col}</th>`; });
             html += `</tr></thead><tbody>`;
             for(let c=1; c<=12; c++) {
                 html += `<tr class="border-b border-slate-700/50"><td class="p-2 bg-slate-900 font-bold border-r border-slate-700">${c}</td>`;
                 colors.forEach(col => {
                     const l = matrix[c][col];
-                    html += `<td class="p-1"><input class="input-table" value="${l[0]}" onchange="upMat(${c},'${col}',0,this.value)"></td>
-                             <td class="p-1 border-r border-slate-700"><input class="input-table" value="${l[1]}" onchange="upMat(${c},'${col}',1,this.value)"></td>`;
+                    html += `<td class="p-1"><input class="input-table" value="${l[0]}" onchange="upMat(${c},'${col}',0,this.value)"></td><td class="p-1 border-r border-slate-700"><input class="input-table" value="${l[1]}" onchange="upMat(${c},'${col}',1,this.value)"></td>`;
                 });
                 html += `</tr>`;
             }
-            html += `</tbody></table>`;
-            container.innerHTML = html;
+            container.innerHTML = html + "</tbody></table>";
         }
 
         function upMat(c, col, i, v) { db.ref(`settings/matrix/${c}/${col}/${i}`).set(v.toUpperCase().trim()); }
 
         function initMatrix() {
-            const def = {
-                1: { NOIR:['D','Q'], ROUGE:['O','U'], BLEU:['Y','A'], VERT:['E','R'], JAUNE:['N','K'] },
-                2: { NOIR:['E','X'], ROUGE:['X','Y'], BLEU:['T','L'], VERT:['R','O'], JAUNE:['A','L'] },
-                3: { NOIR:['C','L'], ROUGE:['H','U'], BLEU:['1','B'], VERT:['O','1'], JAUNE:['T','E'] },
-                4: { NOIR:['R','V'], ROUGE:['E','E'], BLEU:['C','R'], VERT:['T','N'], JAUNE:['O','S'] },
-                5: { NOIR:['A','B'], ROUGE:['J','O'], BLEU:['O','U'], VERT:['N','E'], JAUNE:['C','S'] },
-                6: { NOIR:['F','M'], ROUGE:['1','E'], BLEU:['C','R'], VERT:['U','O'], JAUNE:['S','U'] },
-                7: { NOIR:['G','H'], ROUGE:['U','A'], BLEU:['E','C'], VERT:['U','H'], JAUNE:['X','E'] },
-                8: { NOIR:['I','J'], ROUGE:['V','E'], BLEU:['R','A'], VERT:['E','N'], JAUNE:['S','S'] },
-                9: { NOIR:['K','N'], ROUGE:['N','R'], BLEU:['R','C'], VERT:['Y','E'], JAUNE:['A','E'] },
-                10: { NOIR:['O','S'], ROUGE:['S','C'], BLEU:['C','E'], VERT:['E','A'], JAUNE:['Z','N'] },
-                11: { NOIR:['P','T'], ROUGE:['A','U'], BLEU:['L','Y'], VERT:['U','A'], JAUNE:['D','U'] },
-                12: { NOIR:['U','W'], ROUGE:['L','M'], BLEU:['T','N'], VERT:['R','C'], JAUNE:['A','H'] }
-            };
+            const def = {}; 
+            for(let i=1; i<=12; i++) { def[i] = { NOIR:['',''], ROUGE:['',''], BLEU:['',''], VERT:['',''], JAUNE:['',''] }; }
             db.ref('settings/matrix').set(def); return def;
         }
 
@@ -275,17 +249,13 @@
             liste.forEach(e => {
                 const data = sessions[`${e.color}_${e.num}`] || {};
                 const p60 = Object.values(data).reduce((acc, c) => acc + c.score, 0);
-                const p20 = (p60 / 3).toFixed(2);
-                csv += `${e.name};${e.color} ${e.num};${Object.keys(data).length};${p60};${p20}\n`;
+                csv += `${e.name};${e.color} ${e.num};${Object.keys(data).length};${p60};${(p60/3).toFixed(2)}\n`;
             });
             const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href=url; a.download=`Resultats_CO_${classeActive}.csv`; a.click();
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Results_${classeActive}.csv`; a.click();
         }
 
-        function resetData() { 
-            if(prompt("Code RNE :")==="0680013V" && confirm("Vider tous les scores Firebase ?")) db.ref('sessions').remove(); 
-        }
+        function resetData() { if(prompt("Code RNE :")==="0680013V" && confirm("Vider Firebase ?")) db.ref('sessions').remove(); }
 
         initGestionnaire();
     </script>
