@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CO-Logic | Élève</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    <style>
+        body { background-color: #0f172a; touch-action: manipulation; }
+        .btn-tap:active { transform: scale(0.95); }
+        input { text-transform: uppercase; border: 2px solid #334155; }
+        input:focus { border-color: #3b82f6; outline: none; }
+    </style>
+</head>
+<body class="text-white font-sans">
+
+    <div id="app" class="max-w-md mx-auto p-4 min-h-screen flex flex-col">
+        
+        <div id="step1" class="space-y-6">
+            <h2 class="text-2xl font-black uppercase text-center py-6 border-b border-slate-800 text-blue-500 italic">Orient'Show</h2>
+            
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="selectColor('NOIR')" class="bg-black border-2 border-slate-600 p-5 rounded-2xl font-bold btn-tap uppercase">Noir</button>
+                <button onclick="selectColor('ROUGE')" class="bg-red-600 p-5 rounded-2xl font-bold btn-tap uppercase">Rouge</button>
+                <button onclick="selectColor('BLEU')" class="bg-blue-600 p-5 rounded-2xl font-bold btn-tap uppercase">Bleu</button>
+                <button onclick="selectColor('VERT')" class="bg-green-600 p-5 rounded-2xl font-bold btn-tap uppercase">Vert</button>
+                <button onclick="selectColor('JAUNE')" class="bg-yellow-500 text-black p-5 rounded-2xl font-bold btn-tap uppercase">Jaune</button>
+                <button onclick="location.href='index.html'" class="bg-slate-700 p-5 rounded-2xl font-bold btn-tap text-xs uppercase text-center">Retour Menu</button>
+            </div>
+
+            <div class="bg-slate-800 p-4 rounded-2xl text-center shadow-inner">
+                <label class="block mb-2 text-[10px] uppercase font-bold opacity-60">Ton numéro de groupe (1 à 30)</label>
+                <select id="numGroupe" class="w-full p-4 bg-slate-900 rounded-xl text-2xl font-bold text-center text-white border border-slate-700 appearance-none">
+                    <option value="">-- CHOISIR --</option>
+                    <script>for(let i=1;i<=30;i++) document.write(`<option value="${i}">${i}</option>`)</script>
+                </select>
+            </div>
+        </div>
+
+        <div id="step2" class="hidden space-y-6 animate-in slide-in-from-bottom duration-300">
+            <div class="flex justify-between items-center bg-slate-800 p-4 rounded-2xl border border-slate-700">
+                <div>
+                    <p class="text-[10px] opacity-50 uppercase font-bold">Groupe actuel</p>
+                    <span id="displayUser" class="font-black text-xl tracking-wide uppercase text-blue-400"></span>
+                </div>
+                <button onclick="location.reload()" class="bg-slate-700 px-3 py-1 rounded-lg text-[10px] uppercase font-bold">Changer</button>
+            </div>
+
+            <div class="bg-slate-800 p-6 rounded-3xl shadow-2xl border border-slate-700">
+                <label class="block mb-4 font-black uppercase text-center text-sm opacity-80">Choisis ton Parcours :</label>
+                <select id="circuitNum" class="w-full p-5 bg-slate-900 rounded-2xl text-3xl font-black mb-8 border-2 border-blue-600 text-center text-white appearance-none">
+                    <script>for(let i=1;i<=12;i++) document.write(`<option value="${i}">PARCOURS ${i}</option>`)</script>
+                </select>
+
+                <p class="text-center mb-4 uppercase font-bold text-xs opacity-60">Entre les 2 lettres trouvées :</p>
+                <div class="flex gap-4 justify-center mb-8">
+                    <input type="text" id="l1" maxlength="1" class="w-20 h-20 text-center text-5xl font-black bg-white text-slate-900 rounded-2xl shadow-xl uppercase" autocomplete="off" spellcheck="false">
+                    <input type="text" id="l2" maxlength="1" class="w-20 h-20 text-center text-5xl font-black bg-white text-slate-900 rounded-2xl shadow-xl uppercase" autocomplete="off" spellcheck="false">
+                </div>
+
+                <button onclick="validerSaisie()" id="btnSubmit" class="w-full bg-blue-600 hover:bg-blue-500 p-6 rounded-2xl text-2xl font-black uppercase shadow-lg btn-tap transition-all">
+                    Valider le parcours
+                </button>
+            </div>
+        </div>
+
+        <div id="feedback" class="hidden fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50 p-8 text-center animate-in zoom-in duration-200">
+            <div id="iconScore" class="text-9xl mb-6 animate-bounce"></div>
+            <div id="msgPoints" class="text-6xl font-black mb-4 uppercase tracking-tighter"></div>
+            <div id="msgDetail" class="text-xl opacity-70 italic text-white"></div>
+        </div>
+
+    </div>
+
+    <script>
+        // CONFIGURATION FIREBASE
+        const firebaseConfig = { 
+            databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" 
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let CORRECTION = {};
+        let selectedColor = "";
+
+        // RÉCUPÉRATION DE LA MATRICE EN DIRECT DEPUIS FIREBASE
+        db.ref('settings/matrix').on('value', (snap) => {
+            CORRECTION = snap.val();
+        });
+
+        function selectColor(color) {
+            const num = document.getElementById('numGroupe').value;
+            if(!num) { alert("Choisis ton numéro d'abord !"); return; }
+            selectedColor = color;
+            document.getElementById('displayUser').innerText = color + " " + num;
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+        }
+
+        function validerSaisie() {
+            if(!CORRECTION) { alert("Erreur de connexion : Table de correction non chargée."); return; }
+            
+            const numGrp = document.getElementById('numGroupe').value;
+            const cNum = document.getElementById('circuitNum').value;
+            const l1 = document.getElementById('l1').value.toUpperCase().trim();
+            const l2 = document.getElementById('l2').value.toUpperCase().trim();
+            
+            if(!l1 || !l2) { alert("Saisis les 2 lettres !"); return; }
+
+            const userKey = `${selectedColor}_${numGrp}`;
+            const circuitKey = `C${cNum}`;
+
+            // Calcul du score basé sur la matrice dynamique
+            const sol = CORRECTION[cNum][selectedColor];
+            const saisie = [l1, l2];
+            let count = 0;
+            let tempSol = [...sol];
+            saisie.forEach(l => {
+                const idx = tempSol.indexOf(l);
+                if(idx > -1) { count++; tempSol.splice(idx, 1); }
+            });
+
+            let pts = (count === 2) ? 5 : (count === 1) ? 2 : 0;
+
+            // Envoi à la base de données
+            db.ref(`sessions/${userKey}/${circuitKey}`).set({
+                score: pts,
+                timestamp: Date.now()
+            });
+
+            showFeedback(pts);
+        }
+
+        function showFeedback(p) {
+            const fb = document.getElementById('feedback');
+            const icon = document.getElementById('iconScore');
+            const msgP = document.getElementById('msgPoints');
+            const msgD = document.getElementById('msgDetail');
+
+            if(p === 5) { 
+                icon.innerText = "⭐"; 
+                msgP.innerText = "+5 POINTS"; 
+                msgP.className="text-6xl font-black mb-4 text-green-500"; 
+                msgD.innerText = "Excellent !"; 
+            } else if(p === 2) { 
+                icon.innerText = "🆗"; 
+                msgP.innerText = "+2 POINTS"; 
+                msgP.className="text-6xl font-black mb-4 text-yellow-500"; 
+                msgD.innerText = "Une balise sur deux."; 
+            } else { 
+                icon.innerText = "❌"; 
+                msgP.innerText = "0 POINT"; 
+                msgP.className="text-6xl font-black mb-4 text-red-500"; 
+                msgD.innerText = "Tout est faux..."; 
+            }
+
+            fb.classList.remove('hidden');
+            // Retour auto au menu après 4 secondes pour le suivant
+            setTimeout(() => { location.reload(); }, 4000); 
+        }
+    </script>
+</body>
+</html>

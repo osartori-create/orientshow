@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CO-Logic | Accueil</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: white; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-6">
+    <h1 class="text-4xl font-black mb-12 tracking-tighter uppercase text-blue-500">CO-Logic <span class="text-white">EPS</span></h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
+        <a href="eleve.html" class="bg-blue-600 hover:bg-blue-700 p-12 rounded-3xl text-center shadow-2xl transition-transform active:scale-95">
+            <div class="text-6xl mb-4">🏃‍♂️</div>
+            <div class="text-3xl font-bold uppercase">Espace Élève</div>
+            <p class="opacity-70 mt-2">Saisir mes balises</p>
+        </a>
+
+        <button onclick="checkAdmin()" class="bg-slate-800 hover:bg-slate-700 p-12 rounded-3xl text-center shadow-2xl transition-transform active:scale-95 border-2 border-slate-700">
+            <div class="text-6xl mb-4">📋</div>
+            <div class="text-3xl font-bold uppercase">Espace Maître</div>
+            <p class="opacity-70 mt-2">Suivi & Résultats</p>
+        </button>
+    </div>
+
+    <script>
+        function checkAdmin() {
+            const code = prompt("Code de sécurité (RNE) :");
+            if (code === "0680013V") { window.location.href = "maitre.html"; }
+            else { alert("Code incorrect"); }
+        }
+    </script>
+</body>
+</html>
