@@ -26,13 +26,14 @@
             <h2 class="text-3xl font-black text-blue-500 italic uppercase">Orient'Show</h2>
             <p class="text-xs font-bold opacity-50 uppercase">Choisis ta classe :</p>
             <div id="listeClasses" class="flex flex-col gap-4">
-                </div>
+                <p class="text-sm italic opacity-30">Chargement des classes...</p>
+            </div>
         </div>
 
         <div id="step1" class="hidden space-y-6">
             <div class="flex justify-between items-center opacity-50 text-[10px] font-bold uppercase">
                 <span id="labelClasse"></span>
-                <button onclick="location.reload()" class="underline">Changer classe</button>
+                <button onclick="location.reload()" class="underline">Retour</button>
             </div>
             <div>
                 <p class="text-center text-xs font-black mb-3 opacity-50 uppercase">1. Ton numéro (1-6)</p>
@@ -58,10 +59,10 @@
 
         <div id="step2" class="hidden space-y-6 animate-in slide-in-from-bottom">
             <div id="banner" class="p-6 rounded-3xl shadow-2xl flex justify-between items-center">
-                <span id="displayUser" class="font-black text-4xl uppercase"></span>
+                <span id="displayUser" class="font-black text-3xl uppercase"></span>
                 <button onclick="location.reload()" class="bg-white/20 p-2 rounded-lg text-[10px] font-black uppercase">Précédent</button>
             </div>
-            <div id="containerSaisie" class="bg-slate-800 p-6 rounded-3xl border border-slate-700 space-y-6">
+            <div id="containerSaisie" class="bg-slate-800 p-6 rounded-3xl border border-slate-700 space-y-6 shadow-xl">
                 <div id="timerBlocker" class="hidden text-center py-10 space-y-4">
                     <div class="text-6xl">⏳</div>
                     <p class="font-black text-red-400 uppercase italic">Anti-Triche : Attends un peu...</p>
@@ -69,21 +70,21 @@
                 </div>
                 <div id="mainForm">
                     <label class="block text-center font-black uppercase text-sm opacity-60">Parcours :</label>
-                    <select id="circuitNum" class="w-full p-5 bg-slate-900 rounded-2xl text-3xl font-black border-2 border-blue-600 text-center appearance-none text-white">
+                    <select id="circuitNum" class="w-full p-5 bg-slate-900 rounded-2xl text-3xl font-black border-2 border-blue-600 text-center appearance-none text-white shadow-inner">
                         <option value="" selected disabled>-- CHOISIR --</option>
                     </select>
                     <div class="flex gap-4 justify-center my-8">
-                        <input type="text" id="l1" maxlength="1" class="w-20 h-20 text-center text-5xl font-black bg-white text-slate-900 rounded-2xl uppercase">
-                        <input type="text" id="l2" maxlength="1" class="w-20 h-20 text-center text-5xl font-black bg-white text-slate-900 rounded-2xl uppercase">
+                        <input type="text" id="l1" maxlength="1" class="w-20 h-20 text-center text-5xl font-black bg-white text-slate-900 rounded-2xl uppercase shadow-lg">
+                        <input type="text" id="l2" maxlength="1" class="w-20 h-20 text-center text-5xl font-black bg-white text-slate-900 rounded-2xl uppercase shadow-lg">
                     </div>
-                    <button onclick="validerSaisie()" class="w-full bg-blue-600 p-6 rounded-2xl text-2xl font-black uppercase">Vérifier</button>
+                    <button onclick="validerSaisie()" class="w-full bg-blue-600 p-6 rounded-2xl text-2xl font-black uppercase shadow-lg btn-tap">Vérifier</button>
                 </div>
             </div>
         </div>
 
         <div id="feedback" class="hidden fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50 text-center">
             <div id="iconScore" class="text-9xl mb-4"></div>
-            <div id="msgPoints" class="text-6xl font-black"></div>
+            <div id="msgPoints" class="text-6xl font-black tracking-tighter"></div>
         </div>
     </div>
 
@@ -93,16 +94,22 @@
         const db = firebase.database();
         let CORRECTION = {}; let selectedColor = ""; let selectedClasse = "";
 
-        // On récupère les classes actives depuis Firebase (synchronisation maître)
+        // Récupération des classes depuis Firebase
         db.ref('settings/classes').on('value', snap => {
-            const classes = snap.val() || ["305"];
+            const classes = snap.val() || [];
             const cont = document.getElementById('listeClasses');
             cont.innerHTML = "";
+            if(classes.length === 0) cont.innerHTML = "<p class='text-xs opacity-40'>Aucune classe configurée sur l'iPad Maître.</p>";
             classes.forEach(c => {
                 const b = document.createElement('button');
-                b.className = "bg-slate-800 p-6 rounded-2xl text-2xl font-black border border-slate-700 uppercase btn-tap";
+                b.className = "bg-slate-800 p-6 rounded-2xl text-2xl font-black border border-slate-700 uppercase btn-tap shadow-lg active:bg-blue-900";
                 b.innerText = c;
-                b.onclick = () => { selectedClasse = c; document.getElementById('step0').classList.add('hidden'); document.getElementById('step1').classList.remove('hidden'); document.getElementById('labelClasse').innerText = "Classe : " + c; };
+                b.onclick = () => { 
+                    selectedClasse = c; 
+                    document.getElementById('step0').classList.add('hidden'); 
+                    document.getElementById('step1').classList.remove('hidden'); 
+                    document.getElementById('labelClasse').innerText = "Classe : " + c; 
+                };
                 cont.appendChild(b);
             });
         });
@@ -113,21 +120,15 @@
             if(!selectedNum) return alert("Choisis ton numéro !");
             selectedColor = color;
             const userKey = `${color}_${selectedNum}`;
-            
-            // On vérifie le timer et les circuits faits POUR CETTE CLASSE
             const snap = await db.ref(`sessions/${selectedClasse}/${userKey}`).once('value');
             const data = snap.val() || {};
-            
             let lastTime = 0;
             Object.values(data).forEach(v => { if(v.timestamp > lastTime) lastTime = v.timestamp; });
             const wait = 120000 - (Date.now() - lastTime);
-
             document.getElementById('displayUser').innerText = `${color} ${selectedNum}`;
             document.getElementById('banner').className = `p-6 rounded-3xl shadow-2xl bg-session-${color}`;
-            
             if(wait > 0) startTimer(wait);
             initCircuits(Object.keys(data).map(k => k.replace('C','')));
-
             document.getElementById('step1').classList.add('hidden');
             document.getElementById('step2').classList.remove('hidden');
         }
@@ -147,9 +148,7 @@
             const sel = document.getElementById('circuitNum');
             sel.innerHTML = '<option value="" selected disabled>-- CHOISIR --</option>';
             for(let i=1; i<=12; i++) {
-                if(!faits.includes(i.toString())) {
-                    sel.add(new Option(`PARCOURS N°${i}`, i));
-                }
+                if(!faits.includes(i.toString())) sel.add(new Option(`PARCOURS N°${i}`, i));
             }
         }
 
@@ -158,15 +157,11 @@
             const l1 = document.getElementById('l1').value.toUpperCase().trim();
             const l2 = document.getElementById('l2').value.toUpperCase().trim();
             if(!c || !l1 || !l2) return;
-
             const sol = CORRECTION[c][selectedColor];
             let count = 0; let ts = [...sol];
             [l1, l2].forEach(l => { let idx = ts.indexOf(l); if(idx > -1) { count++; ts.splice(idx, 1); } });
             let pts = (count === 2) ? 5 : (count === 1) ? 2 : 0;
-
-            // ENREGISTREMENT SOUS LE DOSSIER DE LA CLASSE
             db.ref(`sessions/${selectedClasse}/${selectedColor}_${selectedNum}/C${c}`).set({ score: pts, timestamp: Date.now() });
-            
             document.getElementById('msgPoints').innerText = `+${pts} POINTS`;
             document.getElementById('iconScore').innerText = (pts === 5) ? "⭐" : (pts === 2) ? "🆗" : "❌";
             document.getElementById('feedback').classList.remove('hidden');
