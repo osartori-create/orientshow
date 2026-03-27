@@ -3,74 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orient'Show | Maître</title>
+    <title>Master | Orient'Show</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
         body { background-color: #0f172a; color: white; }
         .tab-active { border-bottom: 4px solid #3b82f6; color: #3b82f6; font-weight: 900; }
-        tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
-        .color-dot { width: 26px; height: 26px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); }
-        .dot-NOIR { background-color: #000; } .dot-ROUGE { background-color: #ef4444; } .dot-BLEU { background-color: #3b82f6; } .dot-VERT { background-color: #22c55e; } .dot-JAUNE { background-color: #eab308; }
-        .row-NOIR { border-left: 4px solid #000; background: rgba(0,0,0,0.2); }
-        .row-ROUGE { border-left: 4px solid #ef4444; background: rgba(239,68,68,0.05); }
-        .row-BLEU { border-left: 4px solid #3b82f6; background: rgba(59,130,246,0.05); }
-        .row-VERT { border-left: 4px solid #22c55e; background: rgba(34,197,94,0.05); }
-        .row-JAUNE { border-left: 4px solid #eab308; background: rgba(234,179,8,0.05); }
-        .eleve-row { display: grid; grid-template-columns: 1fr 150px 80px; gap: 10px; align-items: center; border-bottom: 1px solid #1e293b; }
+        .dot { width: 35px; height: 35px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.2); }
+        .dot-NOIR { background: #000; } .dot-ROUGE { background: #ef4444; } .dot-BLEU { background: #3b82f6; } 
+        .dot-VERT { background: #22c55e; } .dot-JAUNE { background: #eab308; }
+        .row-NOIR { border-left: 8px solid #000; background: rgba(0,0,0,0.3); }
+        .row-ROUGE { border-left: 8px solid #ef4444; background: rgba(239,68,68,0.1); }
+        .row-BLEU { border-left: 8px solid #3b82f6; background: rgba(59,130,246,0.1); }
+        .row-VERT { border-left: 8px solid #22c55e; background: rgba(34,197,94,0.1); }
+        .row-JAUNE { border-left: 8px solid #eab308; background: rgba(234,179,8,0.1); }
+        /* Style du sélecteur de numéro plus lisible */
+        .select-num { background: white; color: black; font-weight: 900; font-size: 1.2rem; border-radius: 8px; padding: 4px; border: 2px solid #3b82f6; }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-4 overflow-x-hidden">
 
-    <header class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-black text-blue-500 italic uppercase">Master Console</h1>
+    <header class="flex justify-between items-center mb-4 px-2">
+        <h1 class="text-2xl font-black italic text-blue-500 uppercase">CO-LOGIC MASTER</h1>
         <div class="flex gap-2">
-            <button onclick="exportIdoceo()" class="bg-green-600 px-4 py-2 rounded-lg font-bold text-[10px] uppercase">Export</button>
-            <button onclick="resetData()" class="bg-red-600 px-4 py-2 rounded-lg font-bold text-[10px] uppercase">Vider</button>
+            <button onclick="exportIdoceo()" class="bg-green-600 px-4 py-2 rounded-lg font-bold uppercase text-xs">Export iDoceo</button>
+            <button onclick="resetData()" class="bg-red-600 px-4 py-2 rounded-lg font-bold uppercase text-[10px]">Vider Base</button>
         </div>
     </header>
 
-    <div class="flex border-b border-slate-700 mb-6 uppercase text-[10px] font-bold tracking-widest overflow-x-auto">
-        <button id="btnTabEleves" onclick="switchTab('eleves')" class="px-4 py-3 tab-active whitespace-nowrap">👨‍🎓 Liste</button>
-        <button id="btnTabBilan" onclick="switchTab('bilan')" class="px-4 py-3 text-slate-400 whitespace-nowrap">📊 Résultats</button>
-        <button id="btnTabCorrection" onclick="switchTab('correction')" class="px-4 py-3 text-slate-400 whitespace-nowrap">📝 Correction</button>
+    <div class="flex border-b border-slate-700 mb-6 font-bold uppercase text-[10px] tracking-widest">
+        <button id="btnTabEleves" onclick="switchTab('eleves')" class="px-6 py-4 tab-active uppercase">👨‍🎓 Attribution</button>
+        <button id="btnTabBilan" onclick="switchTab('bilan')" class="px-6 py-4 text-slate-400 uppercase">📊 Résultats</button>
+        <button id="btnTabCorrection" onclick="switchTab('correction')" class="px-6 py-4 text-slate-400 uppercase">📝 Codes</button>
     </div>
 
     <div id="viewEleves" class="space-y-4">
-        <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-xl">
-            <div class="flex flex-col md:flex-row gap-4 items-end">
-                <div class="flex-1 w-full">
-                    <label class="block text-[10px] font-bold mb-2 opacity-50 uppercase">Classe :</label>
-                    <div class="flex gap-2">
-                        <select id="selectClasse" onchange="changeClasse(this.value)" class="bg-slate-900 border border-slate-600 rounded-lg p-2 text-sm font-bold flex-1"></select>
-                        <button onclick="ajouterClasse()" class="bg-blue-600 px-3 rounded-lg font-bold">+</button>
-                    </div>
-                </div>
-                <div class="flex-1 w-full">
-                    <label class="block text-[10px] font-bold mb-2 opacity-50 uppercase">CSV iDoceo :</label>
-                    <input type="file" id="csvFile" accept=".csv" class="text-xs text-slate-400 cursor-pointer"/>
-                </div>
+        <div class="bg-slate-800 p-4 rounded-2xl flex flex-wrap gap-4 items-center justify-between border border-slate-700 shadow-lg">
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] font-bold opacity-50 uppercase">Classe :</span>
+                <select id="selectClasse" onchange="changeClasse(this.value)" class="p-2 rounded-lg text-black font-bold"></select>
+                <button onclick="ajouterClasse()" class="bg-blue-600 px-3 py-1 rounded-lg font-black">+</button>
             </div>
-            <button onclick="ajouterEleveManuel()" class="w-full mt-4 bg-slate-700 py-2 rounded-xl text-[10px] font-bold uppercase border border-slate-600">+ Ajouter élève</button>
+            <div class="flex gap-2">
+                <input type="file" id="csvFile" accept=".csv" class="text-[10px] text-slate-400 border border-slate-600 p-2 rounded-lg"/>
+                <button onclick="ajouterEleveManuel()" class="bg-slate-700 px-3 py-2 rounded-lg font-bold text-[10px] uppercase">+ Élève</button>
+            </div>
         </div>
-        <div id="eleveList" class="flex flex-col gap-1"></div>
+        <div id="eleveList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3"></div>
     </div>
 
-    <div id="viewBilan" class="hidden">
-        <div class="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700">
-            <table class="w-full text-left text-[11px]">
-                <thead class="bg-slate-900 font-bold uppercase opacity-60">
-                    <tr><th class="p-4">Élève</th><th class="p-4 text-center">/60</th><th class="p-4 text-center text-blue-400">/20</th><th class="p-4">Progression</th></tr>
+    <div id="viewBilan" class="hidden animate-in fade-in">
+        <p class="text-[10px] opacity-50 italic mb-2">💡 Cliquez sur un élève pour voir le détail ou modifier un score.</p>
+        <div class="bg-slate-800 rounded-3xl overflow-hidden border border-slate-700 shadow-2xl">
+            <table class="w-full text-left">
+                <thead class="bg-slate-900 uppercase text-[10px] font-black opacity-60">
+                    <tr><th class="p-4">Élève</th><th class="p-4 text-center">Score /60</th><th class="p-4 text-center">Note /20</th><th class="p-4 text-center">Circuits</th></tr>
                 </thead>
-                <tbody id="tableBody"></tbody>
+                <tbody id="tableBody" class="text-sm font-bold cursor-pointer"></tbody>
             </table>
         </div>
     </div>
 
-    <div id="viewCorrection" class="hidden">
-        <div id="matrixContainer" class="bg-slate-800 rounded-2xl overflow-x-auto border border-slate-700"></div>
+    <div id="modalDetail" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-800 w-full max-w-lg rounded-3xl border border-slate-600 overflow-hidden shadow-2xl">
+            <div id="modalHeader" class="p-6 border-b border-slate-700 flex justify-between items-center">
+                <h3 id="modalTitle" class="text-2xl font-black uppercase italic"></h3>
+                <button onclick="closeModal()" class="text-3xl">&times;</button>
+            </div>
+            <div id="modalContent" class="p-6 max-h-[60vh] overflow-y-auto space-y-4 text-sm uppercase">
+                </div>
+            <div class="p-4 bg-slate-900 text-center">
+                <button onclick="closeModal()" class="bg-blue-600 px-8 py-3 rounded-xl font-black uppercase text-xs">Fermer</button>
+            </div>
+        </div>
     </div>
+
+    <div id="viewCorrection" class="hidden"><div id="matrixContainer" class="bg-slate-800 rounded-2xl overflow-x-auto"></div></div>
 
     <script>
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
@@ -87,45 +96,31 @@
             renderEleveList();
         }
 
-        document.getElementById('csvFile').addEventListener('change', function(e) {
-            const file = e.target.files[0]; const reader = new FileReader();
-            reader.onload = function(event) {
-                const lines = event.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
-                const newName = prompt("Nom de la classe ?", "402"); if(!newName) return;
-                const header = lines[0].replace(/"/g, '').split(lines[0].includes(';') ? ';' : ',');
-                const idxName = header.indexOf('@name'); const idxLast = header.indexOf('@lastname');
-                toutesLesClasses[newName] = lines.slice(1).map(line => {
-                    const sep = line.includes(';') ? ';' : ','; const parts = line.split(sep).map(p => p.replace(/"/g, '').trim());
-                    return { name: (parts[idxLast] || "").toUpperCase() + " " + (parts[idxName] || ""), color: '', num: '' };
-                }).sort((a,b) => a.name.localeCompare(b.name));
-                classeActive = newName; saveGlobal(); initGestionnaire();
-            };
-            reader.readAsText(file, "ISO-8859-1");
-        });
-
+        // Attribution : Rendu avec gros chiffres lisibles
         function renderEleveList() {
-            const container = document.getElementById('eleveList'); const liste = toutesLesClasses[classeActive] || [];
+            const container = document.getElementById('eleveList');
+            const liste = toutesLesClasses[classeActive] || [];
             container.innerHTML = liste.map((e, i) => `
-                <div class="p-3 px-4 eleve-row row-${e.color}">
-                    <span class="font-bold text-[11px] truncate uppercase">${e.name}</span>
-                    <div class="flex gap-1 justify-center">
-                        ${colors.map(c => `<button onclick="updateE(${i},'color','${c}')" class="color-dot dot-${c} ${e.color===c?'ring-2 ring-white scale-110':'opacity-30'}"></button>`).join('')}
+                <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 row-${e.color}">
+                    <div class="text-xl font-black mb-3 truncate leading-none uppercase">${e.nom}<br><span class="text-sm font-bold text-blue-300 capitalize">${e.prenom}</span></div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex gap-1">
+                            ${colors.map(c => `<button onclick="updateE(${i},'color','${c}')" class="dot dot-${c} ${e.color===c?'ring-4 ring-white':''}"></button>`).join('')}
+                        </div>
+                        <select onchange="updateE(${i},'num',this.value)" class="select-num">
+                            <option value="">-</option>${[1,2,3,4,5,6].map(n => `<option value="${n}" ${e.num==n?'selected':''}>${n}</option>`).join('')}
+                        </select>
                     </div>
-                    <select onchange="updateE(${i},'num',this.value)" class="bg-slate-900 text-xs p-1 rounded border border-slate-700 font-bold text-center">
-                        <option value="">-</option>${[1,2,3,4,5,6].map(n => `<option value="${n}" ${e.num==n?'selected':''}>${n}</option>`).join('')}
-                    </select>
                 </div>`).join('');
         }
 
         function updateE(i, f, v) { toutesLesClasses[classeActive][i][f] = v; saveGlobal(); renderEleveList(); }
-
-        function ajouterClasse() { const nom = prompt("Nom de la classe :"); if(nom) { toutesLesClasses[nom]=[]; classeActive=nom; saveGlobal(); initGestionnaire(); } }
         function saveGlobal() { localStorage.setItem('co_logic_classes', JSON.stringify(toutesLesClasses)); localStorage.setItem('co_logic_active_name', classeActive); }
-
-        function switchTab(tab) {
-            ['viewEleves', 'viewBilan', 'viewCorrection'].forEach(id => document.getElementById(id).classList.add('hidden'));
-            document.getElementById('view'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.remove('hidden');
-            if(tab === 'bilan') updateBilan();
+        function switchTab(t) {
+            ['viewEleves', 'viewBilan', 'viewCorrection'].forEach(v => document.getElementById(v).classList.add('hidden'));
+            document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden');
+            document.getElementById('btnTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('tab-active');
+            if(t==='bilan') updateBilan(); if(t==='correction') drawMatrix();
         }
 
         db.ref('sessions').on('value', snap => { sessions = snap.val() || {}; updateBilan(); });
@@ -135,58 +130,107 @@
             const tbody = document.getElementById('tableBody'); if(!tbody) return; tbody.innerHTML = "";
             (toutesLesClasses[classeActive] || []).forEach(e => {
                 if(!e.color || !e.num) return;
-                const data = sessions[`${e.color}_${e.num}`] || {};
+                const userKey = `${e.color}_${e.num}`;
+                const data = sessions[userKey] || {};
                 const p60 = Object.values(data).reduce((acc, c) => acc + c.score, 0);
                 const nb = Object.keys(data).length;
-                tbody.innerHTML += `<tr><td class="p-4 font-bold text-xs">${e.name} <br><span class="text-[9px] opacity-40">${e.color} ${e.num}</span></td><td class="p-4 text-center font-bold">${p60}</td><td class="p-4 text-center font-black text-blue-400 text-lg">${(p60/3).toFixed(1)}</td><td class="p-4"><div class="bg-slate-900 h-1.5 rounded-full overflow-hidden"><div class="bg-blue-500 h-1.5 rounded-full" style="width:${(nb/12)*100}%"></div></div></td></tr>`;
+                tbody.innerHTML += `<tr onclick="openDetail('${e.nom}', '${e.prenom}', '${userKey}')" class="border-b border-slate-700 hover:bg-slate-700/50">
+                    <td class="p-4 uppercase">${e.nom} <span class="capitalize text-blue-300 text-[10px]">${e.prenom}</span></td>
+                    <td class="p-4 text-center text-xl">${p60}</td>
+                    <td class="p-4 text-center font-black text-blue-400 text-2xl">${(p60/3).toFixed(1)}</td>
+                    <td class="p-4 text-center opacity-50 uppercase text-[10px]">${nb}/12</td>
+                </tr>`;
             });
         }
 
-        function drawMatrix() {
-            const container = document.getElementById('matrixContainer');
-            let html = `<table class="w-full text-center text-[9px] border-collapse"><thead class="bg-slate-900 uppercase"><tr><th class="p-2">#</th>`;
-            colors.forEach(col => { html += `<th colspan="2" class="p-2 border-l border-slate-700">${col}</th>`; });
-            html += `</tr></thead><tbody>`;
-            for(let c=1; c<=12; c++) {
-                html += `<tr class="border-b border-slate-800"><td class="p-2 font-bold">${c}</td>`;
-                colors.forEach(col => { const l = matrix[c][col]; html += `<td class="p-1"><input class="w-8 bg-transparent border border-slate-700 text-center uppercase" value="${l[0]}" onchange="upMat(${c},'${col}',0,this.value)"></td><td class="p-1"><input class="w-8 bg-transparent border border-slate-700 text-center uppercase" value="${l[1]}" onchange="upMat(${c},'${col}',1,this.value)"></td>`; });
-                html += `</tr>`;
+        function openDetail(nom, prenom, userKey) {
+            const data = sessions[userKey] || {};
+            document.getElementById('modalTitle').innerText = `${nom} ${prenom}`;
+            let html = "";
+            if(Object.keys(data).length === 0) {
+                html = "<p class='text-center py-10 opacity-50'>Aucun parcours enregistré.</p>";
+            } else {
+                Object.entries(data).sort().forEach(([circuit, info]) => {
+                    const date = new Date(info.timestamp).toLocaleTimeString();
+                    html += `
+                    <div class="flex justify-between items-center bg-slate-900 p-4 rounded-xl border border-slate-700">
+                        <div>
+                            <p class="font-black text-blue-400">${circuit.replace('C','PARCOURS ')}</p>
+                            <p class="text-[10px] opacity-40 italic">${date}</p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-xl font-black">${info.score} pts</span>
+                            <button onclick="editScore('${userKey}', '${circuit}')" class="bg-blue-600/20 text-blue-400 p-2 rounded text-[10px] font-bold">MODIFIER</button>
+                        </div>
+                    </div>`;
+                });
             }
-            container.innerHTML = html + "</tbody></table>";
+            document.getElementById('modalContent').innerHTML = html;
+            document.getElementById('modalDetail').classList.remove('hidden');
         }
 
-        function upMat(c, col, i, v) { db.ref(`settings/matrix/${c}/${col}/${i}`).set(v.toUpperCase().trim()); }
+        function editScore(userKey, circuit) {
+            const newScore = prompt("Nouveau score (0, 2 ou 5) :");
+            if (newScore !== null && [0, 2, 5].includes(parseInt(newScore))) {
+                db.ref(`sessions/${userKey}/${circuit}/score`).set(parseInt(newScore));
+                closeModal();
+            } else if (newScore !== null) {
+                alert("Score invalide. Utilisez 0, 2 ou 5.");
+            }
+        }
 
-        function initMatrix() {
-            const def = {
-                1: { NOIR:['D','Q'], ROUGE:['O','U'], BLEU:['Y','A'], VERT:['E','R'], JAUNE:['N','K'] },
-                2: { NOIR:['E','X'], ROUGE:['X','Y'], BLEU:['T','L'], VERT:['R','O'], JAUNE:['A','L'] },
-                3: { NOIR:['C','L'], ROUGE:['H','U'], BLEU:['1','B'], VERT:['O','1'], JAUNE:['T','E'] },
-                4: { NOIR:['R','V'], ROUGE:['E','E'], BLEU:['C','R'], VERT:['T','N'], JAUNE:['O','S'] },
-                5: { NOIR:['A','B'], ROUGE:['J','O'], BLEU:['O','U'], VERT:['N','E'], JAUNE:['C','S'] },
-                6: { NOIR:['F','M'], ROUGE:['1','E'], BLEU:['C','R'], VERT:['U','O'], JAUNE:['S','U'] },
-                7: { NOIR:['G','H'], ROUGE:['U','A'], BLEU:['E','C'], VERT:['U','H'], JAUNE:['X','E'] },
-                8: { NOIR:['I','J'], ROUGE:['V','E'], BLEU:['R','A'], VERT:['E','N'], JAUNE:['S','S'] },
-                9: { NOIR:['K','N'], ROUGE:['N','R'], BLEU:['R','C'], VERT:['Y','E'], JAUNE:['A','E'] },
-                10: { NOIR:['O','S'], ROUGE:['S','C'], BLEU:['C','E'], VERT:['E','A'], JAUNE:['Z','N'] },
-                11: { NOIR:['P','T'], ROUGE:['A','U'], BLEU:['L','Y'], VERT:['U','A'], JAUNE:['D','U'] },
-                12: { NOIR:['U','W'], ROUGE:['L','M'], BLEU:['T','N'], VERT:['R','C'], JAUNE:['A','H'] }
+        function closeModal() { document.getElementById('modalDetail').classList.add('hidden'); }
+
+        // (Autres fonctions inchangées : Import, Manuel, Matrix, Export, etc.)
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0]; const reader = new FileReader();
+            reader.onload = function(event) {
+                const lines = event.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
+                const name = prompt("Nom de la classe ?"); if(!name) return;
+                const h = lines[0].replace(/"/g, '').split(lines[0].includes(';') ? ';' : ',');
+                const idxNom = h.indexOf('@lastname'); const idxPre = h.indexOf('@name');
+                toutesLesClasses[name] = lines.slice(1).map(line => {
+                    const sep = line.includes(';') ? ';' : ','; const p = line.split(sep).map(v => v.replace(/"/g, '').trim());
+                    return { nom: (p[idxNom] || "").toUpperCase(), prenom: p[idxPre] || "", color: '', num: '' };
+                }).sort((a,b) => a.nom.localeCompare(b.nom));
+                classeActive = name; saveGlobal(); initGestionnaire();
             };
+            reader.readAsText(file, "ISO-8859-1");
+        });
+        function ajouterEleveManuel() {
+            const nom = prompt("NOM Prénom :");
+            if (nom) { toutesLesClasses[classeActive].push({ nom: nom.toUpperCase(), prenom: "", color: '', num: '' }); trierEtSauver(); }
+        }
+        function trierEtSauver() { toutesLesClasses[classeActive].sort((a,b) => a.nom.localeCompare(b.nom)); saveGlobal(); renderEleveList(); }
+        function ajouterClasse() { const n = prompt("Nom ?"); if(n) { toutesLesClasses[n]=[]; saveGlobal(); initGestionnaire(); } }
+        function drawMatrix() {
+            const c = document.getElementById('matrixContainer');
+            let h = `<table class="w-full text-center text-[10px]"><thead class="bg-slate-900"><tr><th class="p-2">#</th>`;
+            colors.forEach(col => { h += `<th colspan="2" class="p-2 border-l border-slate-700">${col}</th>`; });
+            h += `</tr></thead><tbody>`;
+            for(let i=1; i<=12; i++) {
+                h += `<tr class="border-b border-slate-700"><td class="p-2 font-black">${i}</td>`;
+                colors.forEach(col => { const l = matrix[i][col]; h += `<td class="p-1"><input class="input-table" value="${l[0]}" onchange="upMat(${i},'${col}',0,this.value)"></td><td class="p-1"><input class="input-table" value="${l[1]}" onchange="upMat(${i},'${col}',1,this.value)"></td>`; });
+                h += `</tr>`;
+            }
+            c.innerHTML = h + "</tbody></table>";
+        }
+        function upMat(c, col, i, v) { db.ref(`settings/matrix/${c}/${col}/${i}`).set(v.toUpperCase().trim()); }
+        function initMatrix() {
+            const def = { 1: { NOIR:['D','Q'], ROUGE:['O','U'], BLEU:['Y','A'], VERT:['E','R'], JAUNE:['N','K'] }, 2: { NOIR:['E','X'], ROUGE:['X','Y'], BLEU:['T','L'], VERT:['R','O'], JAUNE:['A','L'] }, 3: { NOIR:['C','L'], ROUGE:['H','U'], BLEU:['1','B'], VERT:['O','1'], JAUNE:['T','E'] }, 4: { NOIR:['R','V'], ROUGE:['E','E'], BLEU:['C','R'], VERT:['T','N'], JAUNE:['O','S'] }, 5: { NOIR:['A','B'], ROUGE:['J','O'], BLEU:['O','U'], VERT:['N','E'], JAUNE:['C','S'] }, 6: { NOIR:['F','M'], ROUGE:['1','E'], BLEU:['C','R'], VERT:['U','O'], JAUNE:['S','U'] }, 7: { NOIR:['G','H'], ROUGE:['U','A'], BLEU:['E','C'], VERT:['U','H'], JAUNE:['X','E'] }, 8: { NOIR:['I','J'], ROUGE:['V','E'], BLEU:['R','A'], VERT:['E','N'], JAUNE:['S','S'] }, 9: { NOIR:['K','N'], ROUGE:['N','R'], BLEU:['R','C'], VERT:['Y','E'], JAUNE:['A','E'] }, 10: { NOIR:['O','S'], ROUGE:['S','C'], BLEU:['C','E'], VERT:['E','A'], JAUNE:['Z','N'] }, 11: { NOIR:['P','T'], ROUGE:['A','U'], BLEU:['L','Y'], VERT:['U','A'], JAUNE:['D','U'] }, 12: { NOIR:['U','W'], ROUGE:['L','M'], BLEU:['T','N'], VERT:['R','C'], JAUNE:['A','H'] } };
             db.ref('settings/matrix').set(def); return def;
         }
-
         function exportIdoceo() {
-            let csv = "\uFEFFNom;Groupe;Pts_60;Note_20\n";
+            let csv = "\uFEFF@lastname;@name;Points;Note\n";
             (toutesLesClasses[classeActive] || []).forEach(e => {
                 const data = sessions[`${e.color}_${e.num}`] || {};
-                const p60 = Object.values(data).reduce((acc, c) => acc + c.score, 0);
-                csv += `${e.name};${e.color} ${e.num};${p60};${(p60/3).toFixed(2)}\n`;
+                const p60 = Object.values(data).reduce((a,c) => a + c.score, 0);
+                csv += `${e.nom};${e.prenom};${p60};${(p60/3).toFixed(2)}\n`;
             });
-            const blob = new Blob([csv], {type:'text/csv;charset=utf-8'}); const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob); a.download = `Resultats_${classeActive}.csv`; a.click();
+            const b = new Blob([csv], {type:'text/csv;charset=utf-8'}); const a = document.createElement('a');
+            a.href = URL.createObjectURL(b); a.download = `Export_${classeActive}.csv`; a.click();
         }
-
-        function resetData() { if(prompt("Code RNE :")==="0680013V" && confirm("Vider session ?")) db.ref('sessions').remove(); }
+        function resetData() { if(prompt("Code RNE :")==="0680013V" && confirm("Tout vider ?")) db.ref('sessions').remove(); }
         initGestionnaire();
     </script>
 </body>
