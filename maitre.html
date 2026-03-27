@@ -10,10 +10,14 @@
     <style>
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
         .tab-active { border-bottom: 4px solid #3b82f6; color: #3b82f6; font-weight: 900; }
-        .dot { width: 35px; height: 35px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.2); }
+        
+        /* Style des boutons de couleur */
+        .dot { width: 35px; height: 35px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.2); transition: transform 0.1s; }
+        .dot:active { transform: scale(0.8); }
         .dot-NOIR { background: #000; } .dot-ROUGE { background: #ef4444; } .dot-BLEU { background: #3b82f6; } 
         .dot-VERT { background: #22c55e; } .dot-JAUNE { background: #eab308; }
         
+        /* Indicateurs visuels par couleur */
         .row-NOIR { border-left: 8px solid #000; background: rgba(0,0,0,0.3) !important; }
         .row-ROUGE { border-left: 8px solid #ef4444; background: rgba(239,68,68,0.1) !important; }
         .row-BLEU { border-left: 8px solid #3b82f6; background: rgba(59,130,246,0.1) !important; }
@@ -56,8 +60,7 @@
     </div>
 
     <div id="viewBilan" class="hidden animate-in fade-in">
-        <div id="resultList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            </div>
+        <div id="resultList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
     </div>
 
     <div id="modalDetail" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
@@ -82,7 +85,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let toutesLesClasses = JSON.parse(localStorage.getItem('co_logic_classes')) || { "MA CLASSE": [] };
+        let toutesLesClasses = JSON.parse(localStorage.getItem('co_logic_classes')) || { "305": [] };
         let classeActive = localStorage.getItem('co_logic_active_name') || Object.keys(toutesLesClasses)[0];
         let sessions = {}; let matrix = {}; const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
 
@@ -123,46 +126,49 @@
                 const nb = Object.keys(data).length;
                 const p20 = (p60/3).toFixed(1);
 
-                // Correction ici : l'appel à openDetail est bien sur la div cliquable
-                container.innerHTML += `
-                <div onclick="openDetail('${e.nom.replace(/'/g, "\\'")}', '${e.prenom.replace(/'/g, "\\'")}', '${userKey}')" 
-                     class="bg-slate-800 p-4 rounded-2xl border border-slate-700 row-${e.color} cursor-pointer active:scale-95 transition-transform shadow-lg">
-                    <div class="flex justify-between items-start mb-2">
+                const card = document.createElement('div');
+                card.className = `bg-slate-800 p-4 rounded-2xl border border-slate-700 row-${e.color} cursor-pointer active:scale-95 transition-transform shadow-lg`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2 pointer-events-none">
                         <div class="text-lg font-black uppercase leading-tight">${e.nom}<br><span class="text-xs font-bold text-blue-300 capitalize">${e.prenom}</span></div>
                         <div class="bg-slate-900/50 px-2 py-1 rounded text-[10px] font-bold opacity-60 uppercase">${e.color} ${e.num}</div>
                     </div>
-                    <div class="flex items-end justify-between border-t border-white/10 pt-3">
+                    <div class="flex items-end justify-between border-t border-white/10 pt-3 pointer-events-none">
                         <div><span class="text-3xl font-black text-blue-400">${p20}</span><span class="text-xs opacity-50">/20</span></div>
                         <div class="text-right">
                             <div class="text-lg font-bold">${p60}<span class="text-[10px] opacity-50"> pts</span></div>
                             <div class="text-[10px] opacity-40 uppercase font-bold">${nb} parcours</div>
                         </div>
-                    </div>
-                </div>`;
+                    </div>`;
+                
+                card.addEventListener('click', () => openDetail(e.nom, e.prenom, userKey));
+                container.appendChild(card);
             });
         }
 
         function openDetail(nom, prenom, userKey) {
             const data = sessions[userKey] || {};
-            document.getElementById('modalTitle').innerText = `${nom} ${prenom}`;
+            document.getElementById('modalTitle').innerText = nom + " " + prenom;
             let html = "";
             
             if(Object.keys(data).length === 0) {
-                html = "<p class='text-center py-10 opacity-50 italic'>Aucune balise enregistrée.</p>";
+                html = "<p class='text-center py-10 opacity-50 italic'>Aucun parcours enregistré.</p>";
             } else {
                 const sortedEntries = Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp);
                 sortedEntries.forEach(([circuit, info]) => {
-                    const time = new Date(info.timestamp).toLocaleTimeString([], {hour: '2d', minute:'2d', second:'2d'});
+                    const time = new Date(info.timestamp).toLocaleTimeString('fr-FR', {
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
+                    });
                     const scoreColor = info.score === 5 ? 'text-green-400' : (info.score === 2 ? 'text-yellow-400' : 'text-red-400');
                     html += `
                     <div class="flex justify-between items-center bg-slate-900 p-4 rounded-2xl border border-slate-700">
                         <div>
                             <p class="font-black text-sm text-blue-300">${circuit.replace('C','PARCOURS ')}</p>
-                            <p class="text-[10px] opacity-40 font-mono tracking-tighter">${time}</p>
+                            <p class="text-[10px] opacity-40 font-mono italic">Heure : ${time}</p>
                         </div>
                         <div class="flex items-center gap-3">
                             <span class="text-xl font-black ${scoreColor}">${info.score} pts</span>
-                            <button onclick="editScore('${userKey}', '${circuit}')" class="bg-white/5 p-2 rounded-lg text-[10px] font-bold border border-white/10 uppercase">Éditer</button>
+                            <button onclick="editScore('${userKey}', '${circuit}')" class="bg-white/10 p-2 rounded-lg text-[10px] font-bold border border-white/10 uppercase">Éditer</button>
                         </div>
                     </div>`;
                 });
@@ -172,11 +178,11 @@
         }
 
         function editScore(userKey, circuit) {
-            const newScore = prompt("Correction (0, 2 ou 5 pts) :");
-            if (newScore !== null && [0, 2, 5].includes(parseInt(newScore))) {
-                db.ref(`sessions/${userKey}/${circuit}/score`).set(parseInt(newScore));
+            const val = prompt("Correction (0, 2 ou 5 pts) :");
+            if (val !== null && [0, 2, 5].includes(parseInt(val))) {
+                db.ref(`sessions/${userKey}/${circuit}/score`).set(parseInt(val));
                 closeModal();
-                setTimeout(() => { switchTab('bilan'); }, 200);
+                setTimeout(() => { updateBilan(); }, 200);
             }
         }
 
@@ -191,13 +197,12 @@
             if(t==='correction') drawMatrix();
         }
 
-        // --- FIREBASE ET INIT ---
         db.ref('sessions').on('value', snap => { sessions = snap.val() || {}; if(!document.getElementById('viewBilan').classList.contains('hidden')) updateBilan(); });
         db.ref('settings/matrix').on('value', snap => { matrix = snap.val() || initMatrix(); drawMatrix(); });
 
         function updateE(i, f, v) { toutesLesClasses[classeActive][i][f] = v; saveGlobal(); renderEleveList(); }
         function saveGlobal() { localStorage.setItem('co_logic_classes', JSON.stringify(toutesLesClasses)); localStorage.setItem('co_logic_active_name', classeActive); }
-        function changeClasse(n) { classeActive = n; saveGlobal(); initGestionnaire(); if(!document.getElementById('viewBilan').classList.contains('hidden')) updateBilan(); }
+        function changeClasse(n) { classeActive = n; saveGlobal(); initGestionnaire(); updateBilan(); }
         function ajouterClasse() { const n = prompt("Nom ?"); if(n) { toutesLesClasses[n]=[]; saveGlobal(); initGestionnaire(); } }
         function supprimerClasse() { if(Object.keys(toutesLesClasses).length <= 1) return; if(confirm(`Supprimer ${classeActive} ?`)) { delete toutesLesClasses[classeActive]; classeActive = Object.keys(toutesLesClasses)[0]; saveGlobal(); initGestionnaire(); } }
 
