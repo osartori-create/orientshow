@@ -13,21 +13,24 @@
         .dot { width: 35px; height: 35px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.2); }
         .dot-NOIR { background: #000; } .dot-ROUGE { background: #ef4444; } .dot-BLEU { background: #3b82f6; } 
         .dot-VERT { background: #22c55e; } .dot-JAUNE { background: #eab308; }
-        .row-NOIR { border-left: 8px solid #000; background: rgba(0,0,0,0.3); }
-        .row-ROUGE { border-left: 8px solid #ef4444; background: rgba(239,68,68,0.1); }
-        .row-BLEU { border-left: 8px solid #3b82f6; background: rgba(59,130,246,0.1); }
-        .row-VERT { border-left: 8px solid #22c55e; background: rgba(34,197,94,0.1); }
-        .row-JAUNE { border-left: 8px solid #eab308; background: rgba(234,179,8,0.1); }
-        /* Style du sélecteur de numéro plus lisible */
-        .select-num { background: white; color: black; font-weight: 900; font-size: 1.2rem; border-radius: 8px; padding: 4px; border: 2px solid #3b82f6; }
+        
+        /* Couleurs de lignes et cartes */
+        .row-NOIR { border-left: 8px solid #000; background: rgba(0,0,0,0.3) !important; }
+        .row-ROUGE { border-left: 8px solid #ef4444; background: rgba(239,68,68,0.1) !important; }
+        .row-BLEU { border-left: 8px solid #3b82f6; background: rgba(59,130,246,0.1) !important; }
+        .row-VERT { border-left: 8px solid #22c55e; background: rgba(34,197,94,0.1) !important; }
+        .row-JAUNE { border-left: 8px solid #eab308; background: rgba(234,179,8,0.1) !important; }
+
+        .select-num { background: white; color: black; font-weight: 900; font-size: 1.3rem; border-radius: 8px; padding: 5px; border: 2px solid #3b82f6; width: 65px; text-align: center; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="p-4 overflow-x-hidden">
+<body class="p-4">
 
     <header class="flex justify-between items-center mb-4 px-2">
         <h1 class="text-2xl font-black italic text-blue-500 uppercase">CO-LOGIC MASTER</h1>
         <div class="flex gap-2">
-            <button onclick="exportIdoceo()" class="bg-green-600 px-4 py-2 rounded-lg font-bold uppercase text-xs">Export iDoceo</button>
+            <button onclick="exportIdoceo()" class="bg-green-600 px-4 py-2 rounded-lg font-bold uppercase text-xs shadow-lg">Export iDoceo</button>
             <button onclick="resetData()" class="bg-red-600 px-4 py-2 rounded-lg font-bold uppercase text-[10px]">Vider Base</button>
         </div>
     </header>
@@ -39,7 +42,7 @@
     </div>
 
     <div id="viewEleves" class="space-y-4">
-        <div class="bg-slate-800 p-4 rounded-2xl flex flex-wrap gap-4 items-center justify-between border border-slate-700 shadow-lg">
+        <div class="bg-slate-800 p-4 rounded-2xl flex flex-wrap gap-4 items-center justify-between border border-slate-700">
             <div class="flex items-center gap-2">
                 <span class="text-[10px] font-bold opacity-50 uppercase">Classe :</span>
                 <select id="selectClasse" onchange="changeClasse(this.value)" class="p-2 rounded-lg text-black font-bold"></select>
@@ -50,43 +53,38 @@
                 <button onclick="ajouterEleveManuel()" class="bg-slate-700 px-3 py-2 rounded-lg font-bold text-[10px] uppercase">+ Élève</button>
             </div>
         </div>
-        <div id="eleveList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3"></div>
+        <div id="eleveList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
     </div>
 
     <div id="viewBilan" class="hidden animate-in fade-in">
-        <p class="text-[10px] opacity-50 italic mb-2">💡 Cliquez sur un élève pour voir le détail ou modifier un score.</p>
-        <div class="bg-slate-800 rounded-3xl overflow-hidden border border-slate-700 shadow-2xl">
-            <table class="w-full text-left">
-                <thead class="bg-slate-900 uppercase text-[10px] font-black opacity-60">
-                    <tr><th class="p-4">Élève</th><th class="p-4 text-center">Score /60</th><th class="p-4 text-center">Note /20</th><th class="p-4 text-center">Circuits</th></tr>
-                </thead>
-                <tbody id="tableBody" class="text-sm font-bold cursor-pointer"></tbody>
-            </table>
-        </div>
+        <div id="resultList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            </div>
     </div>
 
-    <div id="modalDetail" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
+    <div id="modalDetail" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-slate-800 w-full max-w-lg rounded-3xl border border-slate-600 overflow-hidden shadow-2xl">
-            <div id="modalHeader" class="p-6 border-b border-slate-700 flex justify-between items-center">
-                <h3 id="modalTitle" class="text-2xl font-black uppercase italic"></h3>
-                <button onclick="closeModal()" class="text-3xl">&times;</button>
+            <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900/50">
+                <h3 id="modalTitle" class="text-2xl font-black uppercase italic text-blue-400"></h3>
+                <button onclick="closeModal()" class="text-4xl opacity-50 hover:opacity-100 transition-opacity">&times;</button>
             </div>
-            <div id="modalContent" class="p-6 max-h-[60vh] overflow-y-auto space-y-4 text-sm uppercase">
+            <div id="modalContent" class="p-6 max-h-[60vh] overflow-y-auto space-y-3">
                 </div>
-            <div class="p-4 bg-slate-900 text-center">
-                <button onclick="closeModal()" class="bg-blue-600 px-8 py-3 rounded-xl font-black uppercase text-xs">Fermer</button>
+            <div class="p-4 bg-slate-900/80 text-center border-t border-slate-700">
+                <button onclick="closeModal()" class="bg-slate-700 px-10 py-3 rounded-xl font-black uppercase text-xs tracking-widest">Fermer</button>
             </div>
         </div>
     </div>
 
-    <div id="viewCorrection" class="hidden"><div id="matrixContainer" class="bg-slate-800 rounded-2xl overflow-x-auto"></div></div>
+    <div id="viewCorrection" class="hidden">
+        <div id="matrixContainer" class="bg-slate-800 rounded-2xl overflow-x-auto border border-slate-700 shadow-2xl"></div>
+    </div>
 
     <script>
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let toutesLesClasses = JSON.parse(localStorage.getItem('co_logic_classes')) || { "305": [] };
+        let toutesLesClasses = JSON.parse(localStorage.getItem('co_logic_classes')) || { "MA CLASSE": [] };
         let classeActive = localStorage.getItem('co_logic_active_name') || Object.keys(toutesLesClasses)[0];
         let sessions = {}; let matrix = {}; const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
 
@@ -96,7 +94,7 @@
             renderEleveList();
         }
 
-        // Attribution : Rendu avec gros chiffres lisibles
+        // --- Rendu Attribution ---
         function renderEleveList() {
             const container = document.getElementById('eleveList');
             const liste = toutesLesClasses[classeActive] || [];
@@ -114,53 +112,63 @@
                 </div>`).join('');
         }
 
-        function updateE(i, f, v) { toutesLesClasses[classeActive][i][f] = v; saveGlobal(); renderEleveList(); }
-        function saveGlobal() { localStorage.setItem('co_logic_classes', JSON.stringify(toutesLesClasses)); localStorage.setItem('co_logic_active_name', classeActive); }
-        function switchTab(t) {
-            ['viewEleves', 'viewBilan', 'viewCorrection'].forEach(v => document.getElementById(v).classList.add('hidden'));
-            document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden');
-            document.getElementById('btnTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('tab-active');
-            if(t==='bilan') updateBilan(); if(t==='correction') drawMatrix();
-        }
-
-        db.ref('sessions').on('value', snap => { sessions = snap.val() || {}; updateBilan(); });
-        db.ref('settings/matrix').on('value', snap => { matrix = snap.val() || initMatrix(); drawMatrix(); });
-
+        // --- Rendu Résultats (Format Cartes Harmonisé) ---
         function updateBilan() {
-            const tbody = document.getElementById('tableBody'); if(!tbody) return; tbody.innerHTML = "";
-            (toutesLesClasses[classeActive] || []).forEach(e => {
+            const container = document.getElementById('resultList');
+            if(!container) return;
+            container.innerHTML = "";
+            const liste = toutesLesClasses[classeActive] || [];
+            
+            liste.forEach(e => {
                 if(!e.color || !e.num) return;
                 const userKey = `${e.color}_${e.num}`;
                 const data = sessions[userKey] || {};
                 const p60 = Object.values(data).reduce((acc, c) => acc + c.score, 0);
                 const nb = Object.keys(data).length;
-                tbody.innerHTML += `<tr onclick="openDetail('${e.nom}', '${e.prenom}', '${userKey}')" class="border-b border-slate-700 hover:bg-slate-700/50">
-                    <td class="p-4 uppercase">${e.nom} <span class="capitalize text-blue-300 text-[10px]">${e.prenom}</span></td>
-                    <td class="p-4 text-center text-xl">${p60}</td>
-                    <td class="p-4 text-center font-black text-blue-400 text-2xl">${(p60/3).toFixed(1)}</td>
-                    <td class="p-4 text-center opacity-50 uppercase text-[10px]">${nb}/12</td>
-                </tr>`;
+                const p20 = (p60/3).toFixed(1);
+
+                container.innerHTML += `
+                <div onclick="openDetail('${e.nom}', '${e.prenom}', '${userKey}')" class="bg-slate-800 p-4 rounded-2xl border border-slate-700 row-${e.color} cursor-pointer active:scale-95 transition-transform shadow-lg">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="text-lg font-black uppercase leading-tight">${e.nom}<br><span class="text-xs font-bold text-blue-300 capitalize">${e.prenom}</span></div>
+                        <div class="bg-slate-900/50 px-2 py-1 rounded text-[10px] font-bold opacity-60 uppercase">${e.color} ${e.num}</div>
+                    </div>
+                    <div class="flex items-end justify-between border-t border-white/10 pt-3">
+                        <div><span class="text-3xl font-black text-blue-400">${p20}</span><span class="text-xs opacity-50">/20</span></div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold">${p60}<span class="text-[10px] opacity-50"> pts</span></div>
+                            <div class="text-[10px] opacity-40 uppercase font-bold">${nb} parcours</div>
+                        </div>
+                    </div>
+                </div>`;
             });
         }
 
+        // --- Détail Chronologique ---
         function openDetail(nom, prenom, userKey) {
             const data = sessions[userKey] || {};
             document.getElementById('modalTitle').innerText = `${nom} ${prenom}`;
             let html = "";
+            
             if(Object.keys(data).length === 0) {
-                html = "<p class='text-center py-10 opacity-50'>Aucun parcours enregistré.</p>";
+                html = "<p class='text-center py-10 opacity-50 italic'>Aucune balise enregistrée pour le moment.</p>";
             } else {
-                Object.entries(data).sort().forEach(([circuit, info]) => {
-                    const date = new Date(info.timestamp).toLocaleTimeString();
+                // TRI CHRONOLOGIQUE (Le plus récent en premier)
+                const sortedEntries = Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp);
+                
+                sortedEntries.forEach(([circuit, info]) => {
+                    const time = new Date(info.timestamp).toLocaleTimeString([], {hour: '2d', minute:'2d', second:'2d'});
+                    const scoreColor = info.score === 5 ? 'text-green-400' : (info.score === 2 ? 'text-yellow-400' : 'text-red-400');
+                    
                     html += `
-                    <div class="flex justify-between items-center bg-slate-900 p-4 rounded-xl border border-slate-700">
+                    <div class="flex justify-between items-center bg-slate-900 p-4 rounded-2xl border border-slate-700 shadow-inner">
                         <div>
-                            <p class="font-black text-blue-400">${circuit.replace('C','PARCOURS ')}</p>
-                            <p class="text-[10px] opacity-40 italic">${date}</p>
+                            <p class="font-black text-sm text-blue-300">${circuit.replace('C','PARCOURS ')}</p>
+                            <p class="text-[10px] opacity-40 font-mono tracking-tighter">Heure de validation : ${time}</p>
                         </div>
-                        <div class="flex items-center gap-4">
-                            <span class="text-xl font-black">${info.score} pts</span>
-                            <button onclick="editScore('${userKey}', '${circuit}')" class="bg-blue-600/20 text-blue-400 p-2 rounded text-[10px] font-bold">MODIFIER</button>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl font-black ${scoreColor}">${info.score} pts</span>
+                            <button onclick="editScore('${userKey}', '${circuit}')" class="bg-white/5 hover:bg-white/10 p-2 rounded-lg text-[10px] font-bold border border-white/10 uppercase">Éditer</button>
                         </div>
                     </div>`;
                 });
@@ -170,18 +178,37 @@
         }
 
         function editScore(userKey, circuit) {
-            const newScore = prompt("Nouveau score (0, 2 ou 5) :");
+            const newScore = prompt("Correction manuelle (0, 2 ou 5 pts) :");
             if (newScore !== null && [0, 2, 5].includes(parseInt(newScore))) {
                 db.ref(`sessions/${userKey}/${circuit}/score`).set(parseInt(newScore));
-                closeModal();
-            } else if (newScore !== null) {
-                alert("Score invalide. Utilisez 0, 2 ou 5.");
+                // On ne ferme pas le modal pour pouvoir continuer les corrections si besoin
+                setTimeout(() => {
+                    const activeEleve = document.getElementById('modalTitle').innerText.split(' ');
+                    openDetail(activeEleve[0], activeEleve[1], userKey);
+                }, 200);
             }
         }
 
         function closeModal() { document.getElementById('modalDetail').classList.add('hidden'); }
+        function switchTab(t) {
+            ['viewEleves', 'viewBilan', 'viewCorrection'].forEach(v => document.getElementById(v).classList.add('hidden'));
+            ['btnTabEleves', 'btnTabBilan', 'btnTabCorrection'].forEach(id => document.getElementById(id).classList.remove('tab-active', 'text-blue-500'));
+            document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden');
+            document.getElementById('btnTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('tab-active');
+            if(t==='bilan') updateBilan(); if(t==='correction') drawMatrix();
+        }
 
-        // (Autres fonctions inchangées : Import, Manuel, Matrix, Export, etc.)
+        // --- FIREBASE LOGS ---
+        db.ref('sessions').on('value', snap => { sessions = snap.val() || {}; updateBilan(); });
+        db.ref('settings/matrix').on('value', snap => { matrix = snap.val() || initMatrix(); drawMatrix(); });
+
+        // --- AUTRES FONCTIONS (Inchangées) ---
+        function updateE(i, f, v) { toutesLesClasses[classeActive][i][f] = v; saveGlobal(); renderEleveList(); }
+        function saveGlobal() { localStorage.setItem('co_logic_classes', JSON.stringify(toutesLesClasses)); localStorage.setItem('co_logic_active_name', classeActive); }
+        function changeClasse(n) { classeActive = n; localStorage.setItem('co_logic_active_name', n); renderEleveList(); updateBilan(); }
+        function ajouterClasse() { const n = prompt("Nom de la classe (ex: 402) :"); if(n) { toutesLesClasses[n]=[]; saveGlobal(); initGestionnaire(); } }
+        function supprimerClasse() { if(Object.keys(toutesLesClasses).length <= 1) return; if(confirm(`Supprimer ${classeActive} ?`)) { delete toutesLesClasses[classeActive]; classeActive = Object.keys(toutesLesClasses)[0]; saveGlobal(); initGestionnaire(); } }
+        
         document.getElementById('csvFile').addEventListener('change', function(e) {
             const file = e.target.files[0]; const reader = new FileReader();
             reader.onload = function(event) {
@@ -197,20 +224,20 @@
             };
             reader.readAsText(file, "ISO-8859-1");
         });
+
         function ajouterEleveManuel() {
             const nom = prompt("NOM Prénom :");
-            if (nom) { toutesLesClasses[classeActive].push({ nom: nom.toUpperCase(), prenom: "", color: '', num: '' }); trierEtSauver(); }
+            if (nom) { toutesLesClasses[classeActive].push({ nom: nom.toUpperCase(), prenom: "", color: '', num: '' }); toutesLesClasses[classeActive].sort((a,b) => a.nom.localeCompare(b.nom)); saveGlobal(); renderEleveList(); }
         }
-        function trierEtSauver() { toutesLesClasses[classeActive].sort((a,b) => a.nom.localeCompare(b.nom)); saveGlobal(); renderEleveList(); }
-        function ajouterClasse() { const n = prompt("Nom ?"); if(n) { toutesLesClasses[n]=[]; saveGlobal(); initGestionnaire(); } }
+
         function drawMatrix() {
             const c = document.getElementById('matrixContainer');
-            let h = `<table class="w-full text-center text-[10px]"><thead class="bg-slate-900"><tr><th class="p-2">#</th>`;
-            colors.forEach(col => { h += `<th colspan="2" class="p-2 border-l border-slate-700">${col}</th>`; });
+            let h = `<table class="w-full text-center text-[10px]"><thead class="bg-slate-900 font-bold uppercase"><tr><th class="p-3 border-r border-slate-700">#</th>`;
+            colors.forEach(col => { h += `<th colspan="2" class="p-3 border-r border-slate-700">${col}</th>`; });
             h += `</tr></thead><tbody>`;
             for(let i=1; i<=12; i++) {
-                h += `<tr class="border-b border-slate-700"><td class="p-2 font-black">${i}</td>`;
-                colors.forEach(col => { const l = matrix[i][col]; h += `<td class="p-1"><input class="input-table" value="${l[0]}" onchange="upMat(${i},'${col}',0,this.value)"></td><td class="p-1"><input class="input-table" value="${l[1]}" onchange="upMat(${i},'${col}',1,this.value)"></td>`; });
+                h += `<tr class="border-b border-slate-700"><td class="p-2 font-black italic bg-slate-900/30">${i}</td>`;
+                colors.forEach(col => { const l = matrix[i][col]; h += `<td class="p-1"><input class="w-8 bg-transparent border border-slate-700 text-center uppercase font-bold" value="${l[0]}" onchange="upMat(${i},'${col}',0,this.value)"></td><td class="p-1 border-r border-slate-700"><input class="w-8 bg-transparent border border-slate-700 text-center uppercase font-bold" value="${l[1]}" onchange="upMat(${i},'${col}',1,this.value)"></td>`; });
                 h += `</tr>`;
             }
             c.innerHTML = h + "</tbody></table>";
@@ -230,7 +257,7 @@
             const b = new Blob([csv], {type:'text/csv;charset=utf-8'}); const a = document.createElement('a');
             a.href = URL.createObjectURL(b); a.download = `Export_${classeActive}.csv`; a.click();
         }
-        function resetData() { if(prompt("Code RNE :")==="0680013V" && confirm("Tout vider ?")) db.ref('sessions').remove(); }
+        function resetData() { if(prompt("Code RNE :")==="0680013V" && confirm("Supprimer tous les scores de la classe ?")) db.ref('sessions').remove(); }
         initGestionnaire();
     </script>
 </body>
