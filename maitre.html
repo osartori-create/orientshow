@@ -3,170 +3,286 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orient'Show | Maître</title>
+    <title>Orient'Show | Master Console</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
-        body { background-color: #0f172a; color: white; }
+        body { background-color: #0f172a; color: white; font-family: sans-serif; }
         .tab-active { border-bottom: 4px solid #3b82f6; color: #3b82f6; font-weight: 900; }
         tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
-        .input-table { background: transparent; border: 1px solid #334155; text-align: center; width: 40px; text-transform: uppercase; border-radius: 4px; color: white; }
+        .input-table { background: transparent; border: 1px solid #334155; text-align: center; width: 40px; text-transform: uppercase; border-radius: 4px; color: white; font-weight: bold; }
+        .input-table:focus { border-color: #3b82f6; outline: none; background: #1e293b; }
+        select { color-scheme: dark; }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
     <header class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-black italic uppercase text-blue-500">Master Console</h1>
-        <button onclick="exportIdoceo()" class="bg-green-600 px-4 py-2 rounded-lg font-bold text-xs uppercase">Export iDoceo</button>
+        <div class="flex gap-2">
+            <button onclick="exportIdoceo()" class="bg-green-600 px-4 py-2 rounded-lg font-bold text-[10px] uppercase shadow-lg">Export iDoceo</button>
+            <button onclick="resetData()" class="bg-red-600 px-4 py-2 rounded-lg font-bold text-[10px] uppercase shadow-lg">Vider Session</button>
+        </div>
     </header>
 
-    <div class="flex border-b border-slate-700 mb-6 uppercase text-[10px] font-bold tracking-widest overflow-x-auto">
-        <button id="btnTabEleves" onclick="switchTab('eleves')" class="px-4 py-3 tab-active whitespace-nowrap">👨‍🎓 Liste & Attribution</button>
+    <div class="flex border-b border-slate-700 mb-6 uppercase text-[10px] font-bold tracking-widest overflow-x-auto no-scrollbar">
+        <button id="btnTabEleves" onclick="switchTab('eleves')" class="px-4 py-3 tab-active whitespace-nowrap">👨‍🎓 Liste & Classes</button>
         <button id="btnTabBilan" onclick="switchTab('bilan')" class="px-4 py-3 text-slate-400 whitespace-nowrap">📊 Scores Live</button>
         <button id="btnTabCorrection" onclick="switchTab('correction')" class="px-4 py-3 text-slate-400 whitespace-nowrap">📝 Table Correction</button>
     </div>
 
-    <div id="viewEleves" class="space-y-4">
-        <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700">
-            <h3 class="font-bold mb-4 uppercase text-sm">Importer vos élèves (CSV)</h3>
-            <input type="file" id="csvFile" accept=".csv" class="block w-full text-sm text-slate-400 file:bg-blue-600 file:text-white file:px-4 file:py-2 file:rounded-full file:border-0 cursor-pointer"/>
+    <div id="viewEleves" class="space-y-4 animate-in fade-in duration-300">
+        <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700 space-y-4">
+            <div class="flex flex-col md:flex-row gap-6 justify-between items-end">
+                <div class="flex-1 w-full">
+                    <label class="block text-[10px] uppercase font-bold mb-2 opacity-50">Gestion des classes :</label>
+                    <div class="flex gap-2">
+                        <select id="selectClasse" onchange="changeClasse(this.value)" class="bg-slate-900 border border-slate-600 rounded-lg p-2 text-sm flex-1 font-bold">
+                            </select>
+                        <button onclick="ajouterClasse()" class="bg-blue-600 px-4 rounded-lg font-bold">+</button>
+                        <button onclick="supprimerClasse()" class="bg-red-900/50 text-red-400 px-3 rounded-lg">🗑️</button>
+                    </div>
+                </div>
+                <div class="flex-1 w-full">
+                    <label class="block text-[10px] uppercase font-bold mb-2 opacity-50">Importer CSV (Nom;Prénom) :</label>
+                    <input type="file" id="csvFile" accept=".csv" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-700 file:text-white cursor-pointer"/>
+                </div>
+            </div>
         </div>
-        <div id="eleveList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+        
+        <div id="eleveList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            </div>
     </div>
 
-    <div id="viewBilan" class="hidden space-y-4">
-        <div id="statsGrid" class="grid grid-cols-3 gap-4"></div>
-        <div class="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700">
+    <div id="viewBilan" class="hidden space-y-4 animate-in fade-in duration-300">
+        <div class="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl">
             <table class="w-full text-left text-xs">
-                <thead class="bg-slate-900 uppercase opacity-70">
-                    <tr><th class="p-4">Identité</th><th class="p-4">Réussis</th><th class="p-4">Points</th><th class="p-4">Progression</th></tr>
+                <thead class="bg-slate-900 uppercase opacity-70 font-bold">
+                    <tr>
+                        <th class="p-4">Identité</th>
+                        <th class="p-4">Circuits</th>
+                        <th class="p-4">Points</th>
+                        <th class="p-4">Progression</th>
+                    </tr>
                 </thead>
-                <tbody id="tableBody"></tbody>
+                <tbody id="tableBody">
+                    </tbody>
             </table>
         </div>
     </div>
 
-    <div id="viewCorrection" class="hidden">
-        <div class="bg-slate-800 rounded-2xl overflow-x-auto border border-slate-700">
+    <div id="viewCorrection" class="hidden animate-in fade-in duration-300">
+        <div class="bg-slate-800 rounded-2xl overflow-x-auto border border-slate-700 shadow-2xl">
             <table class="w-full text-center border-collapse text-[10px]">
-                <thead class="bg-slate-900 font-bold uppercase">
-                    <tr><th class="p-2">#</th><th colspan="2">NOIR</th><th colspan="2">ROUGE</th><th colspan="2">BLEU</th><th colspan="2">VERT</th><th colspan="2">JAUNE</th></tr>
+                <thead class="bg-slate-900 font-bold uppercase italic">
+                    <tr>
+                        <th class="p-3 border-r border-slate-700">#</th>
+                        <th colspan="2" class="p-3 border-r border-slate-700">NOIR</th>
+                        <th colspan="2" class="p-3 border-r border-slate-700 bg-red-900/20">ROUGE</th>
+                        <th colspan="2" class="p-3 border-r border-slate-700 bg-blue-900/20">BLEU</th>
+                        <th colspan="2" class="p-3 border-r border-slate-700 bg-green-900/20">VERT</th>
+                        <th colspan="2" class="p-3 bg-yellow-900/20">JAUNE</th>
+                    </tr>
                 </thead>
-                <tbody id="correctionTableBody"></tbody>
+                <tbody id="correctionTableBody">
+                    </tbody>
             </table>
         </div>
     </div>
 
     <script>
+        // CONFIGURATION FIREBASE
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let eleves = JSON.parse(localStorage.getItem('co_eleves')) || [];
+        // DONNÉES LOCALES
+        let toutesLesClasses = JSON.parse(localStorage.getItem('co_logic_classes')) || { "6ème A": [] };
+        let classeActive = localStorage.getItem('co_logic_active_name') || Object.keys(toutesLesClasses)[0];
         let sessions = {};
         let matrix = {};
         const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
 
-        // IMPORT CSV ROBUSTE
+        // --- GESTION DES CLASSES ---
+        function initGestionnaire() {
+            const select = document.getElementById('selectClasse');
+            select.innerHTML = Object.keys(toutesLesClasses).map(name => 
+                `<option value="${name}" ${name === classeActive ? 'selected' : ''}>${name}</option>`
+            ).join('');
+            renderEleveList();
+        }
+
+        function ajouterClasse() {
+            const nom = prompt("Nom de la classe (ex: 4ème C) :");
+            if (nom && !toutesLesClasses[nom]) {
+                toutesLesClasses[nom] = [];
+                classeActive = nom;
+                saveGlobal();
+                initGestionnaire();
+            }
+        }
+
+        function supprimerClasse() {
+            if (Object.keys(toutesLesClasses).length <= 1) return alert("Dernière classe gardée par défaut.");
+            if (confirm(`Supprimer la classe ${classeActive} ?`)) {
+                delete toutesLesClasses[classeActive];
+                classeActive = Object.keys(toutesLesClasses)[0];
+                saveGlobal();
+                initGestionnaire();
+            }
+        }
+
+        function changeClasse(nom) {
+            classeActive = nom;
+            localStorage.setItem('co_logic_active_name', nom);
+            renderEleveList();
+            updateBilan();
+        }
+
+        function saveGlobal() {
+            localStorage.setItem('co_logic_classes', JSON.stringify(toutesLesClasses));
+            localStorage.setItem('co_logic_active_name', classeActive);
+        }
+
+        // --- IMPORT CSV & ACCENTS ---
         document.getElementById('csvFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
             const reader = new FileReader();
             reader.onload = function(event) {
-                const lines = event.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
-                eleves = lines.slice(1).map(line => {
+                const raw = event.target.result;
+                const lines = raw.split(/\r?\n/).filter(l => l.trim() !== "");
+                toutesLesClasses[classeActive] = lines.slice(1).map(line => {
                     const sep = line.includes(';') ? ';' : ',';
-                    const name = line.split(sep).slice(0, 2).join(' ').replace(/"/g, '').trim();
-                    return { name, color: '', num: '' };
+                    const parts = line.split(sep).slice(0, 2).map(p => p.replace(/"/g, '').trim());
+                    return { name: parts.join(' '), color: '', num: '' };
                 });
-                saveEleves(); renderEleveList(); alert(eleves.length + " élèves importés !");
+                saveGlobal();
+                renderEleveList();
+                alert(toutesLesClasses[classeActive].length + " élèves importés dans " + classeActive);
             };
-            reader.readAsText(file, "ISO-8859-1");
+            reader.readAsText(file, "ISO-8859-1"); // Gère les accents Excel
         });
 
-        function saveEleves() { localStorage.setItem('co_eleves', JSON.stringify(eleves)); }
-
+        // --- AFFICHAGE LISTE ---
         function renderEleveList() {
-            document.getElementById('eleveList').innerHTML = eleves.map((e, i) => `
+            const container = document.getElementById('eleveList');
+            const liste = toutesLesClasses[classeActive] || [];
+            container.innerHTML = liste.map((e, i) => `
                 <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col gap-2">
-                    <span class="font-bold text-xs truncate">${e.name}</span>
+                    <span class="font-bold text-xs truncate text-blue-300 uppercase">${e.name}</span>
                     <div class="flex gap-1">
-                        <select onchange="updateE(${i},'color',this.value)" class="bg-slate-900 text-[10px] p-1 rounded border border-slate-600 flex-1 text-white uppercase">
-                            <option value="">COULEUR</option>${colors.map(c => `<option value="${c}" ${e.color===c?'selected':''}>${c}</option>`).join('')}
+                        <select onchange="updateE(${i},'color',this.value)" class="bg-slate-900 text-[10px] p-2 rounded border border-slate-600 flex-1 font-bold">
+                            <option value="">COULEUR</option>
+                            ${colors.map(c => `<option value="${c}" ${e.color===c?'selected':''}>${c}</option>`).join('')}
                         </select>
-                        <input type="number" value="${e.num}" onchange="updateE(${i},'num',this.value)" class="bg-slate-900 text-[10px] w-12 p-1 rounded border border-slate-600 text-center text-white">
+                        <input type="number" placeholder="N°" value="${e.num}" onchange="updateE(${i},'num',this.value)" class="bg-slate-900 text-[10px] w-12 p-2 rounded border border-slate-600 text-center font-bold">
                     </div>
                 </div>`).join('');
         }
 
-        function updateE(i, f, v) { eleves[i][f] = v.toUpperCase(); saveEleves(); }
+        function updateE(i, f, v) { 
+            toutesLesClasses[classeActive][i][f] = v.toUpperCase(); 
+            saveGlobal(); 
+        }
 
+        // --- NAVIGATION ---
         function switchTab(tab) {
             ['viewEleves', 'viewBilan', 'viewCorrection'].forEach(id => document.getElementById(id).classList.add('hidden'));
             ['btnTabEleves', 'btnTabBilan', 'btnTabCorrection'].forEach(id => document.getElementById(id).classList.remove('tab-active', 'text-blue-500'));
             document.getElementById('view'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.remove('hidden');
             document.getElementById('btnTab'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('tab-active');
+            if(tab === 'bilan') updateBilan();
         }
 
+        // --- FIREBASE ET BILAN ---
         db.ref('sessions').on('value', snap => { sessions = snap.val() || {}; updateBilan(); });
         db.ref('settings/matrix').on('value', snap => { matrix = snap.val() || initMatrix(); drawMatrix(); });
 
         function updateBilan() {
             const tbody = document.getElementById('tableBody');
+            if(!tbody) return;
             tbody.innerHTML = "";
-            eleves.forEach(e => {
+            const liste = toutesLesClasses[classeActive] || [];
+            liste.forEach(e => {
                 if(!e.color || !e.num) return;
                 const data = sessions[`${e.color}_${e.num}`] || {};
                 const pts = Object.values(data).reduce((acc, c) => acc + c.score, 0);
                 const nb = Object.keys(data).length;
-                tbody.innerHTML += `<tr><td class="p-4">${e.name} <span class="text-[9px] opacity-40">(${e.color} ${e.num})</span></td><td class="p-4">${nb}/12</td><td class="p-4 font-bold text-blue-400">${pts}</td><td class="p-4"><div class="w-full bg-slate-900 h-1.5 rounded-full"><div class="bg-blue-500 h-1.5 rounded-full" style="width:${(nb/12)*100}%"></div></div></td></tr>`;
+                tbody.innerHTML += `
+                    <tr class="border-b border-slate-700/50">
+                        <td class="p-4 font-bold uppercase text-xs">${e.name} <br><span class="text-[9px] opacity-40 font-normal">${e.color} ${e.num}</span></td>
+                        <td class="p-4">${nb}/12</td>
+                        <td class="p-4 font-black text-blue-400 text-lg">${pts}</td>
+                        <td class="p-4">
+                            <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                                <div class="bg-blue-500 h-2 rounded-full transition-all" style="width:${(nb/12)*100}%"></div>
+                            </div>
+                        </td>
+                    </tr>`;
             });
         }
 
+        // --- CORRECTION DYNAMIQUE ---
         function drawMatrix() {
-            const tbody = document.getElementById('correctionTableBody'); tbody.innerHTML = "";
+            const tbody = document.getElementById('correctionTableBody');
+            tbody.innerHTML = "";
             for(let c=1; c<=12; c++) {
-                let row = `<tr><td class="p-2 bg-slate-900">${c}</td>`;
+                let row = `<tr><td class="p-2 bg-slate-900 font-bold border-r border-slate-700 italic">${c}</td>`;
                 colors.forEach(col => {
                     const l = matrix[c][col];
-                    row += `<td class="p-1"><input class="input-table" value="${l[0]}" onchange="upMat(${c},'${col}',0,this.value)"></td><td class="p-1"><input class="input-table" value="${l[1]}" onchange="upMat(${c},'${col}',1,this.value)"></td>`;
+                    row += `
+                        <td class="p-1"><input class="input-table" value="${l[0]}" onchange="upMat(${c},'${col}',0,this.value)"></td>
+                        <td class="p-1 border-r border-slate-700"><input class="input-table" value="${l[1]}" onchange="upMat(${c},'${col}',1,this.value)"></td>
+                    `;
                 });
                 tbody.innerHTML += row + "</tr>";
             }
         }
 
-        function upMat(c, col, i, v) { db.ref(`settings/matrix/${c}/${col}/${i}`).set(v.toUpperCase().trim()); }
+        function upMat(c, col, i, v) { 
+            db.ref(`settings/matrix/${c}/${col}/${i}`).set(v.toUpperCase().trim()); 
+        }
 
         function initMatrix() {
             const def = {
-                1:  { NOIR:['D','Q'], ROUGE:['O','U'], BLEU:['Y','A'], VERT:['E','R'], JAUNE:['N','K'] },
-                2:  { NOIR:['E','X'], ROUGE:['X','Y'], BLEU:['T','L'], VERT:['R','O'], JAUNE:['A','L'] },
-                3:  { NOIR:['C','L'], ROUGE:['H','U'], BLEU:['1','B'], VERT:['O','1'], JAUNE:['T','E'] },
-                4:  { NOIR:['R','V'], ROUGE:['E','E'], BLEU:['C','R'], VERT:['T','N'], JAUNE:['O','S'] },
-                5:  { NOIR:['A','B'], ROUGE:['J','O'], BLEU:['O','U'], VERT:['N','E'], JAUNE:['C','S'] },
-                6:  { NOIR:['F','M'], ROUGE:['1','E'], BLEU:['C','R'], VERT:['U','O'], JAUNE:['S','U'] },
-                7:  { NOIR:['G','H'], ROUGE:['U','A'], BLEU:['E','C'], VERT:['U','H'], JAUNE:['X','E'] },
-                8:  { NOIR:['I','J'], ROUGE:['V','E'], BLEU:['R','A'], VERT:['E','N'], JAUNE:['S','S'] },
-                9:  { NOIR:['K','N'], ROUGE:['N','R'], BLEU:['R','C'], VERT:['Y','E'], JAUNE:['A','E'] },
+                1: { NOIR:['D','Q'], ROUGE:['O','U'], BLEU:['Y','A'], VERT:['E','R'], JAUNE:['N','K'] },
+                2: { NOIR:['E','X'], ROUGE:['X','Y'], BLEU:['T','L'], VERT:['R','O'], JAUNE:['A','L'] },
+                3: { NOIR:['C','L'], ROUGE:['H','U'], BLEU:['1','B'], VERT:['O','1'], JAUNE:['T','E'] },
+                4: { NOIR:['R','V'], ROUGE:['E','E'], BLEU:['C','R'], VERT:['T','N'], JAUNE:['O','S'] },
+                5: { NOIR:['A','B'], ROUGE:['J','O'], BLEU:['O','U'], VERT:['N','E'], JAUNE:['C','S'] },
+                6: { NOIR:['F','M'], ROUGE:['1','E'], BLEU:['C','R'], VERT:['U','O'], JAUNE:['S','U'] },
+                7: { NOIR:['G','H'], ROUGE:['U','A'], BLEU:['E','C'], VERT:['U','H'], JAUNE:['X','E'] },
+                8: { NOIR:['I','J'], ROUGE:['V','E'], BLEU:['R','A'], VERT:['E','N'], JAUNE:['S','S'] },
+                9: { NOIR:['K','N'], ROUGE:['N','R'], BLEU:['R','C'], VERT:['Y','E'], JAUNE:['A','E'] },
                 10: { NOIR:['O','S'], ROUGE:['S','C'], BLEU:['C','E'], VERT:['E','A'], JAUNE:['Z','N'] },
                 11: { NOIR:['P','T'], ROUGE:['A','U'], BLEU:['L','Y'], VERT:['U','A'], JAUNE:['D','U'] },
                 12: { NOIR:['U','W'], ROUGE:['L','M'], BLEU:['T','N'], VERT:['R','C'], JAUNE:['A','H'] }
             };
-            db.ref('settings/matrix').set(def); return def;
+            db.ref('settings/matrix').set(def);
+            return def;
         }
 
         function exportIdoceo() {
-            let csv = "Nom;Groupe;Circuits;Points\n";
-            eleves.forEach(e => {
+            let csv = "\uFEFFNom;Groupe;Circuits;Points\n";
+            const liste = toutesLesClasses[classeActive] || [];
+            liste.forEach(e => {
                 const data = sessions[`${e.color}_${e.num}`] || {};
-                csv += `${e.name};${e.color} ${e.num};${Object.keys(data).length};${Object.values(data).reduce((a,c)=>a+c.score,0)}\n`;
+                const pts = Object.values(data).reduce((acc, c) => acc + c.score, 0);
+                csv += `${e.name};${e.color} ${e.num};${Object.keys(data).length};${pts}\n`;
             });
-            const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href=url; a.download='CO_LOGIC_IDOCEO.csv'; a.click();
+            const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href=url; a.download=`CO_${classeActive}.csv`; a.click();
         }
 
-        function resetData() { if(prompt("Code RNE :")==="0680013V" && confirm("Tout vider ?")) db.ref('sessions').remove(); }
-        renderEleveList();
+        function resetData() { 
+            if(prompt("Code RNE :")==="0680013V" && confirm("Vider tous les scores Firebase ?")) {
+                db.ref('sessions').remove(); 
+            }
+        }
+
+        initGestionnaire();
     </script>
 </body>
 </html>
