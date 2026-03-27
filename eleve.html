@@ -2,157 +2,190 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Orient'Show | Élève</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master | Orient'Show</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
-        body { background-color: #0f172a; touch-action: manipulation; }
-        .btn-tap:active { transform: scale(0.95); }
-        .btn-num { background-color: #1e293b; border: 2px solid #334155; }
-        .btn-num.selected { background-color: #3b82f6; border-color: #60a5fa; font-weight: 900; }
-        .bg-session-NOIR { background-color: #000; border: 2px solid #334155; }
-        .bg-session-ROUGE { background-color: #991b1b; }
-        .bg-session-BLEU { background-color: #1e40af; }
-        .bg-session-VERT { background-color: #166534; }
-        .bg-session-JAUNE { background-color: #ca8a04; color: black; }
+        body { background-color: #0f172a; color: white; }
+        .tab-active { border-bottom: 4px solid #3b82f6; color: #3b82f6; font-weight: 900; }
+        .dot { width: 35px; height: 35px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.2); }
+        .dot-NOIR { background: #000; } .dot-ROUGE { background: #ef4444; } .dot-BLEU { background: #3b82f6; } 
+        .dot-VERT { background: #22c55e; } .dot-JAUNE { background: #eab308; }
+        .row-NOIR { border-left: 8px solid #000; background: rgba(0,0,0,0.3); }
+        .row-ROUGE { border-left: 8px solid #ef4444; background: rgba(239,68,68,0.1); }
+        .row-BLEU { border-left: 8px solid #3b82f6; background: rgba(59,130,246,0.1); }
+        .row-VERT { border-left: 8px solid #22c55e; background: rgba(34,197,94,0.1); }
+        .row-JAUNE { border-left: 8px solid #eab308; background: rgba(234,179,8,0.1); }
+        select { color: black; font-weight: bold; }
     </style>
 </head>
-<body class="text-white font-sans">
-    <div id="app" class="max-w-md mx-auto p-4 min-h-screen">
-        
-        <div id="step1" class="space-y-6">
-            <h2 class="text-2xl font-black uppercase text-center py-4 text-blue-500 italic">Orient'Show</h2>
-            <div>
-                <p class="text-center text-xs font-black mb-3 opacity-50">1. TON NUMÉRO (1-6)</p>
-                <div id="gridNumeros" class="grid grid-cols-3 gap-3">
-                    <script>
-                        for(let i=1;i<=6;i++) document.write(`<button onclick="selN(${i}, this)" class="btn-num p-5 rounded-2xl font-black text-2xl btn-tap">${i}</button>`);
-                        let selectedNum = "";
-                        function selN(n, btn) {
-                            document.querySelectorAll('.btn-num').forEach(b => b.classList.remove('selected'));
-                            btn.classList.add('selected'); selectedNum = n;
-                        }
-                    </script>
-                </div>
+<body class="p-4 overflow-x-hidden">
+
+    <header class="flex justify-between items-center mb-4 px-2">
+        <h1 class="text-3xl font-black italic text-blue-500 uppercase">CO-LOGIC <span class="text-white">MASTER</span></h1>
+        <div class="flex gap-4">
+            <button onclick="exportIdoceo()" class="bg-green-600 px-6 py-3 rounded-xl font-bold uppercase text-sm">Export iDoceo</button>
+            <button onclick="resetData()" class="bg-red-600 px-4 py-3 rounded-xl font-bold uppercase text-xs">Vider Base</button>
+        </div>
+    </header>
+
+    <div class="flex border-b border-slate-700 mb-6 font-bold uppercase text-xs">
+        <button id="btnTabEleves" onclick="switchTab('eleves')" class="px-8 py-4 tab-active">👨‍🎓 Attribution</button>
+        <button id="btnTabBilan" onclick="switchTab('bilan')" class="px-8 py-4 text-slate-400">📊 Résultats</button>
+        <button id="btnTabCorrection" onclick="switchTab('correction')" class="px-8 py-4 text-slate-400">📝 Correction</button>
+    </div>
+
+    <div id="viewEleves" class="space-y-4">
+        <div class="bg-slate-800 p-4 rounded-2xl flex flex-wrap gap-4 items-center justify-between border border-slate-700">
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold opacity-50 uppercase">Classe :</span>
+                <select id="selectClasse" onchange="changeClasse(this.value)" class="p-2 rounded-lg text-lg"></select>
+                <button onclick="ajouterClasse()" class="bg-blue-600 px-4 py-2 rounded-lg font-black">+</button>
             </div>
-            <div class="grid grid-cols-2 gap-3 pt-4 border-t border-slate-800">
-                <button onclick="selectColor('NOIR')" class="bg-black border-2 border-slate-600 p-5 rounded-2xl font-black btn-tap">NOIR</button>
-                <button onclick="selectColor('ROUGE')" class="bg-red-600 p-5 rounded-2xl font-black btn-tap">ROUGE</button>
-                <button onclick="selectColor('BLEU')" class="bg-blue-600 p-5 rounded-2xl font-black btn-tap">BLEU</button>
-                <button onclick="selectColor('VERT')" class="bg-green-600 p-5 rounded-2xl font-black btn-tap">VERT</button>
-                <button onclick="selectColor('JAUNE')" class="bg-yellow-500 text-black p-5 rounded-2xl font-black btn-tap">JAUNE</button>
-                <button onclick="location.href='index.html'" class="bg-slate-700 p-5 rounded-2xl font-bold btn-tap text-xs">MENU</button>
+            <div class="flex gap-4">
+                <input type="file" id="csvFile" accept=".csv" class="text-xs text-slate-400 border border-slate-600 p-2 rounded-lg"/>
+                <button onclick="ajouterEleveManuel()" class="bg-slate-700 px-4 py-2 rounded-lg font-bold text-xs">+ ÉLÈVE</button>
             </div>
         </div>
 
-        <div id="step2" class="hidden space-y-6 animate-in slide-in-from-bottom">
-            <div id="banner" class="p-6 rounded-3xl shadow-2xl flex justify-between items-center">
-                <span id="displayUser" class="font-black text-4xl"></span>
-                <button onclick="location.reload()" class="bg-white/20 p-2 rounded-lg text-[10px] font-black uppercase">Changer</button>
+        <div id="eleveList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             </div>
+    </div>
 
-            <div id="containerSaisie" class="bg-slate-800 p-6 rounded-3xl border border-slate-700 space-y-6">
-                <div id="timerBlocker" class="hidden text-center py-10 space-y-4">
-                    <div class="text-6xl">⏳</div>
-                    <p class="font-black text-red-400 uppercase italic">Anti-Triche : Attends un peu...</p>
-                    <p id="timerLabel" class="text-4xl font-mono"></p>
-                </div>
-
-                <div id="mainForm">
-                    <label class="block text-center font-black uppercase text-sm opacity-60">Choisis ton parcours :</label>
-                    <select id="circuitNum" class="w-full p-5 bg-slate-900 rounded-2xl text-3xl font-black border-2 border-blue-600 text-center appearance-none text-white">
-                        <option value="" selected disabled>-- SÉLECTIONNER --</option>
-                    </select>
-
-                    <div class="flex gap-4 justify-center my-8">
-                        <input type="text" id="l1" maxlength="1" class="w-20 h-20 text-center text-5xl font-black bg-white text-slate-900 rounded-2xl uppercase">
-                        <input type="text" id="l2" maxlength="1" class="w-20 h-20 text-center text-5xl font-black bg-white text-slate-900 rounded-2xl uppercase">
-                    </div>
-                    <button onclick="validerSaisie()" class="w-full bg-blue-600 p-6 rounded-2xl text-2xl font-black uppercase">Vérifier</button>
-                </div>
-            </div>
+    <div id="viewBilan" class="hidden animate-in fade-in">
+        <div class="bg-slate-800 rounded-3xl overflow-hidden border border-slate-700 shadow-2xl">
+            <table class="w-full text-left">
+                <thead class="bg-slate-900 uppercase text-xs font-black opacity-60">
+                    <tr><th class="p-5 text-blue-400">Élève</th><th class="p-5 text-center">Score /60</th><th class="p-5 text-center text-blue-400">Note /20</th><th class="p-5">Parcours</th></tr>
+                </thead>
+                <tbody id="tableBody" class="text-sm font-bold"></tbody>
+            </table>
         </div>
+    </div>
 
-        <div id="feedback" class="hidden fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50 text-center">
-            <div id="iconScore" class="text-9xl mb-4"></div>
-            <div id="msgPoints" class="text-6xl font-black"></div>
-        </div>
+    <div id="viewCorrection" class="hidden">
+        <div id="matrixContainer" class="bg-slate-800 rounded-2xl overflow-x-auto"></div>
     </div>
 
     <script>
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        let CORRECTION = {}; let selectedColor = "";
 
-        db.ref('settings/matrix').on('value', snap => { CORRECTION = snap.val(); });
+        let toutesLesClasses = JSON.parse(localStorage.getItem('co_logic_classes')) || { "MA CLASSE": [] };
+        let classeActive = localStorage.getItem('co_logic_active_name') || Object.keys(toutesLesClasses)[0];
+        let sessions = {}; let matrix = {}; const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
 
-        async function selectColor(color) {
-            if(!selectedNum) return alert("Choisis ton numéro !");
-            selectedColor = color;
-            const userKey = `${color}_${selectedNum}`;
-            
-            // On vérifie le timer et les circuits faits
-            const snap = await db.ref(`sessions/${userKey}`).once('value');
-            const data = snap.val() || {};
-            
-            // Check Timer (2mn = 120000ms)
-            let lastTime = 0;
-            Object.values(data).forEach(v => { if(v.timestamp > lastTime) lastTime = v.timestamp; });
-            const wait = 120000 - (Date.now() - lastTime);
-
-            document.getElementById('displayUser').innerText = `${color} ${selectedNum}`;
-            document.getElementById('banner').className = `p-6 rounded-3xl shadow-2xl bg-session-${color}`;
-            
-            if(wait > 0) startTimer(wait);
-            initCircuits(Object.keys(data).map(k => k.replace('C','')));
-
-            document.getElementById('step1').classList.add('hidden');
-            document.getElementById('step2').classList.remove('hidden');
+        function initGestionnaire() {
+            const select = document.getElementById('selectClasse');
+            select.innerHTML = Object.keys(toutesLesClasses).map(name => `<option value="${name}" ${name === classeActive ? 'selected' : ''}>${name}</option>`).join('');
+            renderEleveList();
         }
 
-        function startTimer(ms) {
-            document.getElementById('mainForm').classList.add('hidden');
-            document.getElementById('timerBlocker').classList.remove('hidden');
-            let remaining = Math.floor(ms/1000);
-            const intv = setInterval(() => {
-                remaining--;
-                document.getElementById('timerLabel').innerText = `${Math.floor(remaining/60)}m ${remaining%60}s`;
-                if(remaining <= 0) { clearInterval(intv); location.reload(); }
-            }, 1000);
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0]; const reader = new FileReader();
+            reader.onload = function(event) {
+                const lines = event.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
+                const name = prompt("Nom de la classe ?"); if(!name) return;
+                const h = lines[0].replace(/"/g, '').split(lines[0].includes(';') ? ';' : ',');
+                const idxNom = h.indexOf('@lastname'); const idxPre = h.indexOf('@name');
+                toutesLesClasses[name] = lines.slice(1).map(line => {
+                    const sep = line.includes(';') ? ';' : ','; const p = line.split(sep).map(v => v.replace(/"/g, '').trim());
+                    return { nom: (p[idxNom] || "").toUpperCase(), prenom: p[idxPre] || "", color: '', num: '' };
+                }).sort((a,b) => a.nom.localeCompare(b.nom));
+                classeActive = name; saveGlobal(); initGestionnaire();
+            };
+            reader.readAsText(file, "ISO-8859-1");
+        });
+
+        function renderEleveList() {
+            const container = document.getElementById('eleveList');
+            const liste = toutesLesClasses[classeActive] || [];
+            container.innerHTML = liste.map((e, i) => `
+                <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 row-${e.color}">
+                    <div class="text-xl font-black mb-4 truncate leading-none uppercase">${e.nom}<br><span class="text-sm font-bold text-blue-300 capitalize">${e.prenom}</span></div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex gap-1">
+                            ${colors.map(c => `<button onclick="updateE(${i},'color','${c}')" class="dot dot-${c} ${e.color===c?'ring-4 ring-white':''}"></button>`).join('')}
+                        </div>
+                        <select onchange="updateE(${i},'num',this.value)" class="p-1 rounded font-bold w-12 text-center text-lg">
+                            <option value="">-</option>${[1,2,3,4,5,6].map(n => `<option value="${n}" ${e.num==n?'selected':''}>${n}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>`).join('');
         }
 
-        function initCircuits(faits) {
-            const sel = document.getElementById('circuitNum');
+        function updateE(i, f, v) { toutesLesClasses[classeActive][i][f] = v; saveGlobal(); renderEleveList(); }
+        function saveGlobal() { localStorage.setItem('co_logic_classes', JSON.stringify(toutesLesClasses)); localStorage.setItem('co_logic_active_name', classeActive); }
+        function switchTab(t) {
+            ['viewEleves', 'viewBilan', 'viewCorrection'].forEach(v => document.getElementById(v).classList.add('hidden'));
+            document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden');
+            if(t==='bilan') updateBilan(); if(t==='correction') drawMatrix();
+        }
+
+        db.ref('sessions').on('value', snap => { sessions = snap.val() || {}; updateBilan(); });
+        db.ref('settings/matrix').on('value', snap => { matrix = snap.val() || initMatrix(); drawMatrix(); });
+
+        function updateBilan() {
+            const tbody = document.getElementById('tableBody'); if(!tbody) return; tbody.innerHTML = "";
+            (toutesLesClasses[classeActive] || []).forEach(e => {
+                if(!e.color || !e.num) return;
+                const data = sessions[`${e.color}_${e.num}`] || {};
+                const p60 = Object.values(data).reduce((acc, c) => acc + c.score, 0);
+                const nb = Object.keys(data).length;
+                tbody.innerHTML += `<tr><td class="p-5 font-black uppercase text-lg">${e.nom} <span class="font-normal capitalize text-blue-300 text-sm">${e.prenom}</span></td><td class="p-5 text-center text-2xl font-black">${p60}</td><td class="p-5 text-center font-black text-blue-400 text-3xl">${(p60/3).toFixed(1)}</td><td class="p-5 text-xs opacity-50">${nb}/12</td></tr>`;
+            });
+        }
+
+        function exportIdoceo() {
+            // EXPORT 2 COLONNES POUR IDOCEO
+            let csv = "\uFEFF@lastname;@name;Points;Note\n";
+            (toutesLesClasses[classeActive] || []).forEach(e => {
+                const data = sessions[`${e.color}_${e.num}`] || {};
+                const p60 = Object.values(data).reduce((a,c) => a + c.score, 0);
+                csv += `${e.nom};${e.prenom};${p60};${(p60/3).toFixed(2)}\n`;
+            });
+            const b = new Blob([csv], {type:'text/csv;charset=utf-8'}); const a = document.createElement('a');
+            a.href = URL.createObjectURL(b); a.download = `Export_${classeActive}.csv`; a.click();
+        }
+        
+        function initMatrix() {
+            const def = {
+                1:  { NOIR:['D','Q'], ROUGE:['O','U'], BLEU:['Y','A'], VERT:['E','R'], JAUNE:['N','K'] },
+                2:  { NOIR:['E','X'], ROUGE:['X','Y'], BLEU:['T','L'], VERT:['R','O'], JAUNE:['A','L'] },
+                3:  { NOIR:['C','L'], ROUGE:['H','U'], BLEU:['1','B'], VERT:['O','1'], JAUNE:['T','E'] },
+                4:  { NOIR:['R','V'], ROUGE:['E','E'], BLEU:['C','R'], VERT:['T','N'], JAUNE:['O','S'] },
+                5:  { NOIR:['A','B'], ROUGE:['J','O'], BLEU:['O','U'], VERT:['N','E'], JAUNE:['C','S'] },
+                6:  { NOIR:['F','M'], ROUGE:['I','E'], BLEU:['C','R'], VERT:['U','O'], JAUNE:['S','U'] },
+                7:  { NOIR:['G','H'], ROUGE:['U','A'], BLEU:['E','C'], VERT:['U','H'], JAUNE:['X','E'] },
+                8:  { NOIR:['I','J'], ROUGE:['V','E'], BLEU:['R','A'], VERT:['E','N'], JAUNE:['S','S'] },
+                9:  { NOIR:['K','N'], ROUGE:['N','R'], BLEU:['R','C'], VERT:['Y','E'], JAUNE:['A','E'] },
+                10: { NOIR:['O','S'], ROUGE:['S','C'], BLEU:['C','E'], VERT:['E','A'], JAUNE:['Z','N'] },
+                11: { NOIR:['P','T'], ROUGE:['A','U'], BLEU:['L','Y'], VERT:['U','A'], JAUNE:['D','U'] },
+                12: { NOIR:['U','W'], ROUGE:['L','M'], BLEU:['T','N'], VERT:['R','C'], JAUNE:['A','H'] }
+            };
+            db.ref('settings/matrix').set(def); return def;
+        }
+
+        function drawMatrix() {
+            const c = document.getElementById('matrixContainer');
+            let h = `<table class="w-full text-center text-[10px]"><thead class="bg-slate-900"><tr><th class="p-2">#</th>`;
+            colors.forEach(col => { h += `<th colspan="2" class="p-2 border-l border-slate-700">${col}</th>`; });
+            h += `</tr></thead><tbody>`;
             for(let i=1; i<=12; i++) {
-                if(!faits.includes(i.toString())) {
-                    const opt = new Option(`PARCOURS N°${i}`, i);
-                    sel.add(opt);
-                }
+                h += `<tr class="border-b border-slate-700"><td class="p-2 font-black">${i}</td>`;
+                colors.forEach(col => { const l = matrix[i][col]; h += `<td class="p-1"><input class="w-8 bg-transparent border border-slate-700 text-center uppercase" value="${l[0]}" onchange="upMat(${i},'${col}',0,this.value)"></td><td class="p-1"><input class="w-8 bg-transparent border border-slate-700 text-center uppercase" value="${l[1]}" onchange="upMat(${i},'${col}',1,this.value)"></td>`; });
+                h += `</tr>`;
             }
-            if(sel.options.length === 1) document.getElementById('mainForm').innerHTML = "<p class='text-center font-bold text-red-400'>FINI ! TOUT EST VALIDÉ.</p>";
+            c.innerHTML = h + "</tbody></table>";
         }
-
-        function validerSaisie() {
-            const c = document.getElementById('circuitNum').value;
-            const l1 = document.getElementById('l1').value.toUpperCase().trim();
-            const l2 = document.getElementById('l2').value.toUpperCase().trim();
-            if(!c || !l1 || !l2) return alert("Complète tout !");
-
-            const sol = CORRECTION[c][selectedColor];
-            let count = 0; let ts = [...sol];
-            [l1, l2].forEach(l => { let idx = ts.indexOf(l); if(idx > -1) { count++; ts.splice(idx, 1); } });
-            let pts = (count === 2) ? 5 : (count === 1) ? 2 : 0;
-
-            db.ref(`sessions/${selectedColor}_${selectedNum}/C${c}`).set({ score: pts, timestamp: Date.now() });
-            
-            document.getElementById('msgPoints').innerText = `+${pts} POINTS`;
-            document.getElementById('iconScore').innerText = (pts === 5) ? "⭐" : (pts === 2) ? "🆗" : "❌";
-            document.getElementById('feedback').classList.remove('hidden');
-            setTimeout(() => { location.reload(); }, 3500);
-        }
+        function upMat(c, col, i, v) { db.ref(`settings/matrix/${c}/${col}/${i}`).set(v.toUpperCase().trim()); }
+        function changeClasse(n) { classeActive = n; localStorage.setItem('co_logic_active_name', n); renderEleveList(); }
+        function ajouterClasse() { const n = prompt("Nom ?"); if(n) { toutesLesClasses[n]=[]; saveGlobal(); initGestionnaire(); } }
+        function resetData() { if(prompt("Code RNE :")==="0680013V" && confirm("Tout vider ?")) db.ref('sessions').remove(); }
+        initGestionnaire();
     </script>
 </body>
 </html>
