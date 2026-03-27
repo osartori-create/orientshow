@@ -10,22 +10,15 @@
     <style>
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
         .tab-active { border-bottom: 4px solid #3b82f6; color: #3b82f6; font-weight: 900; }
-        
-        /* Style des boutons de couleur */
-        .dot { width: 35px; height: 35px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.2); transition: transform 0.1s; }
-        .dot:active { transform: scale(0.8); }
+        .dot { width: 35px; height: 35px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.2); }
         .dot-NOIR { background: #000; } .dot-ROUGE { background: #ef4444; } .dot-BLEU { background: #3b82f6; } 
         .dot-VERT { background: #22c55e; } .dot-JAUNE { background: #eab308; }
-        
-        /* Indicateurs visuels par couleur */
         .row-NOIR { border-left: 8px solid #000; background: rgba(0,0,0,0.3) !important; }
         .row-ROUGE { border-left: 8px solid #ef4444; background: rgba(239,68,68,0.1) !important; }
         .row-BLEU { border-left: 8px solid #3b82f6; background: rgba(59,130,246,0.1) !important; }
         .row-VERT { border-left: 8px solid #22c55e; background: rgba(34,197,94,0.1) !important; }
         .row-JAUNE { border-left: 8px solid #eab308; background: rgba(234,179,8,0.1) !important; }
-
         .select-num { background: white; color: black; font-weight: 900; font-size: 1.3rem; border-radius: 8px; padding: 5px; border: 2px solid #3b82f6; width: 65px; text-align: center; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="p-4">
@@ -45,11 +38,12 @@
     </div>
 
     <div id="viewEleves" class="space-y-4">
-        <div class="bg-slate-800 p-4 rounded-2xl flex flex-wrap gap-4 items-center justify-between border border-slate-700">
+        <div class="bg-slate-800 p-4 rounded-2xl flex flex-wrap gap-4 items-center justify-between border border-slate-700 shadow-xl">
             <div class="flex items-center gap-2">
                 <span class="text-[10px] font-bold opacity-50 uppercase">Classe :</span>
                 <select id="selectClasse" onchange="changeClasse(this.value)" class="p-2 rounded-lg text-black font-bold"></select>
                 <button onclick="ajouterClasse()" class="bg-blue-600 px-3 py-1 rounded-lg font-black">+</button>
+                <button onclick="supprimerClasse()" class="bg-red-900/50 text-red-400 px-2 rounded-lg text-xs uppercase">Suppr.</button>
             </div>
             <div class="flex gap-2">
                 <input type="file" id="csvFile" accept=".csv" class="text-[10px] text-slate-400 border border-slate-600 p-2 rounded-lg"/>
@@ -71,14 +65,12 @@
             </div>
             <div id="modalContent" class="p-6 max-h-[60vh] overflow-y-auto space-y-3"></div>
             <div class="p-4 bg-slate-900/80 text-center border-t border-slate-700">
-                <button onclick="closeModal()" class="bg-slate-700 px-10 py-3 rounded-xl font-black uppercase text-xs tracking-widest">Fermer</button>
+                <button onclick="closeModal()" class="bg-slate-700 px-10 py-3 rounded-xl font-black uppercase text-xs">Fermer</button>
             </div>
         </div>
     </div>
 
-    <div id="viewCorrection" class="hidden">
-        <div id="matrixContainer" class="bg-slate-800 rounded-2xl overflow-x-auto border border-slate-700 shadow-2xl"></div>
-    </div>
+    <div id="viewCorrection" class="hidden"><div id="matrixContainer" class="bg-slate-800 rounded-2xl overflow-x-auto shadow-2xl"></div></div>
 
     <script>
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
@@ -87,11 +79,16 @@
 
         let toutesLesClasses = JSON.parse(localStorage.getItem('co_logic_classes')) || { "305": [] };
         let classeActive = localStorage.getItem('co_logic_active_name') || Object.keys(toutesLesClasses)[0];
-        let sessions = {}; let matrix = {}; const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
+        let sessionsTotal = {}; let matrix = {}; const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
 
         function initGestionnaire() {
             const select = document.getElementById('selectClasse');
-            select.innerHTML = Object.keys(toutesLesClasses).map(name => `<option value="${name}" ${name === classeActive ? 'selected' : ''}>${name}</option>`).join('');
+            const nomsClasses = Object.keys(toutesLesClasses);
+            select.innerHTML = nomsClasses.map(name => `<option value="${name}" ${name === classeActive ? 'selected' : ''}>${name}</option>`).join('');
+            
+            // On envoie les noms des classes à Firebase pour les élèves
+            db.ref('settings/classes').set(nomsClasses);
+            
             renderEleveList();
         }
 
@@ -99,7 +96,7 @@
             const container = document.getElementById('eleveList');
             const liste = toutesLesClasses[classeActive] || [];
             container.innerHTML = liste.map((e, i) => `
-                <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 row-${e.color}">
+                <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 row-${e.color} shadow-lg transition-all">
                     <div class="text-xl font-black mb-3 truncate leading-none uppercase">${e.nom}<br><span class="text-sm font-bold text-blue-300 capitalize">${e.prenom}</span></div>
                     <div class="flex items-center justify-between">
                         <div class="flex gap-1">
@@ -117,11 +114,12 @@
             if(!container) return;
             container.innerHTML = "";
             const liste = toutesLesClasses[classeActive] || [];
+            const sessionsActive = sessionsTotal[classeActive] || {};
             
             liste.forEach(e => {
                 if(!e.color || !e.num) return;
                 const userKey = `${e.color}_${e.num}`;
-                const data = sessions[userKey] || {};
+                const data = sessionsActive[userKey] || {};
                 const p60 = Object.values(data).reduce((acc, c) => acc + (c.score || 0), 0);
                 const nb = Object.keys(data).length;
                 const p20 = (p60/3).toFixed(1);
@@ -135,10 +133,7 @@
                     </div>
                     <div class="flex items-end justify-between border-t border-white/10 pt-3 pointer-events-none">
                         <div><span class="text-3xl font-black text-blue-400">${p20}</span><span class="text-xs opacity-50">/20</span></div>
-                        <div class="text-right">
-                            <div class="text-lg font-bold">${p60}<span class="text-[10px] opacity-50"> pts</span></div>
-                            <div class="text-[10px] opacity-40 uppercase font-bold">${nb} parcours</div>
-                        </div>
+                        <div class="text-right"><div class="text-lg font-bold">${p60} pts</div><div class="text-[10px] opacity-40 uppercase font-bold">${nb} parcours</div></div>
                     </div>`;
                 
                 card.addEventListener('click', () => openDetail(e.nom, e.prenom, userKey));
@@ -147,30 +142,17 @@
         }
 
         function openDetail(nom, prenom, userKey) {
-            const data = sessions[userKey] || {};
+            const data = (sessionsTotal[classeActive] || {})[userKey] || {};
             document.getElementById('modalTitle').innerText = nom + " " + prenom;
             let html = "";
-            
             if(Object.keys(data).length === 0) {
                 html = "<p class='text-center py-10 opacity-50 italic'>Aucun parcours enregistré.</p>";
             } else {
-                const sortedEntries = Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp);
-                sortedEntries.forEach(([circuit, info]) => {
-                    const time = new Date(info.timestamp).toLocaleTimeString('fr-FR', {
-                        hour: '2-digit', minute: '2-digit', second: '2-digit'
-                    });
+                const sorted = Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp);
+                sorted.forEach(([circuit, info]) => {
+                    const time = new Date(info.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                     const scoreColor = info.score === 5 ? 'text-green-400' : (info.score === 2 ? 'text-yellow-400' : 'text-red-400');
-                    html += `
-                    <div class="flex justify-between items-center bg-slate-900 p-4 rounded-2xl border border-slate-700">
-                        <div>
-                            <p class="font-black text-sm text-blue-300">${circuit.replace('C','PARCOURS ')}</p>
-                            <p class="text-[10px] opacity-40 font-mono italic">Heure : ${time}</p>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span class="text-xl font-black ${scoreColor}">${info.score} pts</span>
-                            <button onclick="editScore('${userKey}', '${circuit}')" class="bg-white/10 p-2 rounded-lg text-[10px] font-bold border border-white/10 uppercase">Éditer</button>
-                        </div>
-                    </div>`;
+                    html += `<div class="flex justify-between items-center bg-slate-900 p-4 rounded-2xl border border-slate-700"><div><p class="font-black text-sm text-blue-300">${circuit.replace('C','PARCOURS ')}</p><p class="text-[10px] opacity-40 font-mono italic">Heure : ${time}</p></div><div class="flex items-center gap-3"><span class="text-xl font-black ${scoreColor}">${info.score} pts</span><button onclick="editScore('${userKey}', '${circuit}')" class="bg-white/10 p-2 rounded-lg text-[10px] font-bold uppercase border border-white/10">Éditer</button></div></div>`;
                 });
             }
             document.getElementById('modalContent').innerHTML = html;
@@ -178,32 +160,29 @@
         }
 
         function editScore(userKey, circuit) {
-            const val = prompt("Correction (0, 2 ou 5 pts) :");
+            const val = prompt("Score (0, 2 ou 5 pts) :");
             if (val !== null && [0, 2, 5].includes(parseInt(val))) {
-                db.ref(`sessions/${userKey}/${circuit}/score`).set(parseInt(val));
+                db.ref(`sessions/${classeActive}/${userKey}/${circuit}/score`).set(parseInt(val));
                 closeModal();
-                setTimeout(() => { updateBilan(); }, 200);
             }
         }
 
         function closeModal() { document.getElementById('modalDetail').classList.add('hidden'); }
-
         function switchTab(t) {
             ['viewEleves', 'viewBilan', 'viewCorrection'].forEach(v => document.getElementById(v).classList.add('hidden'));
             ['btnTabEleves', 'btnTabBilan', 'btnTabCorrection'].forEach(id => document.getElementById(id).classList.remove('tab-active', 'text-blue-500'));
             document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden');
             document.getElementById('btnTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('tab-active');
-            if(t==='bilan') updateBilan();
-            if(t==='correction') drawMatrix();
+            if(t==='bilan') updateBilan(); if(t==='correction') drawMatrix();
         }
 
-        db.ref('sessions').on('value', snap => { sessions = snap.val() || {}; if(!document.getElementById('viewBilan').classList.contains('hidden')) updateBilan(); });
+        db.ref('sessions').on('value', snap => { sessionsTotal = snap.val() || {}; updateBilan(); });
         db.ref('settings/matrix').on('value', snap => { matrix = snap.val() || initMatrix(); drawMatrix(); });
 
         function updateE(i, f, v) { toutesLesClasses[classeActive][i][f] = v; saveGlobal(); renderEleveList(); }
         function saveGlobal() { localStorage.setItem('co_logic_classes', JSON.stringify(toutesLesClasses)); localStorage.setItem('co_logic_active_name', classeActive); }
-        function changeClasse(n) { classeActive = n; saveGlobal(); initGestionnaire(); updateBilan(); }
-        function ajouterClasse() { const n = prompt("Nom ?"); if(n) { toutesLesClasses[n]=[]; saveGlobal(); initGestionnaire(); } }
+        function changeClasse(n) { classeActive = n; localStorage.setItem('co_logic_active_name', n); renderEleveList(); updateBilan(); }
+        function ajouterClasse() { const n = prompt("Nom de la classe (ex: 402) :"); if(n) { toutesLesClasses[n]=[]; saveGlobal(); initGestionnaire(); } }
         function supprimerClasse() { if(Object.keys(toutesLesClasses).length <= 1) return; if(confirm(`Supprimer ${classeActive} ?`)) { delete toutesLesClasses[classeActive]; classeActive = Object.keys(toutesLesClasses)[0]; saveGlobal(); initGestionnaire(); } }
 
         document.getElementById('csvFile').addEventListener('change', function(e) {
@@ -229,12 +208,12 @@
 
         function drawMatrix() {
             const c = document.getElementById('matrixContainer');
-            let h = `<table class="w-full text-center text-[10px]"><thead class="bg-slate-900 font-bold uppercase"><tr><th class="p-3">#</th>`;
+            let h = `<table class="w-full text-center text-[10px] shadow-2xl"><thead class="bg-slate-900 font-bold uppercase"><tr><th class="p-3">#</th>`;
             colors.forEach(col => { h += `<th colspan="2" class="p-3 border-l border-slate-700">${col}</th>`; });
             h += `</tr></thead><tbody>`;
             for(let i=1; i<=12; i++) {
                 h += `<tr class="border-b border-slate-700"><td class="p-2 font-black italic bg-slate-900/30">${i}</td>`;
-                colors.forEach(col => { const l = matrix[i][col]; h += `<td class="p-1"><input class="w-8 bg-transparent border border-slate-700 text-center uppercase font-bold" value="${l[0]}" onchange="upMat(${i},'${col}',0,this.value)"></td><td class="p-1 border-r border-slate-700"><input class="w-8 bg-transparent border border-slate-700 text-center uppercase font-bold" value="${l[1]}" onchange="upMat(${i},'${col}',1,this.value)"></td>`; });
+                colors.forEach(col => { const l = matrix[i][col]; h += `<td class="p-1"><input class="w-8 bg-transparent border border-slate-700 text-center uppercase font-bold" value="${l[0] || ''}" onchange="upMat(${i},'${col}',0,this.value)"></td><td class="p-1 border-r border-slate-700"><input class="w-8 bg-transparent border border-slate-700 text-center uppercase font-bold" value="${l[1] || ''}" onchange="upMat(${i},'${col}',1,this.value)"></td>`; });
                 h += `</tr>`;
             }
             c.innerHTML = h + "</tbody></table>";
@@ -246,15 +225,20 @@
         }
         function exportIdoceo() {
             let csv = "\uFEFF@lastname;@name;Points;Note\n";
+            const sessionsActive = sessionsTotal[classeActive] || {};
             (toutesLesClasses[classeActive] || []).forEach(e => {
-                const data = sessions[`${e.color}_${e.num}`] || {};
+                const data = sessionsActive[`${e.color}_${e.num}`] || {};
                 const p60 = Object.values(data).reduce((a,c) => a + (c.score || 0), 0);
                 csv += `${e.nom};${e.prenom};${p60};${(p60/3).toFixed(2)}\n`;
             });
             const b = new Blob([csv], {type:'text/csv;charset=utf-8'}); const a = document.createElement('a');
             a.href = URL.createObjectURL(b); a.download = `Export_${classeActive}.csv`; a.click();
         }
-        function resetData() { if(prompt("Code RNE :")==="0680013V" && confirm("Tout vider ?")) db.ref('sessions').remove(); }
+        function resetData() { 
+            if(prompt("Code RNE :")==="0680013V" && confirm(`Vider uniquement les scores de la classe ${classeActive} ?`)) {
+                db.ref(`sessions/${classeActive}`).remove(); 
+            }
+        }
         initGestionnaire();
     </script>
 </body>
