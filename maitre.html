@@ -3,30 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orient'Show | Accueil</title>
+    <title>Orient'Show | Maître</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>body { background-color: #0f172a; color: white; }</style>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    <style>
+        body { background-color: #0f172a; color: white; }
+        .tab-active { border-bottom: 4px solid #3b82f6; color: #3b82f6; font-weight: 900; }
+        tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
+        .input-table { background: transparent; border: 1px solid #334155; text-align: center; width: 40px; text-transform: uppercase; border-radius: 4px; color: white; }
+    </style>
 </head>
-<body class="flex flex-col items-center justify-center min-h-screen p-6">
-    <h1 class="text-4xl font-black mb-12 tracking-tighter uppercase text-blue-500 italic">Orient'Show <span class="text-white">EPS</span></h1>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
-        <a href="eleve.html" class="bg-blue-600 hover:bg-blue-700 p-12 rounded-3xl text-center shadow-2xl transition-transform active:scale-95">
-            <div class="text-6xl mb-4">🏃‍♂️</div>
-            <div class="text-3xl font-bold uppercase">Espace Élève</div>
-            <p class="opacity-70 mt-2">Saisir mes balises</p>
-        </a>
-        <button onclick="checkAdmin()" class="bg-slate-800 hover:bg-slate-700 p-12 rounded-3xl text-center shadow-2xl transition-transform active:scale-95 border-2 border-slate-700">
-            <div class="text-6xl mb-4">📋</div>
-            <div class="text-3xl font-bold uppercase">Espace Maître</div>
-            <p class="opacity-70 mt-2">Suivi & Correction</p>
-        </button>
+<body class="p-4 md:p-8">
+
+    <header class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-black italic uppercase text-blue-500">Master Console</h1>
+        <button onclick="exportIdoceo()" class="bg-green-600 px-4 py-2 rounded-lg font-bold text-xs uppercase">Export iDoceo</button>
+    </header>
+
+    <div class="flex border-b border-slate-700 mb-6 uppercase text-[10px] font-bold tracking-widest overflow-x-auto">
+        <button id="btnTabEleves" onclick="switchTab('eleves')" class="px-4 py-3 tab-active whitespace-nowrap">👨‍🎓 Liste & Attribution</button>
+        <button id="btnTabBilan" onclick="switchTab('bilan')" class="px-4 py-3 text-slate-400 whitespace-nowrap">📊 Scores Live</button>
+        <button id="btnTabCorrection" onclick="switchTab('correction')" class="px-4 py-3 text-slate-400 whitespace-nowrap">📝 Table Correction</button>
     </div>
+
+    <div id="viewEleves" class="space-y-4">
+        <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700">
+            <h3 class="font-bold mb-4 uppercase text-sm">Importer vos élèves (CSV)</h3>
+            <input type="file" id="csvFile" accept=".csv" class="block w-full text-sm text-slate-400 file:bg-blue-600 file:text-white file:px-4 file:py-2 file:rounded-full file:border-0 cursor-pointer"/>
+        </div>
+        <div id="eleveList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+    </div>
+
+    <div id="viewBilan" class="hidden space-y-4">
+        <div id="statsGrid" class="grid grid-cols-3 gap-4"></div>
+        <div class="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-900 uppercase opacity-70">
+                    <tr><th class="p-4">Identité</th><th class="p-4">Réussis</th><th class="p-4">Points</th><th class="p-4">Progression</th></tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="viewCorrection" class="hidden">
+        <div class="bg-slate-800 rounded-2xl overflow-x-auto border border-slate-700">
+            <table class="w-full text-center border-collapse text-[10px]">
+                <thead class="bg-slate-900 font-bold uppercase">
+                    <tr><th class="p-2">#</th><th colspan="2">NOIR</th><th colspan="2">ROUGE</th><th colspan="2">BLEU</th><th colspan="2">VERT</th><th colspan="2">JAUNE</th></tr>
+                </thead>
+                <tbody id="correctionTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
     <script>
-        function checkAdmin() {
-            const code = prompt("Code de sécurité (RNE) :");
-            if (code === "0680013V") { window.location.href = "maitre.html"; }
-            else { alert("Code incorrect"); }
+        const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let eleves = JSON.parse(localStorage.getItem('co_eleves')) || [];
+        let sessions = {};
+        let matrix = {};
+        const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
+
+        // IMPORT CSV ROBUSTE
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const lines = event.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
+                eleves = lines.slice(1).map(line => {
+                    const sep = line.includes(';') ? ';' : ',';
+                    const name = line.split(sep).slice(0, 2).join(' ').replace(/"/g, '').trim();
+                    return { name, color: '', num: '' };
+                });
+                saveEleves(); renderEleveList(); alert(eleves.length + " élèves importés !");
+            };
+            reader.readAsText(file, "ISO-8859-1");
+        });
+
+        function saveEleves() { localStorage.setItem('co_eleves', JSON.stringify(eleves)); }
+
+        function renderEleveList() {
+            document.getElementById('eleveList').innerHTML = eleves.map((e, i) => `
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col gap-2">
+                    <span class="font-bold text-xs truncate">${e.name}</span>
+                    <div class="flex gap-1">
+                        <select onchange="updateE(${i},'color',this.value)" class="bg-slate-900 text-[10px] p-1 rounded border border-slate-600 flex-1 text-white uppercase">
+                            <option value="">COULEUR</option>${colors.map(c => `<option value="${c}" ${e.color===c?'selected':''}>${c}</option>`).join('')}
+                        </select>
+                        <input type="number" value="${e.num}" onchange="updateE(${i},'num',this.value)" class="bg-slate-900 text-[10px] w-12 p-1 rounded border border-slate-600 text-center text-white">
+                    </div>
+                </div>`).join('');
         }
+
+        function updateE(i, f, v) { eleves[i][f] = v.toUpperCase(); saveEleves(); }
+
+        function switchTab(tab) {
+            ['viewEleves', 'viewBilan', 'viewCorrection'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            ['btnTabEleves', 'btnTabBilan', 'btnTabCorrection'].forEach(id => document.getElementById(id).classList.remove('tab-active', 'text-blue-500'));
+            document.getElementById('view'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.remove('hidden');
+            document.getElementById('btnTab'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('tab-active');
+        }
+
+        db.ref('sessions').on('value', snap => { sessions = snap.val() || {}; updateBilan(); });
+        db.ref('settings/matrix').on('value', snap => { matrix = snap.val() || initMatrix(); drawMatrix(); });
+
+        function updateBilan() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = "";
+            eleves.forEach(e => {
+                if(!e.color || !e.num) return;
+                const data = sessions[`${e.color}_${e.num}`] || {};
+                const pts = Object.values(data).reduce((acc, c) => acc + c.score, 0);
+                const nb = Object.keys(data).length;
+                tbody.innerHTML += `<tr><td class="p-4">${e.name} <span class="text-[9px] opacity-40">(${e.color} ${e.num})</span></td><td class="p-4">${nb}/12</td><td class="p-4 font-bold text-blue-400">${pts}</td><td class="p-4"><div class="w-full bg-slate-900 h-1.5 rounded-full"><div class="bg-blue-500 h-1.5 rounded-full" style="width:${(nb/12)*100}%"></div></div></td></tr>`;
+            });
+        }
+
+        function drawMatrix() {
+            const tbody = document.getElementById('correctionTableBody'); tbody.innerHTML = "";
+            for(let c=1; c<=12; c++) {
+                let row = `<tr><td class="p-2 bg-slate-900">${c}</td>`;
+                colors.forEach(col => {
+                    const l = matrix[c][col];
+                    row += `<td class="p-1"><input class="input-table" value="${l[0]}" onchange="upMat(${c},'${col}',0,this.value)"></td><td class="p-1"><input class="input-table" value="${l[1]}" onchange="upMat(${c},'${col}',1,this.value)"></td>`;
+                });
+                tbody.innerHTML += row + "</tr>";
+            }
+        }
+
+        function upMat(c, col, i, v) { db.ref(`settings/matrix/${c}/${col}/${i}`).set(v.toUpperCase().trim()); }
+
+        function initMatrix() {
+            const def = {
+                1:  { NOIR:['D','Q'], ROUGE:['O','U'], BLEU:['Y','A'], VERT:['E','R'], JAUNE:['N','K'] },
+                2:  { NOIR:['E','X'], ROUGE:['X','Y'], BLEU:['T','L'], VERT:['R','O'], JAUNE:['A','L'] },
+                3:  { NOIR:['C','L'], ROUGE:['H','U'], BLEU:['1','B'], VERT:['O','1'], JAUNE:['T','E'] },
+                4:  { NOIR:['R','V'], ROUGE:['E','E'], BLEU:['C','R'], VERT:['T','N'], JAUNE:['O','S'] },
+                5:  { NOIR:['A','B'], ROUGE:['J','O'], BLEU:['O','U'], VERT:['N','E'], JAUNE:['C','S'] },
+                6:  { NOIR:['F','M'], ROUGE:['1','E'], BLEU:['C','R'], VERT:['U','O'], JAUNE:['S','U'] },
+                7:  { NOIR:['G','H'], ROUGE:['U','A'], BLEU:['E','C'], VERT:['U','H'], JAUNE:['X','E'] },
+                8:  { NOIR:['I','J'], ROUGE:['V','E'], BLEU:['R','A'], VERT:['E','N'], JAUNE:['S','S'] },
+                9:  { NOIR:['K','N'], ROUGE:['N','R'], BLEU:['R','C'], VERT:['Y','E'], JAUNE:['A','E'] },
+                10: { NOIR:['O','S'], ROUGE:['S','C'], BLEU:['C','E'], VERT:['E','A'], JAUNE:['Z','N'] },
+                11: { NOIR:['P','T'], ROUGE:['A','U'], BLEU:['L','Y'], VERT:['U','A'], JAUNE:['D','U'] },
+                12: { NOIR:['U','W'], ROUGE:['L','M'], BLEU:['T','N'], VERT:['R','C'], JAUNE:['A','H'] }
+            };
+            db.ref('settings/matrix').set(def); return def;
+        }
+
+        function exportIdoceo() {
+            let csv = "Nom;Groupe;Circuits;Points\n";
+            eleves.forEach(e => {
+                const data = sessions[`${e.color}_${e.num}`] || {};
+                csv += `${e.name};${e.color} ${e.num};${Object.keys(data).length};${Object.values(data).reduce((a,c)=>a+c.score,0)}\n`;
+            });
+            const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href=url; a.download='CO_LOGIC_IDOCEO.csv'; a.click();
+        }
+
+        function resetData() { if(prompt("Code RNE :")==="0680013V" && confirm("Tout vider ?")) db.ref('sessions').remove(); }
+        renderEleveList();
     </script>
 </body>
 </html>
