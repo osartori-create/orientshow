@@ -3,243 +3,213 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Master | Orient'Show</title>
+    <title>CO-Logic | Master Console</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        body { background-color: #0f172a; color: white; font-family: sans-serif; }
+        body { background-color: #0f172a; color: white; }
         .tab-active { border-bottom: 4px solid #3b82f6; color: #3b82f6; font-weight: 900; }
-        .dot { width: 35px; height: 35px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.2); }
-        .dot-NOIR { background: #000; } .dot-ROUGE { background: #ef4444; } .dot-BLEU { background: #3b82f6; } 
-        .dot-VERT { background: #22c55e; } .dot-JAUNE { background: #eab308; }
-        .row-NOIR { border-left: 8px solid #000; background: rgba(0,0,0,0.3) !important; }
-        .row-ROUGE { border-left: 8px solid #ef4444; background: rgba(239,68,68,0.1) !important; }
-        .row-BLEU { border-left: 8px solid #3b82f6; background: rgba(59,130,246,0.1) !important; }
-        .row-VERT { border-left: 8px solid #22c55e; background: rgba(34,197,94,0.1) !important; }
-        .row-JAUNE { border-left: 8px solid #eab308; background: rgba(234,179,8,0.1) !important; }
-        .select-num { background: white; color: black; font-weight: 900; font-size: 1.3rem; border-radius: 8px; padding: 5px; border: 2px solid #3b82f6; width: 65px; text-align: center; }
+        .table-wrap { max-height: 75vh; overflow: auto; border: 1px solid #334155; }
+        thead th { position: sticky; top: 0; z-index: 30; }
+        td:first-child, th:first-child { position: sticky; left: 0; z-index: 40; background: #0f172a !important; border-right: 3px solid #3b82f6; }
+        .pastille-bilan { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; color: white; }
+        .big-name { font-size: 2.2rem; font-weight: 900; text-transform: uppercase; line-height: 0.9; text-align: center; }
+        .big-pastille { width: 85px; height: 85px; border-radius: 20px; font-size: 40px; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 3px solid black; }
+        .input-code { background: #1e293b; border: 1px solid #334155; text-align: center; width: 60px; height: 50px; font-size: 24px; font-weight: 900; color: white; border-radius: 8px; }
     </style>
 </head>
 <body class="p-4">
 
-    <header class="flex justify-between items-center mb-4 px-2">
-        <h1 class="text-2xl font-black italic text-blue-500 uppercase">CO-LOGIC MASTER</h1>
+    <script>
+        if (sessionStorage.getItem("co_logic_auth") !== "granted") {
+            window.location.href = "index.html";
+        }
+    </script>
+
+    <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4">
+        <h1 class="text-3xl font-black italic text-blue-500 uppercase tracking-tighter">CO-LOGIC MAÎTRE</h1>
+        <div class="flex items-center gap-2">
+            <select id="activeClasse" onchange="loadClasseData()" class="bg-slate-800 p-2 rounded-lg font-bold border border-slate-700 min-w-[120px]"></select>
+            <button onclick="addNewClasse()" class="bg-blue-600 w-10 h-10 rounded-full font-black text-xl hover:bg-blue-500 transition-colors">+</button>
+        </div>
         <div class="flex gap-2">
-            <button onclick="exportIdoceo()" class="bg-green-600 px-4 py-2 rounded-lg font-bold uppercase text-xs shadow-lg">Export iDoceo</button>
-            <button onclick="resetData()" class="bg-red-600 px-4 py-2 rounded-lg font-bold uppercase text-[10px]">Vider Base</button>
+            <button onclick="document.getElementById('csvFile').click()" class="bg-slate-700 px-4 py-2 rounded-lg font-bold text-[10px] uppercase border border-slate-600">Import CSV</button>
+            <input type="file" id="csvFile" class="hidden" accept=".csv" onchange="importCSV(this)">
+            <button onclick="exportIdoceo()" class="bg-green-600 px-4 py-2 rounded-lg font-bold text-[10px] uppercase">Export CSV</button>
+            <button onclick="resetData()" class="bg-red-600 px-4 py-2 rounded-lg font-bold text-[10px] uppercase">Vider</button>
         </div>
     </header>
 
-    <div class="flex border-b border-slate-700 mb-6 font-bold uppercase text-[10px] tracking-widest">
-        <button id="btnTabEleves" onclick="switchTab('eleves')" class="px-6 py-4 tab-active uppercase">👨‍🎓 Attribution</button>
-        <button id="btnTabBilan" onclick="switchTab('bilan')" class="px-6 py-4 text-slate-400 uppercase">📊 Résultats</button>
-        <button id="btnTabCorrection" onclick="switchTab('correction')" class="px-6 py-4 text-slate-400 uppercase">📝 Codes</button>
+    <nav class="flex border-b border-slate-700 mb-6 uppercase text-[10px] font-black tracking-widest overflow-x-auto">
+        <button id="btnTabBilan" onclick="switchTab('bilan')" class="px-6 py-4 tab-active whitespace-nowrap">📊 Bilan Classe</button>
+        <button id="btnTabGroupes" onclick="switchTab('groupes')" class="px-6 py-4 whitespace-nowrap">👥 Attribution</button>
+        <button id="btnTabCorrection" onclick="switchTab('correction')" class="px-6 py-4 whitespace-nowrap">📝 Table de Codes</button>
+    </nav>
+
+    <div id="viewBilan" class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
+
+    <div id="viewGroupes" class="hidden space-y-6">
+        <div class="flex justify-center"><button onclick="addStudentManually()" class="bg-blue-600 px-8 py-3 rounded-full font-black uppercase text-sm shadow-xl">+ Ajouter un élève</button></div>
+        <div id="gridGroupes" class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
     </div>
 
-    <div id="viewEleves" class="space-y-4">
-        <div class="bg-slate-800 p-4 rounded-2xl flex flex-wrap gap-4 items-center justify-between border border-slate-700 shadow-xl">
-            <div class="flex items-center gap-2">
-                <span class="text-[10px] font-bold opacity-50 uppercase">Classe :</span>
-                <select id="selectClasse" onchange="changeClasse(this.value)" class="p-2 rounded-lg text-black font-bold"></select>
-                <button onclick="ajouterClasse()" class="bg-blue-600 px-3 py-1 rounded-lg font-black">+</button>
-                <button onclick="supprimerClasse()" class="bg-red-900/50 text-red-400 px-2 rounded-lg text-xs uppercase">Suppr.</button>
-            </div>
-            <div class="flex gap-2">
-                <input type="file" id="csvFile" accept=".csv" class="text-[10px] text-slate-400 border border-slate-600 p-2 rounded-lg"/>
-                <button onclick="ajouterEleveManuel()" class="bg-slate-700 px-3 py-2 rounded-lg font-bold text-[10px] uppercase">+ Élève</button>
-            </div>
-        </div>
-        <div id="eleveList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
+    <div id="viewCorrection" class="hidden">
+        <div class="table-wrap rounded-2xl"><table class="w-full border-collapse"><thead class="bg-slate-900 text-[10px] font-black italic shadow-xl"><tr><th class="p-6 bg-slate-900 text-blue-500">PARCOURS</th><th colspan="2" class="p-4 bg-gray-800">NOIR</th><th colspan="2" class="p-4 bg-red-900">ROUGE</th><th colspan="2" class="p-4 bg-blue-900">BLEU</th><th colspan="2" class="p-4 bg-green-900">VERT</th><th colspan="2" class="p-4 bg-yellow-600 text-black">JAUNE</th></tr></thead><tbody id="matrixTable"></tbody></table></div>
     </div>
 
-    <div id="viewBilan" class="hidden animate-in fade-in">
-        <div id="resultList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
-    </div>
-
-    <div id="modalDetail" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-        <div class="bg-slate-800 w-full max-w-lg rounded-3xl border border-slate-600 overflow-hidden shadow-2xl">
-            <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900/50">
-                <h3 id="modalTitle" class="text-2xl font-black uppercase italic text-blue-400"></h3>
-                <button onclick="closeModal()" class="text-4xl opacity-50 hover:opacity-100">&times;</button>
+    <div id="modalDetails" class="hidden fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4">
+        <div class="bg-slate-800 w-full max-w-xl rounded-3xl p-6 border border-slate-600 shadow-2xl">
+            <div class="flex justify-between items-start mb-6">
+                <div><h2 id="mName" class="text-3xl font-black italic leading-none uppercase"></h2><p id="mCode" class="text-blue-400 font-bold mt-1 uppercase"></p></div>
+                <button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl">&times;</button>
             </div>
-            <div id="modalContent" class="p-6 max-h-[60vh] overflow-y-auto space-y-3"></div>
-            <div class="p-4 bg-slate-900/80 text-center border-t border-slate-700">
-                <button onclick="closeModal()" class="bg-slate-700 px-10 py-3 rounded-xl font-black uppercase text-xs">Fermer</button>
-            </div>
+            <div id="mHistory" class="space-y-3 max-h-[60vh] overflow-auto pr-2"></div>
         </div>
     </div>
-
-    <div id="viewCorrection" class="hidden"><div id="matrixContainer" class="bg-slate-800 rounded-2xl overflow-x-auto shadow-2xl"></div></div>
 
     <script>
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
+        const colStyles = { NOIR:"bg-black", ROUGE:"bg-red-600", BLEU:"bg-blue-600", VERT:"bg-green-600", JAUNE:"bg-yellow-500 text-black" };
+        let mapping = JSON.parse(localStorage.getItem('co_v4_mapping') || '{}');
+        let currentClass = ""; let classResults = {};
 
-        let toutesLesClasses = JSON.parse(localStorage.getItem('co_logic_classes')) || { "305": [] };
-        let classeActive = localStorage.getItem('co_logic_active_name') || Object.keys(toutesLesClasses)[0];
-        let sessionsTotal = {}; let matrix = {}; const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
+        db.ref('settings/classes').on('value', snap => {
+            const sel = document.getElementById('activeClasse');
+            const classes = Object.keys(snap.val() || {});
+            sel.innerHTML = classes.map(c => `<option value="${c}">${c}</option>`).join('');
+            if(!currentClass && classes.length > 0) { currentClass = classes[0]; loadClasseData(); }
+        });
 
-        function initGestionnaire() {
-            const select = document.getElementById('selectClasse');
-            const nomsClasses = Object.keys(toutesLesClasses);
-            select.innerHTML = nomsClasses.map(name => `<option value="${name}" ${name === classeActive ? 'selected' : ''}>${name}</option>`).join('');
-            
-            // On envoie les noms des classes à Firebase pour les élèves
-            db.ref('settings/classes').set(nomsClasses);
-            
-            renderEleveList();
+        function addNewClasse() {
+            const name = prompt("Nom de la nouvelle classe (ex: 504) :");
+            if (name) { db.ref(`settings/classes/${name}`).set(true); if (!mapping[name]) mapping[name] = []; localStorage.setItem('co_v4_mapping', JSON.stringify(mapping)); }
         }
 
-        function renderEleveList() {
-            const container = document.getElementById('eleveList');
-            const liste = toutesLesClasses[classeActive] || [];
-            container.innerHTML = liste.map((e, i) => `
-                <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 row-${e.color} shadow-lg transition-all">
-                    <div class="text-xl font-black mb-3 truncate leading-none uppercase">${e.nom}<br><span class="text-sm font-bold text-blue-300 capitalize">${e.prenom}</span></div>
-                    <div class="flex items-center justify-between">
-                        <div class="flex gap-1">
-                            ${colors.map(c => `<button onclick="updateE(${i},'color','${c}')" class="dot dot-${c} ${e.color===c?'ring-4 ring-white':''}"></button>`).join('')}
-                        </div>
-                        <select onchange="updateE(${i},'num',this.value)" class="select-num">
-                            <option value="">-</option>${[1,2,3,4,5,6].map(n => `<option value="${n}" ${e.num==n?'selected':''}>${n}</option>`).join('')}
-                        </select>
-                    </div>
-                </div>`).join('');
+        function addStudentManually() {
+            if(!currentClass) return alert("Créez une classe d'abord !");
+            const last = prompt("NOM de l'élève :");
+            const first = prompt("PRÉNOM de l'élève :");
+            if(last && first) {
+                const idx = mapping[currentClass].length;
+                mapping[currentClass].push({
+                    id: Date.now(), last: last.toUpperCase(), first: first,
+                    code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, absent: false
+                });
+                localStorage.setItem('co_v4_mapping', JSON.stringify(mapping));
+                loadClasseData();
+            }
+        }
+
+        function loadClasseData() {
+            currentClass = document.getElementById('activeClasse').value;
+            db.ref(`sessions/${currentClass}`).on('value', snap => { classResults = snap.val() || {}; updateBilan(); });
+            drawAttribution();
+        }
+
+        function importCSV(input) {
+            Papa.parse(input.files[0], { header: true, complete: res => {
+                const data = res.data.filter(r => r['@lastname']); if (data.length === 0) return;
+                const className = data[0]['@classe'] || currentClass || "NOUVELLE_CLASSE";
+                mapping[className] = data.map((row, idx) => ({
+                    id: idx, last: row['@lastname'].toUpperCase(), first: row['@name'],
+                    code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, absent: false
+                }));
+                localStorage.setItem('co_v4_mapping', JSON.stringify(mapping));
+                db.ref(`settings/classes/${className}`).set(true);
+                location.reload();
+            }});
         }
 
         function updateBilan() {
-            const container = document.getElementById('resultList');
-            if(!container) return;
-            container.innerHTML = "";
-            const liste = toutesLesClasses[classeActive] || [];
-            const sessionsActive = sessionsTotal[classeActive] || {};
-            
-            liste.forEach(e => {
-                if(!e.color || !e.num) return;
-                const userKey = `${e.color}_${e.num}`;
-                const data = sessionsActive[userKey] || {};
-                const p60 = Object.values(data).reduce((acc, c) => acc + (c.score || 0), 0);
-                const nb = Object.keys(data).length;
-                const p20 = (p60/3).toFixed(1);
-
-                const card = document.createElement('div');
-                card.className = `bg-slate-800 p-4 rounded-2xl border border-slate-700 row-${e.color} cursor-pointer active:scale-95 transition-transform shadow-lg`;
-                card.innerHTML = `
-                    <div class="flex justify-between items-start mb-2 pointer-events-none">
-                        <div class="text-lg font-black uppercase leading-tight">${e.nom}<br><span class="text-xs font-bold text-blue-300 capitalize">${e.prenom}</span></div>
-                        <div class="bg-slate-900/50 px-2 py-1 rounded text-[10px] font-bold opacity-60 uppercase">${e.color} ${e.num}</div>
-                    </div>
-                    <div class="flex items-end justify-between border-t border-white/10 pt-3 pointer-events-none">
-                        <div><span class="text-3xl font-black text-blue-400">${p20}</span><span class="text-xs opacity-50">/20</span></div>
-                        <div class="text-right"><div class="text-lg font-bold">${p60} pts</div><div class="text-[10px] opacity-40 uppercase font-bold">${nb} parcours</div></div>
-                    </div>`;
-                
-                card.addEventListener('click', () => openDetail(e.nom, e.prenom, userKey));
-                container.appendChild(card);
-            });
+            const list = mapping[currentClass] || [];
+            let scs = list.map(s => Object.values(classResults[s.code] || {}).reduce((a,b)=>a+b.score, 0)).sort((a,b)=>b-a);
+            const q1 = scs[Math.floor(scs.length*0.25)]; const med = scs[Math.floor(scs.length*0.5)];
+            document.getElementById('viewBilan').innerHTML = list.sort((a,b)=>a.last.localeCompare(b.last)).map(s => {
+                const res = classResults[s.code] || {}; const pts = Object.values(res).reduce((a,b)=>a+b.score,0);
+                let bg = "bg-slate-800";
+                if(!s.absent && Object.keys(res).length>0) {
+                    if(pts >= q1 && pts > 0) bg = "bg-green-600"; else if(pts >= med && pts > 0) bg = "bg-yellow-500 text-black"; else bg = "bg-red-600";
+                }
+                const [col, num] = s.code.split('_');
+                return `<div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-4 rounded-2xl border border-white/10 cursor-pointer active:scale-95 text-center">
+                    <div class="flex justify-between items-center mb-3"><span class="pastille-bilan ${colStyles[col]}">${num}</span><span class="text-2xl font-black">${pts}</span></div>
+                    <p class="text-xs font-black uppercase leading-tight">${s.last}<br><span class="opacity-70 font-bold">${s.first}</span></p></div>`;
+            }).join('');
         }
 
-        function openDetail(nom, prenom, userKey) {
-            const data = (sessionsTotal[classeActive] || {})[userKey] || {};
-            document.getElementById('modalTitle').innerText = nom + " " + prenom;
-            let html = "";
-            if(Object.keys(data).length === 0) {
-                html = "<p class='text-center py-10 opacity-50 italic'>Aucun parcours enregistré.</p>";
-            } else {
-                const sorted = Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp);
-                sorted.forEach(([circuit, info]) => {
-                    const time = new Date(info.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                    const scoreColor = info.score === 5 ? 'text-green-400' : (info.score === 2 ? 'text-yellow-400' : 'text-red-400');
-                    html += `<div class="flex justify-between items-center bg-slate-900 p-4 rounded-2xl border border-slate-700"><div><p class="font-black text-sm text-blue-300">${circuit.replace('C','PARCOURS ')}</p><p class="text-[10px] opacity-40 font-mono italic">Heure : ${time}</p></div><div class="flex items-center gap-3"><span class="text-xl font-black ${scoreColor}">${info.score} pts</span><button onclick="editScore('${userKey}', '${circuit}')" class="bg-white/10 p-2 rounded-lg text-[10px] font-bold uppercase border border-white/10">Éditer</button></div></div>`;
+        function drawAttribution() {
+            const list = mapping[currentClass] || [];
+            document.getElementById('gridGroupes').innerHTML = list.map(s => {
+                const [col, num] = s.code.split('_');
+                return `<div class="bg-slate-800 p-6 rounded-[30px] border border-slate-700 flex flex-col items-center">
+                    <div id="past-${s.id}" class="big-pastille ${colStyles[col]} mb-4 shadow-2xl">${num}</div>
+                    <div class="mb-4 text-center"><p class="text-[10px] uppercase font-bold opacity-60">${s.last}</p><p class="text-2xl font-black uppercase text-blue-400">${s.first}</p></div>
+                    <select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 p-3 rounded-xl border border-slate-600 w-full text-xs font-bold text-center">
+                        <option value="ABS" ${s.absent?'selected':''}>ABSENT</option>
+                        ${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}
+                    </select></div>`;
+            }).join('');
+        }
+
+        function changeCode(id, val) {
+            const s = mapping[currentClass].find(x => x.id == id);
+            if(val === "ABS") s.absent = true; else { s.absent = false; s.code = val; }
+            localStorage.setItem('co_v4_mapping', JSON.stringify(mapping));
+            if(val !== "ABS") {
+                const [col, num] = val.split('_'); const past = document.getElementById(`past-${id}`);
+                past.className = `big-pastille ${colStyles[col]} mb-4 shadow-2xl`; past.innerText = num;
+            }
+            updateBilan();
+        }
+
+        function openModal(name, code) {
+            document.getElementById('mName').innerText = name; document.getElementById('mCode').innerText = code.replace('_',' ');
+            const res = classResults[code] || {}; const hist = Object.entries(res).sort((a,b)=>b[1].timestamp - a[1].timestamp);
+            document.getElementById('mHistory').innerHTML = hist.map(([c, v]) => `
+                <div class="bg-slate-900 p-4 rounded-2xl flex justify-between items-center mb-2 border border-slate-700">
+                    <div><p class="font-black text-blue-400 uppercase">Parcours ${c.replace('C','')}</p><p class="text-[10px] opacity-40">${new Date(v.timestamp).toLocaleTimeString()}</p></div>
+                    <input type="number" value="${v.score}" onchange="editScore('${code}','${c}',this.value)" class="w-16 bg-slate-800 p-2 text-center rounded-lg font-black text-xl border border-slate-600 text-white">
+                </div>`).join('') || "<p class='text-center opacity-50 italic'>Aucun passage.</p>";
+            document.getElementById('modalDetails').classList.remove('hidden');
+        }
+
+        function editScore(code, c, v) { db.ref(`sessions/${currentClass}/${code}/${c}/score`).set(parseInt(v)); }
+
+        db.ref('settings/matrix').on('value', snap => {
+            const matrix = snap.val(); let html = "";
+            for(let c=1; c<=12; c++) {
+                html += `<tr class="border-b border-slate-800"><td class="p-6 font-black italic bg-slate-900 text-blue-500 text-center">#${c}</td>`;
+                colors.forEach(col => {
+                    const letters = (matrix && matrix[c]) ? matrix[c][col] : ["",""];
+                    html += `<td class="p-3 ${colStyles[col]} bg-opacity-10"><input class="input-code" value="${letters[0]}" onchange="updL(${c},'${col}',0,this.value)"></td>
+                             <td class="p-3 ${colStyles[col]} bg-opacity-10 border-r border-slate-800"><input class="input-code" value="${letters[1]}" onchange="updL(${c},'${col}',1,this.value)"></td>`;
                 });
+                html += `</tr>`;
             }
-            document.getElementById('modalContent').innerHTML = html;
-            document.getElementById('modalDetail').classList.remove('hidden');
-        }
-
-        function editScore(userKey, circuit) {
-            const val = prompt("Score (0, 2 ou 5 pts) :");
-            if (val !== null && [0, 2, 5].includes(parseInt(val))) {
-                db.ref(`sessions/${classeActive}/${userKey}/${circuit}/score`).set(parseInt(val));
-                closeModal();
-            }
-        }
-
-        function closeModal() { document.getElementById('modalDetail').classList.add('hidden'); }
-        function switchTab(t) {
-            ['viewEleves', 'viewBilan', 'viewCorrection'].forEach(v => document.getElementById(v).classList.add('hidden'));
-            ['btnTabEleves', 'btnTabBilan', 'btnTabCorrection'].forEach(id => document.getElementById(id).classList.remove('tab-active', 'text-blue-500'));
-            document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden');
-            document.getElementById('btnTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('tab-active');
-            if(t==='bilan') updateBilan(); if(t==='correction') drawMatrix();
-        }
-
-        db.ref('sessions').on('value', snap => { sessionsTotal = snap.val() || {}; updateBilan(); });
-        db.ref('settings/matrix').on('value', snap => { matrix = snap.val() || initMatrix(); drawMatrix(); });
-
-        function updateE(i, f, v) { toutesLesClasses[classeActive][i][f] = v; saveGlobal(); renderEleveList(); }
-        function saveGlobal() { localStorage.setItem('co_logic_classes', JSON.stringify(toutesLesClasses)); localStorage.setItem('co_logic_active_name', classeActive); }
-        function changeClasse(n) { classeActive = n; localStorage.setItem('co_logic_active_name', n); renderEleveList(); updateBilan(); }
-        function ajouterClasse() { const n = prompt("Nom de la classe (ex: 402) :"); if(n) { toutesLesClasses[n]=[]; saveGlobal(); initGestionnaire(); } }
-        function supprimerClasse() { if(Object.keys(toutesLesClasses).length <= 1) return; if(confirm(`Supprimer ${classeActive} ?`)) { delete toutesLesClasses[classeActive]; classeActive = Object.keys(toutesLesClasses)[0]; saveGlobal(); initGestionnaire(); } }
-
-        document.getElementById('csvFile').addEventListener('change', function(e) {
-            const file = e.target.files[0]; const reader = new FileReader();
-            reader.onload = function(event) {
-                const lines = event.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
-                const name = prompt("Nom de la classe ?"); if(!name) return;
-                const h = lines[0].replace(/"/g, '').split(lines[0].includes(';') ? ';' : ',');
-                const idxNom = h.indexOf('@lastname'); const idxPre = h.indexOf('@name');
-                toutesLesClasses[name] = lines.slice(1).map(line => {
-                    const sep = line.includes(';') ? ';' : ','; const p = line.split(sep).map(v => v.replace(/"/g, '').trim());
-                    return { nom: (p[idxNom] || "").toUpperCase(), prenom: p[idxPre] || "", color: '', num: '' };
-                }).sort((a,b) => a.nom.localeCompare(b.nom));
-                classeActive = name; saveGlobal(); initGestionnaire();
-            };
-            reader.readAsText(file, "ISO-8859-1");
+            document.getElementById('matrixTable').innerHTML = html;
         });
 
-        function ajouterEleveManuel() {
-            const nom = prompt("NOM Prénom :");
-            if (nom) { toutesLesClasses[classeActive].push({ nom: nom.toUpperCase(), prenom: "", color: '', num: '' }); toutesLesClasses[classeActive].sort((a,b) => a.nom.localeCompare(b.nom)); saveGlobal(); renderEleveList(); }
+        function updL(c, col, i, v) { db.ref(`settings/matrix/${c}/${col}/${i}`).set(v.toUpperCase().trim()); }
+
+        function switchTab(t) {
+            ['viewBilan', 'viewGroupes', 'viewCorrection'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById('view' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('hidden');
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
+            document.getElementById('btnTab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.add('tab-active');
         }
 
-        function drawMatrix() {
-            const c = document.getElementById('matrixContainer');
-            let h = `<table class="w-full text-center text-[10px] shadow-2xl"><thead class="bg-slate-900 font-bold uppercase"><tr><th class="p-3">#</th>`;
-            colors.forEach(col => { h += `<th colspan="2" class="p-3 border-l border-slate-700">${col}</th>`; });
-            h += `</tr></thead><tbody>`;
-            for(let i=1; i<=12; i++) {
-                h += `<tr class="border-b border-slate-700"><td class="p-2 font-black italic bg-slate-900/30">${i}</td>`;
-                colors.forEach(col => { const l = matrix[i][col]; h += `<td class="p-1"><input class="w-8 bg-transparent border border-slate-700 text-center uppercase font-bold" value="${l[0] || ''}" onchange="upMat(${i},'${col}',0,this.value)"></td><td class="p-1 border-r border-slate-700"><input class="w-8 bg-transparent border border-slate-700 text-center uppercase font-bold" value="${l[1] || ''}" onchange="upMat(${i},'${col}',1,this.value)"></td>`; });
-                h += `</tr>`;
-            }
-            c.innerHTML = h + "</tbody></table>";
-        }
-        function upMat(c, col, i, v) { db.ref(`settings/matrix/${c}/${col}/${i}`).set(v.toUpperCase().trim()); }
-        function initMatrix() {
-            const def = { 1: { NOIR:['D','Q'], ROUGE:['O','U'], BLEU:['Y','A'], VERT:['E','R'], JAUNE:['N','K'] }, 2: { NOIR:['E','X'], ROUGE:['X','Y'], BLEU:['T','L'], VERT:['R','O'], JAUNE:['A','L'] }, 3: { NOIR:['C','L'], ROUGE:['H','U'], BLEU:['1','B'], VERT:['O','1'], JAUNE:['T','E'] }, 4: { NOIR:['R','V'], ROUGE:['E','E'], BLEU:['C','R'], VERT:['T','N'], JAUNE:['O','S'] }, 5: { NOIR:['A','B'], ROUGE:['J','O'], BLEU:['O','U'], VERT:['N','E'], JAUNE:['C','S'] }, 6: { NOIR:['F','M'], ROUGE:['1','E'], BLEU:['C','R'], VERT:['U','O'], JAUNE:['S','U'] }, 7: { NOIR:['G','H'], ROUGE:['U','A'], BLEU:['E','C'], VERT:['U','H'], JAUNE:['X','E'] }, 8: { NOIR:['I','J'], ROUGE:['V','E'], BLEU:['R','A'], VERT:['E','N'], JAUNE:['S','S'] }, 9: { NOIR:['K','N'], ROUGE:['N','R'], BLEU:['R','C'], VERT:['Y','E'], JAUNE:['A','E'] }, 10: { NOIR:['O','S'], ROUGE:['S','C'], BLEU:['C','E'], VERT:['E','A'], JAUNE:['Z','N'] }, 11: { NOIR:['P','T'], ROUGE:['A','U'], BLEU:['L','Y'], VERT:['U','A'], JAUNE:['D','U'] }, 12: { NOIR:['U','W'], ROUGE:['L','M'], BLEU:['T','N'], VERT:['R','C'], JAUNE:['A','H'] } };
-            db.ref('settings/matrix').set(def); return def;
-        }
         function exportIdoceo() {
-            let csv = "\uFEFF@lastname;@name;Points;Note\n";
-            const sessionsActive = sessionsTotal[classeActive] || {};
-            (toutesLesClasses[classeActive] || []).forEach(e => {
-                const data = sessionsActive[`${e.color}_${e.num}`] || {};
-                const p60 = Object.values(data).reduce((a,c) => a + (c.score || 0), 0);
-                csv += `${e.nom};${e.prenom};${p60};${(p60/3).toFixed(2)}\n`;
-            });
-            const b = new Blob([csv], {type:'text/csv;charset=utf-8'}); const a = document.createElement('a');
-            a.href = URL.createObjectURL(b); a.download = `Export_${classeActive}.csv`; a.click();
+            let csv = "Nom;Parcours;Score\n";
+            mapping[currentClass].forEach(s => { const r = classResults[s.code] || {}; csv += `${s.last} ${s.first};${Object.keys(r).length};${Object.values(r).reduce((a,b)=>a+b.score,0)}\n`; });
+            const blob = new Blob([csv], {type:'text/csv'}); const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`Resultats_${currentClass}.csv`; a.click();
         }
-        function resetData() { 
-            if(prompt("Code RNE :")==="0680013V" && confirm(`Vider uniquement les scores de la classe ${classeActive} ?`)) {
-                db.ref(`sessions/${classeActive}`).remove(); 
-            }
-        }
-        initGestionnaire();
+
+        function resetData() { if(prompt("RNE :")==="0680013V" && confirm("Tout vider ?")) db.ref(`sessions/${currentClass}`).remove(); }
     </script>
 </body>
 </html>
