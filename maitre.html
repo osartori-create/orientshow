@@ -14,23 +14,17 @@
         .table-wrap { max-height: 75vh; overflow: auto; border: 1px solid #334155; }
         thead th { position: sticky; top: 0; z-index: 30; }
         td:first-child, th:first-child { position: sticky; left: 0; z-index: 40; background: #0f172a !important; border-right: 3px solid #3b82f6; }
-        
-        /* Pastille Bilan (Doublée) */
         .pastille-bilan { width: 60px; height: 60px; border-radius: 50%; border: 3px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; color: white; }
-        
-        /* Prénom Bilan (Doublé) */
         .prenom-bilan { font-size: 1.8rem; font-weight: 900; text-transform: uppercase; line-height: 1; color: #3b82f6; }
-        
-        /* Attribution Style */
         .big-name { font-size: 2.2rem; font-weight: 900; text-transform: uppercase; line-height: 0.9; text-align: center; }
         .big-pastille { width: 85px; height: 85px; border-radius: 20px; font-size: 40px; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 3px solid black; }
-        
         .input-code { background: #1e293b; border: 1px solid #334155; text-align: center; width: 60px; height: 50px; font-size: 24px; font-weight: 900; color: white; border-radius: 8px; }
     </style>
 </head>
 <body class="p-4">
 
     <script>
+        // VERROU DE SÉCURITÉ
         if (sessionStorage.getItem("co_logic_auth") !== "granted") {
             window.location.href = "index.html";
         }
@@ -39,8 +33,8 @@
     <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4">
         <h1 class="text-3xl font-black italic text-blue-500 uppercase tracking-tighter text-center">ORIENT'SHOW <span class="text-white">MAÎTRE</span></h1>
         <div class="flex items-center gap-2">
-            <select id="activeClasse" onchange="loadClasseData()" class="bg-slate-800 p-2 rounded-lg font-bold border border-slate-700 min-w-[120px]"></select>
-            <button onclick="addNewClasse()" class="bg-blue-600 w-10 h-10 rounded-full font-black text-xl hover:bg-blue-500 transition-colors">+</button>
+            <select id="activeClasse" onchange="loadClasseData()" class="bg-slate-800 p-2 rounded-lg font-bold border border-slate-700 min-w-[150px]"></select>
+            <button onclick="addNewClasse()" class="bg-blue-600 w-10 h-10 rounded-full font-black text-xl hover:bg-blue-500 transition-colors shadow-lg shadow-blue-900/50">+</button>
         </div>
         <div class="flex gap-2">
             <button onclick="document.getElementById('csvFile').click()" class="bg-slate-700 px-4 py-2 rounded-lg font-bold text-[10px] uppercase border border-slate-600">Import CSV</button>
@@ -59,7 +53,7 @@
     <div id="viewBilan" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
 
     <div id="viewGroupes" class="hidden space-y-6">
-        <div class="flex justify-center"><button onclick="addStudentManually()" class="bg-blue-600 px-8 py-3 rounded-full font-black uppercase text-sm shadow-xl">+ Ajouter un élève</button></div>
+        <div class="flex justify-center"><button onclick="addStudentManually()" class="bg-blue-600 px-8 py-3 rounded-full font-black uppercase text-sm shadow-xl hover:bg-blue-500">+ Ajouter un élève</button></div>
         <div id="gridGroupes" class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
     </div>
 
@@ -70,7 +64,7 @@
     <div id="modalDetails" class="hidden fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4">
         <div class="bg-slate-800 w-full max-w-xl rounded-3xl p-6 border border-slate-600">
             <div class="flex justify-between items-start mb-6">
-                <div><h2 id="mName" class="text-3xl font-black italic leading-none uppercase"></h2><p id="mCode" class="text-blue-400 font-bold mt-1 uppercase"></p></div>
+                <div><h2 id="mName" class="text-3xl font-black italic leading-none uppercase text-blue-400"></h2><p id="mCode" class="text-white font-bold mt-1 uppercase opacity-50"></p></div>
                 <button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl">&times;</button>
             </div>
             <div id="mHistory" class="space-y-3 max-h-[60vh] overflow-auto pr-2"></div>
@@ -83,78 +77,120 @@
         const db = firebase.database();
         const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
         const colStyles = { NOIR:"bg-black", ROUGE:"bg-red-600", BLEU:"bg-blue-600", VERT:"bg-green-600", JAUNE:"bg-yellow-500 text-black" };
+        
         let mapping = JSON.parse(localStorage.getItem('orient_v5_mapping') || '{}');
         let currentClass = ""; let classResults = {};
 
-        // Chargement initial des classes (Nettoyage des résidus Firebase)
+        // SYNC CLASSES
         db.ref('settings/classes').on('value', snap => {
             const sel = document.getElementById('activeClasse');
             const data = snap.val() || {};
-            // On ne garde que les clés qui ne sont pas des index numériques par défaut
-            const classes = Object.keys(data).filter(c => isNaN(c));
-            sel.innerHTML = classes.map(c => `<option value="${c}">${c}</option>`).join('');
-            if(!currentClass && classes.length > 0) { currentClass = classes[0]; loadClasseData(); }
+            const classes = Object.keys(data).filter(c => c !== "0" && c !== "1" && c !== "2" && c !== "3");
+            
+            sel.innerHTML = classes.map(c => `<option value="${c}" ${c === currentClass ? 'selected' : ''}>${c}</option>`).join('');
+            
+            if (classes.length === 0) {
+                sel.innerHTML = '<option value="">-- AUCUNE CLASSE --</option>';
+            } else if (!currentClass) {
+                currentClass = classes[0];
+                loadClasseData();
+            }
         });
 
         function addNewClasse() {
-            const name = prompt("Nom de la nouvelle classe :");
-            if (name) { db.ref(`settings/classes/${name}`).set(true); if (!mapping[name]) mapping[name] = []; localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping)); }
-        }
-
-        function addStudentManually() {
-            if(!currentClass) return alert("Créez une classe d'abord !");
-            const last = prompt("NOM :"); const first = prompt("PRÉNOM :");
-            if(last && first) {
-                const idx = mapping[currentClass].length;
-                mapping[currentClass].push({ id: Date.now(), last: last.toUpperCase(), first: first, code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, absent: false });
-                localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping)); loadClasseData();
+            const name = prompt("Nom de la nouvelle classe (ex: 6A, 302, AS...) :");
+            if (name && name.trim() !== "") {
+                const cleanName = name.trim().toUpperCase();
+                db.ref(`settings/classes/${cleanName}`).set(true);
+                if (!mapping[cleanName]) mapping[cleanName] = [];
+                localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping));
+                currentClass = cleanName;
+                setTimeout(loadClasseData, 500);
             }
         }
 
         function loadClasseData() {
             currentClass = document.getElementById('activeClasse').value;
-            db.ref(`sessions/${currentClass}`).on('value', snap => { classResults = snap.val() || {}; updateBilan(); });
+            if(!currentClass) return;
+            db.ref(`sessions/${currentClass}`).on('value', snap => { 
+                classResults = snap.val() || {}; 
+                updateBilan(); 
+            });
             drawAttribution();
+        }
+
+        function addStudentManually() {
+            if(!currentClass) { alert("Veuillez d'abord créer ou sélectionner une classe."); return; }
+            const last = prompt("NOM de l'élève :");
+            const first = prompt("PRÉNOM de l'élève :");
+            if(last && first) {
+                if (!mapping[currentClass]) mapping[currentClass] = [];
+                const idx = mapping[currentClass].length;
+                mapping[currentClass].push({ 
+                    id: Date.now(), 
+                    last: last.toUpperCase().trim(), 
+                    first: first.trim(), 
+                    code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, 
+                    absent: false 
+                });
+                localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping));
+                drawAttribution();
+                updateBilan();
+            }
         }
 
         function importCSV(input) {
             Papa.parse(input.files[0], { header: true, complete: res => {
-                const data = res.data.filter(r => r['@lastname']);
-                const className = data[0]['@classe'] || currentClass || "CLASSE_NOUVELLE";
-                mapping[className] = data.map((row, idx) => ({
-                    id: idx, last: row['@lastname'].toUpperCase(), first: row['@name'],
-                    code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, absent: false
+                const data = res.data.filter(r => r['@lastname'] && r['@name']);
+                if (data.length === 0) { alert("Format CSV iDoceo non reconnu."); return; }
+                const className = data[0]['@classe'] || prompt("Nom de la classe pour cet import ?") || "IMPORT";
+                const cleanName = className.toUpperCase();
+                
+                mapping[cleanName] = data.map((row, idx) => ({
+                    id: idx + Date.now(), 
+                    last: row['@lastname'].toUpperCase().trim(), 
+                    first: row['@name'].trim(),
+                    code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, 
+                    absent: false
                 }));
+                
                 localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping));
-                db.ref(`settings/classes/${className}`).set(true);
+                db.ref(`settings/classes/${cleanName}`).set(true);
+                currentClass = cleanName;
                 location.reload();
             }});
         }
 
         function updateBilan() {
+            const view = document.getElementById('viewBilan');
             const list = mapping[currentClass] || [];
-            let scs = list.map(s => Object.values(classResults[s.code] || {}).reduce((a,b)=>a+b.score, 0)).sort((a,b)=>b-a);
-            const q1 = scs[Math.floor(scs.length*0.25)]; const med = scs[Math.floor(scs.length*0.5)];
+            if (list.length === 0) { view.innerHTML = "<p class='col-span-full text-center opacity-40 py-10 italic'>Aucun élève dans cette classe. Allez dans 'Attribution' pour en ajouter.</p>"; return; }
 
-            document.getElementById('viewBilan').innerHTML = list.sort((a,b)=>a.last.localeCompare(b.last)).map(s => {
+            let scs = list.map(s => Object.values(classResults[s.code] || {}).reduce((a,b)=>a+b.score, 0)).sort((a,b)=>b-a);
+            const q1 = scs[Math.floor(scs.length*0.25)] || 0;
+            const med = scs[Math.floor(scs.length*0.5)] || 0;
+
+            view.innerHTML = list.sort((a,b)=>a.last.localeCompare(b.last)).map(s => {
                 const res = classResults[s.code] || {};
                 const pts = Object.values(res).reduce((a,b)=>a+b.score,0);
-                const nbParcours = Object.keys(res).length;
+                const nb = Object.keys(res).length;
                 let bg = "bg-slate-800";
-                if(!s.absent && nbParcours > 0) {
-                    if(pts >= q1 && pts > 0) bg = "bg-green-600"; else if(pts >= med && pts > 0) bg = "bg-yellow-500 text-black"; else bg = "bg-red-600";
+                if(!s.absent && nb > 0) {
+                    if(pts >= q1 && pts > 0) bg = "bg-green-600";
+                    else if(pts >= med && pts > 0) bg = "bg-yellow-500 text-black";
+                    else bg = "bg-red-600";
                 }
                 const [col, num] = s.code.split('_');
                 return `
-                    <div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-6 rounded-3xl border border-white/10 cursor-pointer text-center shadow-xl">
+                    <div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-6 rounded-3xl border border-white/10 cursor-pointer text-center shadow-lg transition-transform active:scale-95">
                         <div class="flex justify-between items-center mb-4">
                             <span class="pastille-bilan ${colStyles[col]}">${num}</span>
                             <div class="text-right">
                                 <span class="text-4xl font-black">${pts}</span><br>
-                                <span class="text-[10px] uppercase font-bold opacity-60">${nbParcours} parcours</span>
+                                <span class="text-[10px] uppercase font-bold opacity-60">${nb} parcours</span>
                             </div>
                         </div>
-                        <p class="text-xs uppercase font-bold opacity-60 mb-1">${s.last}</p>
+                        <p class="text-[10px] uppercase font-bold opacity-50 mb-1 truncate">${s.last}</p>
                         <p class="prenom-bilan truncate">${s.first}</p>
                     </div>`;
             }).join('');
@@ -162,43 +198,51 @@
 
         function drawAttribution() {
             const list = mapping[currentClass] || [];
-            document.getElementById('gridGroupes').innerHTML = list.map(s => {
+            const grid = document.getElementById('gridGroupes');
+            grid.innerHTML = list.map(s => {
                 const [col, num] = s.code.split('_');
-                return `<div class="bg-slate-800 p-6 rounded-[30px] border border-slate-700 flex flex-col items-center">
+                return `
+                <div class="bg-slate-800 p-6 rounded-[30px] border border-slate-700 flex flex-col items-center">
                     <div id="past-${s.id}" class="big-pastille ${colStyles[col]} mb-4 shadow-2xl">${num}</div>
-                    <div class="mb-4 text-center"><p class="text-[10px] uppercase font-bold opacity-60">${s.last}</p><p class="text-2xl font-black uppercase text-blue-400 leading-none">${s.first}</p></div>
+                    <div class="mb-4 text-center">
+                        <p class="text-[10px] uppercase font-bold opacity-40">${s.last}</p>
+                        <p class="text-2xl font-black uppercase text-blue-400 leading-none truncate w-full">${s.first}</p>
+                    </div>
                     <select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 p-3 rounded-xl border border-slate-600 w-full text-xs font-bold text-center">
                         <option value="ABS" ${s.absent?'selected':''}>ABSENT</option>
-                        ${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}
-                    </select></div>`;
+                        ${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}` && !s.absent ?'selected':''}>${c} ${n+1}</option>`)).join('')}
+                    </select>
+                </div>`;
             }).join('');
         }
 
         function changeCode(id, val) {
             const s = mapping[currentClass].find(x => x.id == id);
-            if(val === "ABS") s.absent = true; else { s.absent = false; s.code = val; }
+            if(val === "ABS") s.absent = true; 
+            else { s.absent = false; s.code = val; }
             localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping));
-            if(val !== "ABS") { const [col, num] = val.split('_'); const p = document.getElementById(`past-${id}`); p.className = `big-pastille ${colStyles[col]} mb-4 shadow-2xl`; p.innerText = num; }
-            updateBilan();
+            loadClasseData();
         }
 
         function openModal(name, code) {
-            document.getElementById('mName').innerText = name; document.getElementById('mCode').innerText = code.replace('_',' ');
-            const res = classResults[code] || {}; const hist = Object.entries(res).sort((a,b)=>b[1].timestamp - a[1].timestamp);
-            document.getElementById('mHistory').innerHTML = hist.map(([cKey, v]) => `
+            document.getElementById('mName').innerText = name;
+            document.getElementById('mCode').innerText = code.replace('_',' ');
+            const res = classResults[code] || {};
+            const hist = Object.entries(res).sort((a,b)=>b[1].timestamp - a[1].timestamp);
+            document.getElementById('mHistory').innerHTML = hist.map(([cK, v]) => `
                 <div class="bg-slate-900 p-4 rounded-2xl flex justify-between items-center mb-2 border border-slate-700">
-                    <div><p class="font-black text-blue-400 uppercase">Parcours ${cKey.replace('C','')}</p><p class="text-[10px] opacity-40">${new Date(v.timestamp).toLocaleTimeString()}</p></div>
+                    <div><p class="font-black text-blue-400 uppercase">Parcours ${cK.replace('C','')}</p><p class="text-[10px] opacity-40">${new Date(v.timestamp).toLocaleTimeString()}</p></div>
                     <div class="flex items-center gap-3">
-                        <input type="number" value="${v.score}" onchange="editScore('${code}','${cKey}',this.value)" class="w-16 bg-slate-800 p-2 text-center rounded-lg font-black text-xl border border-slate-600 text-white">
-                        <button onclick="deletePassage('${code}','${cKey}')" class="bg-red-600 p-2 rounded-lg text-xs font-bold">🗑️</button>
+                        <input type="number" value="${v.score}" onchange="editScore('${code}','${cK}',this.value)" class="w-16 bg-slate-800 p-2 text-center rounded-lg font-black text-xl border border-slate-600 text-white">
+                        <button onclick="deletePassage('${code}','${cK}')" class="bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white p-2 rounded-lg transition-colors text-xs">🗑️</button>
                     </div>
-                </div>`).join('') || "<p class='text-center opacity-50 italic py-10'>Aucun passage enregistré.</p>";
+                </div>`).join('') || "<p class='text-center opacity-30 py-10 italic'>Aucune donnée pour cet élève.</p>";
             document.getElementById('modalDetails').classList.remove('hidden');
         }
 
-        function deletePassage(studentCode, circuitKey) {
-            if(confirm("Réinitialiser ce parcours ? L'élève pourra le recommencer.")) {
-                db.ref(`sessions/${currentClass}/${studentCode}/${circuitKey}`).remove();
+        function deletePassage(stCode, cK) {
+            if(confirm("Supprimer ce passage ? L'élève pourra le refaire.")) {
+                db.ref(`sessions/${currentClass}/${stCode}/${cK}`).remove();
                 document.getElementById('modalDetails').classList.add('hidden');
             }
         }
@@ -229,12 +273,12 @@
         }
 
         function exportIdoceo() {
-            let csv = "Nom;Parcours_Termines;Total_Points\n";
+            let csv = "Nom;Parcours_Valides;Score_Total\n";
             mapping[currentClass].forEach(s => { const r = classResults[s.code] || {}; csv += `${s.last} ${s.first};${Object.keys(r).length};${Object.values(r).reduce((a,b)=>a+b.score,0)}\n`; });
-            const blob = new Blob([csv], {type:'text/csv'}); const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`Resultats_${currentClass}.csv`; a.click();
+            const blob = new Blob([csv], {type:'text/csv'}); const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`OrientShow_${currentClass}.csv`; a.click();
         }
 
-        function resetData() { if(prompt("Code RNE :")==="0680013V" && confirm("Vider les scores de cette classe ?")) db.ref(`sessions/${currentClass}`).remove(); }
+        function resetData() { if(prompt("Code RNE :")==="0680013V" && confirm("Vider tous les scores de la classe " + currentClass + " ?")) db.ref(`sessions/${currentClass}`).remove(); }
     </script>
 </body>
 </html>
