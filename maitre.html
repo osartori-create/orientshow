@@ -11,35 +11,37 @@
     <style>
         body { background-color: #0f172a; color: white; }
         .tab-active { border-bottom: 4px solid #3b82f6; color: #3b82f6; font-weight: 900; }
-        .table-wrap { max-height: 75vh; overflow: auto; border: 1px solid #334155; }
+        .table-wrap { max-height: 70vh; overflow: auto; }
         thead th { position: sticky; top: 0; z-index: 30; }
         td:first-child, th:first-child { position: sticky; left: 0; z-index: 40; background: #0f172a !important; border-right: 3px solid #3b82f6; }
         .pastille-bilan { width: 60px; height: 60px; border-radius: 50%; border: 3px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; color: white; }
         .prenom-bilan { font-size: 1.8rem; font-weight: 900; text-transform: uppercase; line-height: 1; color: #3b82f6; }
-        .big-name { font-size: 2.2rem; font-weight: 900; text-transform: uppercase; line-height: 0.9; text-align: center; }
         .big-pastille { width: 85px; height: 85px; border-radius: 20px; font-size: 40px; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 3px solid black; }
         .input-code { background: #1e293b; border: 1px solid #334155; text-align: center; width: 60px; height: 50px; font-size: 24px; font-weight: 900; color: white; border-radius: 8px; }
     </style>
 </head>
 <body class="p-4">
 
-    <script>
-        // VERROU DE SÉCURITÉ
-        if (sessionStorage.getItem("co_logic_auth") !== "granted") {
-            window.location.href = "index.html";
-        }
-    </script>
+    <script>if (sessionStorage.getItem("co_logic_auth") !== "granted") { window.location.href = "index.html"; }</script>
 
     <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4">
-        <h1 class="text-3xl font-black italic text-blue-500 uppercase tracking-tighter text-center">ORIENT'SHOW <span class="text-white">MAÎTRE</span></h1>
-        <div class="flex items-center gap-2">
-            <select id="activeClasse" onchange="loadClasseData()" class="bg-slate-800 p-2 rounded-lg font-bold border border-slate-700 min-w-[150px]"></select>
-            <button onclick="addNewClasse()" class="bg-blue-600 w-10 h-10 rounded-full font-black text-xl hover:bg-blue-500 transition-colors shadow-lg shadow-blue-900/50">+</button>
+        <h1 class="text-3xl font-black italic text-blue-500 uppercase tracking-tighter">ORIENT'SHOW <span class="text-white">MAÎTRE</span></h1>
+        
+        <div class="flex items-center gap-4">
+            <div class="flex bg-slate-800 rounded-xl p-1 border border-slate-700">
+                <button onclick="setMode('CLASSIC')" id="btnNormal" class="px-3 py-1 rounded-lg text-[10px] font-black uppercase">Normal</button>
+                <button onclick="setMode('TIME_ATTACK')" id="btnTime" class="px-3 py-1 rounded-lg text-[10px] font-black uppercase">Vitesse</button>
+            </div>
+            <div class="flex items-center gap-2">
+                <select id="activeClasse" onchange="loadClasseData()" class="bg-slate-800 p-2 rounded-lg font-bold border border-slate-700"></select>
+                <button onclick="addNewClasse()" class="bg-blue-600 w-10 h-10 rounded-full font-black text-xl">+</button>
+            </div>
         </div>
+
         <div class="flex gap-2">
-            <button onclick="document.getElementById('csvFile').click()" class="bg-slate-700 px-4 py-2 rounded-lg font-bold text-[10px] uppercase border border-slate-600">Import CSV</button>
+            <button onclick="document.getElementById('csvFile').click()" class="bg-slate-700 px-4 py-2 rounded-lg font-bold text-[10px] uppercase border border-slate-600">Import iDoceo</button>
             <input type="file" id="csvFile" class="hidden" accept=".csv" onchange="importCSV(this)">
-            <button onclick="exportIdoceo()" class="bg-green-600 px-4 py-2 rounded-lg font-bold text-[10px] uppercase">Export CSV</button>
+            <button onclick="exportIdoceo()" class="bg-green-600 px-4 py-2 rounded-lg font-bold text-[10px] uppercase">Export</button>
             <button onclick="resetData()" class="bg-red-600 px-4 py-2 rounded-lg font-bold text-[10px] uppercase">Vider</button>
         </div>
     </header>
@@ -47,24 +49,22 @@
     <nav class="flex border-b border-slate-700 mb-6 uppercase text-[10px] font-black tracking-widest overflow-x-auto">
         <button id="btnTabBilan" onclick="switchTab('bilan')" class="px-6 py-4 tab-active whitespace-nowrap">📊 Bilan Classe</button>
         <button id="btnTabGroupes" onclick="switchTab('groupes')" class="px-6 py-4 whitespace-nowrap">👥 Attribution</button>
-        <button id="btnTabCorrection" onclick="switchTab('correction')" class="px-6 py-4 whitespace-nowrap">📝 Table de Codes</button>
+        <button id="btnTabCorrection" onclick="switchTab('correction')" class="px-6 py-4 whitespace-nowrap">📝 Codes</button>
     </nav>
 
     <div id="viewBilan" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
-
     <div id="viewGroupes" class="hidden space-y-6">
-        <div class="flex justify-center"><button onclick="addStudentManually()" class="bg-blue-600 px-8 py-3 rounded-full font-black uppercase text-sm shadow-xl hover:bg-blue-500">+ Ajouter un élève</button></div>
+        <center><button onclick="addStudentManually()" class="bg-blue-600 px-8 py-3 rounded-full font-black uppercase text-sm shadow-xl">+ Nouvel Élève</button></center>
         <div id="gridGroupes" class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
     </div>
-
     <div id="viewCorrection" class="hidden">
         <div class="table-wrap rounded-2xl"><table class="w-full border-collapse"><thead class="bg-slate-900 text-[10px] font-black italic shadow-xl"><tr><th class="p-6 bg-slate-900 text-blue-500">PARCOURS</th><th colspan="2" class="p-4 bg-gray-800">NOIR</th><th colspan="2" class="p-4 bg-red-900">ROUGE</th><th colspan="2" class="p-4 bg-blue-900">BLEU</th><th colspan="2" class="p-4 bg-green-900">VERT</th><th colspan="2" class="p-4 bg-yellow-600 text-black">JAUNE</th></tr></thead><tbody id="matrixTable"></tbody></table></div>
     </div>
 
     <div id="modalDetails" class="hidden fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4">
-        <div class="bg-slate-800 w-full max-w-xl rounded-3xl p-6 border border-slate-600">
+        <div class="bg-slate-800 w-full max-w-xl rounded-3xl p-6 border border-slate-600 shadow-2xl">
             <div class="flex justify-between items-start mb-6">
-                <div><h2 id="mName" class="text-3xl font-black italic leading-none uppercase text-blue-400"></h2><p id="mCode" class="text-white font-bold mt-1 uppercase opacity-50"></p></div>
+                <div><h2 id="mName" class="text-3xl font-black italic leading-none uppercase text-blue-400"></h2><p id="mCode" class="text-white font-bold mt-1 uppercase opacity-40"></p></div>
                 <button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl">&times;</button>
             </div>
             <div id="mHistory" class="space-y-3 max-h-[60vh] overflow-auto pr-2"></div>
@@ -77,105 +77,70 @@
         const db = firebase.database();
         const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
         const colStyles = { NOIR:"bg-black", ROUGE:"bg-red-600", BLEU:"bg-blue-600", VERT:"bg-green-600", JAUNE:"bg-yellow-500 text-black" };
-        
         let mapping = JSON.parse(localStorage.getItem('orient_v5_mapping') || '{}');
-        let currentClass = ""; let classResults = {};
+        let currentClass = ""; let classResults = {}; let gMode = "CLASSIC";
 
-        // SYNC CLASSES
         db.ref('settings/classes').on('value', snap => {
+            const classes = Object.keys(snap.val() || {}).filter(c => isNaN(c));
             const sel = document.getElementById('activeClasse');
-            const data = snap.val() || {};
-            const classes = Object.keys(data).filter(c => c !== "0" && c !== "1" && c !== "2" && c !== "3");
-            
-            sel.innerHTML = classes.map(c => `<option value="${c}" ${c === currentClass ? 'selected' : ''}>${c}</option>`).join('');
-            
-            if (classes.length === 0) {
-                sel.innerHTML = '<option value="">-- AUCUNE CLASSE --</option>';
-            } else if (!currentClass) {
-                currentClass = classes[0];
-                loadClasseData();
-            }
+            sel.innerHTML = classes.map(c => `<option value="${c}" ${c===currentClass?'selected':''}>${c}</option>`).join('');
+            if(!currentClass && classes.length>0) { currentClass = classes[0]; loadClasseData(); }
         });
 
+        db.ref('settings/gameMode').on('value', snap => {
+            gMode = snap.val() || "CLASSIC";
+            document.getElementById('btnNormal').className = gMode === "CLASSIC" ? "px-3 py-1 rounded-lg text-[10px] font-black uppercase bg-blue-600" : "px-3 py-1 rounded-lg text-[10px] font-black uppercase bg-slate-900";
+            document.getElementById('btnTime').className = gMode === "TIME_ATTACK" ? "px-3 py-1 rounded-lg text-[10px] font-black uppercase bg-orange-600" : "px-3 py-1 rounded-lg text-[10px] font-black uppercase bg-slate-900";
+        });
+
+        function setMode(m) { db.ref('settings/gameMode').set(m); }
+
         function addNewClasse() {
-            const name = prompt("Nom de la nouvelle classe (ex: 6A, 302, AS...) :");
-            if (name && name.trim() !== "") {
-                const cleanName = name.trim().toUpperCase();
-                db.ref(`settings/classes/${cleanName}`).set(true);
-                if (!mapping[cleanName]) mapping[cleanName] = [];
-                localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping));
-                currentClass = cleanName;
-                setTimeout(loadClasseData, 500);
+            const name = prompt("Nom de la classe :");
+            if(name) { db.ref(`settings/classes/${name.toUpperCase()}`).set(true); mapping[name.toUpperCase()] = []; localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping)); }
+        }
+
+        function addStudentManually() {
+            const last = prompt("NOM :"); const first = prompt("PRÉNOM :");
+            if(last && first) {
+                const idx = mapping[currentClass].length;
+                mapping[currentClass].push({ id: Date.now(), last: last.toUpperCase(), first: first, code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, absent: false });
+                localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping)); loadClasseData();
             }
         }
 
         function loadClasseData() {
             currentClass = document.getElementById('activeClasse').value;
-            if(!currentClass) return;
-            db.ref(`sessions/${currentClass}`).on('value', snap => { 
-                classResults = snap.val() || {}; 
-                updateBilan(); 
-            });
+            db.ref(`sessions/${currentClass}`).on('value', snap => { classResults = snap.val() || {}; updateBilan(); });
             drawAttribution();
-        }
-
-        function addStudentManually() {
-            if(!currentClass) { alert("Veuillez d'abord créer ou sélectionner une classe."); return; }
-            const last = prompt("NOM de l'élève :");
-            const first = prompt("PRÉNOM de l'élève :");
-            if(last && first) {
-                if (!mapping[currentClass]) mapping[currentClass] = [];
-                const idx = mapping[currentClass].length;
-                mapping[currentClass].push({ 
-                    id: Date.now(), 
-                    last: last.toUpperCase().trim(), 
-                    first: first.trim(), 
-                    code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, 
-                    absent: false 
-                });
-                localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping));
-                drawAttribution();
-                updateBilan();
-            }
         }
 
         function importCSV(input) {
             Papa.parse(input.files[0], { header: true, complete: res => {
-                const data = res.data.filter(r => r['@lastname'] && r['@name']);
-                if (data.length === 0) { alert("Format CSV iDoceo non reconnu."); return; }
-                const className = data[0]['@classe'] || prompt("Nom de la classe pour cet import ?") || "IMPORT";
-                const cleanName = className.toUpperCase();
-                
-                mapping[cleanName] = data.map((row, idx) => ({
-                    id: idx + Date.now(), 
-                    last: row['@lastname'].toUpperCase().trim(), 
-                    first: row['@name'].trim(),
-                    code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, 
-                    absent: false
-                }));
-                
+                const data = res.data.filter(r => r['@lastname']);
+                const className = data[0]['@classe'] || currentClass || "IMPORT";
+                mapping[className] = data.map((row, idx) => ({ id: idx + Date.now(), last: row['@lastname'].toUpperCase(), first: row['@name'], code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, absent: false }));
                 localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping));
-                db.ref(`settings/classes/${cleanName}`).set(true);
-                currentClass = cleanName;
-                location.reload();
+                db.ref(`settings/classes/${className.toUpperCase()}`).set(true); location.reload();
             }});
         }
 
         function updateBilan() {
-            const view = document.getElementById('viewBilan');
             const list = mapping[currentClass] || [];
-            if (list.length === 0) { view.innerHTML = "<p class='col-span-full text-center opacity-40 py-10 italic'>Aucun élève dans cette classe. Allez dans 'Attribution' pour en ajouter.</p>"; return; }
-
             let scs = list.map(s => Object.values(classResults[s.code] || {}).reduce((a,b)=>a+b.score, 0)).sort((a,b)=>b-a);
             const q1 = scs[Math.floor(scs.length*0.25)] || 0;
             const med = scs[Math.floor(scs.length*0.5)] || 0;
 
-            view.innerHTML = list.sort((a,b)=>a.last.localeCompare(b.last)).map(s => {
+            document.getElementById('viewBilan').innerHTML = list.sort((a,b)=>a.last.localeCompare(b.last)).map(s => {
                 const res = classResults[s.code] || {};
-                const pts = Object.values(res).reduce((a,b)=>a+b.score,0);
-                const nb = Object.keys(res).length;
+                const passages = Object.values(res);
+                const pts = passages.reduce((a,b)=>a+b.score,0);
+                const avgT = passages.length > 0 ? Math.floor(passages.reduce((a,b)=>a+(b.time||0), 0) / passages.length) : 0;
+                const scoreM = passages.length > 0 ? pts / passages.length : 0;
+                const luc = (scoreM > 4 && avgT < 30) ? "⚡ PRO" : (scoreM < 3 && avgT < 20) ? "🚩 PRÉCIPITÉ" : (avgT > 60) ? "🐢 LENT" : "OK";
+
                 let bg = "bg-slate-800";
-                if(!s.absent && nb > 0) {
+                if(!s.absent && passages.length > 0) {
                     if(pts >= q1 && pts > 0) bg = "bg-green-600";
                     else if(pts >= med && pts > 0) bg = "bg-yellow-500 text-black";
                     else bg = "bg-red-600";
@@ -185,78 +150,59 @@
                     <div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-6 rounded-3xl border border-white/10 cursor-pointer text-center shadow-lg transition-transform active:scale-95">
                         <div class="flex justify-between items-center mb-4">
                             <span class="pastille-bilan ${colStyles[col]}">${num}</span>
-                            <div class="text-right">
-                                <span class="text-4xl font-black">${pts}</span><br>
-                                <span class="text-[10px] uppercase font-bold opacity-60">${nb} parcours</span>
-                            </div>
+                            <div class="text-right"><span class="text-4xl font-black">${Math.floor(pts)}</span><br><span class="text-[10px] uppercase font-bold opacity-60">${passages.length} parcours</span></div>
                         </div>
-                        <p class="text-[10px] uppercase font-bold opacity-50 mb-1 truncate">${s.last}</p>
-                        <p class="prenom-bilan truncate">${s.first}</p>
+                        <p class="text-[10px] uppercase font-bold opacity-40 mb-1 truncate">${s.last}</p>
+                        <p class="prenom-bilan truncate mb-3">${s.first}</p>
+                        <div class="bg-black/20 rounded-xl py-1 px-3 flex justify-between items-center text-[10px] font-black"><span>⏱️ ${avgT}s</span><span class="italic">${luc}</span></div>
                     </div>`;
             }).join('');
         }
 
         function drawAttribution() {
             const list = mapping[currentClass] || [];
-            const grid = document.getElementById('gridGroupes');
-            grid.innerHTML = list.map(s => {
+            document.getElementById('gridGroupes').innerHTML = list.map(s => {
                 const [col, num] = s.code.split('_');
-                return `
-                <div class="bg-slate-800 p-6 rounded-[30px] border border-slate-700 flex flex-col items-center">
-                    <div id="past-${s.id}" class="big-pastille ${colStyles[col]} mb-4 shadow-2xl">${num}</div>
-                    <div class="mb-4 text-center">
-                        <p class="text-[10px] uppercase font-bold opacity-40">${s.last}</p>
-                        <p class="text-2xl font-black uppercase text-blue-400 leading-none truncate w-full">${s.first}</p>
-                    </div>
+                return `<div class="bg-slate-800 p-6 rounded-[30px] border border-slate-700 flex flex-col items-center">
+                    <div id="p-${s.id}" class="big-pastille ${colStyles[col]} mb-4 shadow-2xl">${num}</div>
+                    <div class="mb-4 text-center"><p class="text-[10px] uppercase font-bold opacity-40">${s.last}</p><p class="text-2xl font-black uppercase text-blue-400 leading-none truncate w-full">${s.first}</p></div>
                     <select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 p-3 rounded-xl border border-slate-600 w-full text-xs font-bold text-center">
                         <option value="ABS" ${s.absent?'selected':''}>ABSENT</option>
                         ${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}` && !s.absent ?'selected':''}>${c} ${n+1}</option>`)).join('')}
-                    </select>
-                </div>`;
+                    </select></div>`;
             }).join('');
         }
 
-        function changeCode(id, val) {
+        function changeCode(id, v) {
             const s = mapping[currentClass].find(x => x.id == id);
-            if(val === "ABS") s.absent = true; 
-            else { s.absent = false; s.code = val; }
-            localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping));
-            loadClasseData();
+            if(v === "ABS") s.absent = true; else { s.absent = false; s.code = v; }
+            localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping)); loadClasseData();
         }
 
-        function openModal(name, code) {
-            document.getElementById('mName').innerText = name;
-            document.getElementById('mCode').innerText = code.replace('_',' ');
-            const res = classResults[code] || {};
-            const hist = Object.entries(res).sort((a,b)=>b[1].timestamp - a[1].timestamp);
+        function openModal(n, c) {
+            document.getElementById('mName').innerText = n; document.getElementById('mCode').innerText = c.replace('_',' ');
+            const r = classResults[c] || {}; const hist = Object.entries(r).sort((a,b)=>b[1].timestamp - a[1].timestamp);
             document.getElementById('mHistory').innerHTML = hist.map(([cK, v]) => `
                 <div class="bg-slate-900 p-4 rounded-2xl flex justify-between items-center mb-2 border border-slate-700">
-                    <div><p class="font-black text-blue-400 uppercase">Parcours ${cK.replace('C','')}</p><p class="text-[10px] opacity-40">${new Date(v.timestamp).toLocaleTimeString()}</p></div>
+                    <div><p class="font-black text-blue-400 uppercase">Parcours ${cK.replace('C','')}</p><p class="text-[10px] opacity-30">${new Date(v.timestamp).toLocaleTimeString()} | ⏱️ ${v.time}s</p></div>
                     <div class="flex items-center gap-3">
-                        <input type="number" value="${v.score}" onchange="editScore('${code}','${cK}',this.value)" class="w-16 bg-slate-800 p-2 text-center rounded-lg font-black text-xl border border-slate-600 text-white">
-                        <button onclick="deletePassage('${code}','${cK}')" class="bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white p-2 rounded-lg transition-colors text-xs">🗑️</button>
+                        <input type="number" step="0.1" value="${v.score}" onchange="editS('${c}','${cK}',this.value)" class="w-16 bg-slate-800 p-2 text-center rounded-lg font-black text-xl text-white">
+                        <button onclick="delP('${c}','${cK}')" class="bg-red-600 p-2 rounded-lg text-xs">🗑️</button>
                     </div>
-                </div>`).join('') || "<p class='text-center opacity-30 py-10 italic'>Aucune donnée pour cet élève.</p>";
+                </div>`).join('') || "<p class='text-center opacity-30 py-10 italic'>Aucun passage.</p>";
             document.getElementById('modalDetails').classList.remove('hidden');
         }
 
-        function deletePassage(stCode, cK) {
-            if(confirm("Supprimer ce passage ? L'élève pourra le refaire.")) {
-                db.ref(`sessions/${currentClass}/${stCode}/${cK}`).remove();
-                document.getElementById('modalDetails').classList.add('hidden');
-            }
-        }
-
-        function editScore(st, ci, v) { db.ref(`sessions/${currentClass}/${st}/${ci}/score`).set(parseInt(v)); }
+        function delP(st, ci) { if(confirm("Réinitialiser ?")) { db.ref(`sessions/${currentClass}/${st}/${ci}`).remove(); document.getElementById('modalDetails').classList.add('hidden'); } }
+        function editS(st, ci, v) { db.ref(`sessions/${currentClass}/${st}/${ci}/score`).set(parseFloat(v)); }
 
         db.ref('settings/matrix').on('value', snap => {
             const matrix = snap.val(); let html = "";
             for(let c=1; c<=12; c++) {
                 html += `<tr class="border-b border-slate-800"><td class="p-6 font-black italic bg-slate-900 text-blue-500 text-center">#${c}</td>`;
                 colors.forEach(col => {
-                    const letters = (matrix && matrix[c]) ? matrix[c][col] : ["",""];
-                    html += `<td class="p-3 ${colStyles[col]} bg-opacity-10"><input class="input-code" value="${letters[0]}" onchange="updL(${c},'${col}',0,this.value)"></td>
-                             <td class="p-3 ${colStyles[col]} bg-opacity-10 border-r border-slate-800"><input class="input-code" value="${letters[1]}" onchange="updL(${c},'${col}',1,this.value)"></td>`;
+                    const l = (matrix && matrix[c]) ? matrix[c][col] : ["",""];
+                    html += `<td class="p-3 ${colStyles[col]} bg-opacity-10"><input class="input-code" value="${l[0]}" onchange="updL(${c},'${col}',0,this.value)"></td><td class="p-3 ${colStyles[col]} bg-opacity-10 border-r border-slate-800"><input class="input-code" value="${l[1]}" onchange="updL(${c},'${col}',1,this.value)"></td>`;
                 });
                 html += `</tr>`;
             }
@@ -264,21 +210,9 @@
         });
 
         function updL(c, col, i, v) { db.ref(`settings/matrix/${c}/${col}/${i}`).set(v.toUpperCase().trim()); }
-
-        function switchTab(t) {
-            ['viewBilan', 'viewGroupes', 'viewCorrection'].forEach(id => document.getElementById(id).classList.add('hidden'));
-            document.getElementById('view' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('hidden');
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
-            document.getElementById('btnTab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.add('tab-active');
-        }
-
-        function exportIdoceo() {
-            let csv = "Nom;Parcours_Valides;Score_Total\n";
-            mapping[currentClass].forEach(s => { const r = classResults[s.code] || {}; csv += `${s.last} ${s.first};${Object.keys(r).length};${Object.values(r).reduce((a,b)=>a+b.score,0)}\n`; });
-            const blob = new Blob([csv], {type:'text/csv'}); const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`OrientShow_${currentClass}.csv`; a.click();
-        }
-
-        function resetData() { if(prompt("Code RNE :")==="0680013V" && confirm("Vider tous les scores de la classe " + currentClass + " ?")) db.ref(`sessions/${currentClass}`).remove(); }
+        function switchTab(t) { ['viewBilan', 'viewGroupes', 'viewCorrection'].forEach(id => document.getElementById(id).classList.add('hidden')); document.getElementById('view' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('hidden'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active')); document.getElementById('btnTab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.add('tab-active'); }
+        function exportIdoceo() { let csv = "Nom;Parcours;Score\n"; mapping[currentClass].forEach(s => { const r = classResults[s.code] || {}; csv += `${s.last} ${s.first};${Object.keys(r).length};${Object.values(r).reduce((a,b)=>a+b.score,0)}\n`; }); const blob = new Blob([csv], {type:'text/csv'}); const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`Resultats_${currentClass}.csv`; a.click(); }
+        function resetData() { if(prompt("Code RNE :")==="0680013V" && confirm("Vider la classe ?")) db.ref(`sessions/${currentClass}`).remove(); }
     </script>
 </body>
 </html>
