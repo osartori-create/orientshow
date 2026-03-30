@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CO-Logic | Master Console</title>
+    <title>Orient'Show | Master Console</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -14,9 +14,17 @@
         .table-wrap { max-height: 75vh; overflow: auto; border: 1px solid #334155; }
         thead th { position: sticky; top: 0; z-index: 30; }
         td:first-child, th:first-child { position: sticky; left: 0; z-index: 40; background: #0f172a !important; border-right: 3px solid #3b82f6; }
-        .pastille-bilan { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; color: white; }
+        
+        /* Pastille Bilan (Doublée) */
+        .pastille-bilan { width: 60px; height: 60px; border-radius: 50%; border: 3px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; color: white; }
+        
+        /* Prénom Bilan (Doublé) */
+        .prenom-bilan { font-size: 1.8rem; font-weight: 900; text-transform: uppercase; line-height: 1; color: #3b82f6; }
+        
+        /* Attribution Style */
         .big-name { font-size: 2.2rem; font-weight: 900; text-transform: uppercase; line-height: 0.9; text-align: center; }
         .big-pastille { width: 85px; height: 85px; border-radius: 20px; font-size: 40px; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 3px solid black; }
+        
         .input-code { background: #1e293b; border: 1px solid #334155; text-align: center; width: 60px; height: 50px; font-size: 24px; font-weight: 900; color: white; border-radius: 8px; }
     </style>
 </head>
@@ -29,7 +37,7 @@
     </script>
 
     <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4">
-        <h1 class="text-3xl font-black italic text-blue-500 uppercase tracking-tighter">CO-LOGIC MAÎTRE</h1>
+        <h1 class="text-3xl font-black italic text-blue-500 uppercase tracking-tighter text-center">ORIENT'SHOW <span class="text-white">MAÎTRE</span></h1>
         <div class="flex items-center gap-2">
             <select id="activeClasse" onchange="loadClasseData()" class="bg-slate-800 p-2 rounded-lg font-bold border border-slate-700 min-w-[120px]"></select>
             <button onclick="addNewClasse()" class="bg-blue-600 w-10 h-10 rounded-full font-black text-xl hover:bg-blue-500 transition-colors">+</button>
@@ -48,7 +56,7 @@
         <button id="btnTabCorrection" onclick="switchTab('correction')" class="px-6 py-4 whitespace-nowrap">📝 Table de Codes</button>
     </nav>
 
-    <div id="viewBilan" class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
+    <div id="viewBilan" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
 
     <div id="viewGroupes" class="hidden space-y-6">
         <div class="flex justify-center"><button onclick="addStudentManually()" class="bg-blue-600 px-8 py-3 rounded-full font-black uppercase text-sm shadow-xl">+ Ajouter un élève</button></div>
@@ -60,7 +68,7 @@
     </div>
 
     <div id="modalDetails" class="hidden fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4">
-        <div class="bg-slate-800 w-full max-w-xl rounded-3xl p-6 border border-slate-600 shadow-2xl">
+        <div class="bg-slate-800 w-full max-w-xl rounded-3xl p-6 border border-slate-600">
             <div class="flex justify-between items-start mb-6">
                 <div><h2 id="mName" class="text-3xl font-black italic leading-none uppercase"></h2><p id="mCode" class="text-blue-400 font-bold mt-1 uppercase"></p></div>
                 <button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl">&times;</button>
@@ -75,33 +83,31 @@
         const db = firebase.database();
         const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
         const colStyles = { NOIR:"bg-black", ROUGE:"bg-red-600", BLEU:"bg-blue-600", VERT:"bg-green-600", JAUNE:"bg-yellow-500 text-black" };
-        let mapping = JSON.parse(localStorage.getItem('co_v4_mapping') || '{}');
+        let mapping = JSON.parse(localStorage.getItem('orient_v5_mapping') || '{}');
         let currentClass = ""; let classResults = {};
 
+        // Chargement initial des classes (Nettoyage des résidus Firebase)
         db.ref('settings/classes').on('value', snap => {
             const sel = document.getElementById('activeClasse');
-            const classes = Object.keys(snap.val() || {});
+            const data = snap.val() || {};
+            // On ne garde que les clés qui ne sont pas des index numériques par défaut
+            const classes = Object.keys(data).filter(c => isNaN(c));
             sel.innerHTML = classes.map(c => `<option value="${c}">${c}</option>`).join('');
             if(!currentClass && classes.length > 0) { currentClass = classes[0]; loadClasseData(); }
         });
 
         function addNewClasse() {
-            const name = prompt("Nom de la nouvelle classe (ex: 504) :");
-            if (name) { db.ref(`settings/classes/${name}`).set(true); if (!mapping[name]) mapping[name] = []; localStorage.setItem('co_v4_mapping', JSON.stringify(mapping)); }
+            const name = prompt("Nom de la nouvelle classe :");
+            if (name) { db.ref(`settings/classes/${name}`).set(true); if (!mapping[name]) mapping[name] = []; localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping)); }
         }
 
         function addStudentManually() {
             if(!currentClass) return alert("Créez une classe d'abord !");
-            const last = prompt("NOM de l'élève :");
-            const first = prompt("PRÉNOM de l'élève :");
+            const last = prompt("NOM :"); const first = prompt("PRÉNOM :");
             if(last && first) {
                 const idx = mapping[currentClass].length;
-                mapping[currentClass].push({
-                    id: Date.now(), last: last.toUpperCase(), first: first,
-                    code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, absent: false
-                });
-                localStorage.setItem('co_v4_mapping', JSON.stringify(mapping));
-                loadClasseData();
+                mapping[currentClass].push({ id: Date.now(), last: last.toUpperCase(), first: first, code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, absent: false });
+                localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping)); loadClasseData();
             }
         }
 
@@ -113,13 +119,13 @@
 
         function importCSV(input) {
             Papa.parse(input.files[0], { header: true, complete: res => {
-                const data = res.data.filter(r => r['@lastname']); if (data.length === 0) return;
-                const className = data[0]['@classe'] || currentClass || "NOUVELLE_CLASSE";
+                const data = res.data.filter(r => r['@lastname']);
+                const className = data[0]['@classe'] || currentClass || "CLASSE_NOUVELLE";
                 mapping[className] = data.map((row, idx) => ({
                     id: idx, last: row['@lastname'].toUpperCase(), first: row['@name'],
                     code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, absent: false
                 }));
-                localStorage.setItem('co_v4_mapping', JSON.stringify(mapping));
+                localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping));
                 db.ref(`settings/classes/${className}`).set(true);
                 location.reload();
             }});
@@ -129,16 +135,28 @@
             const list = mapping[currentClass] || [];
             let scs = list.map(s => Object.values(classResults[s.code] || {}).reduce((a,b)=>a+b.score, 0)).sort((a,b)=>b-a);
             const q1 = scs[Math.floor(scs.length*0.25)]; const med = scs[Math.floor(scs.length*0.5)];
+
             document.getElementById('viewBilan').innerHTML = list.sort((a,b)=>a.last.localeCompare(b.last)).map(s => {
-                const res = classResults[s.code] || {}; const pts = Object.values(res).reduce((a,b)=>a+b.score,0);
+                const res = classResults[s.code] || {};
+                const pts = Object.values(res).reduce((a,b)=>a+b.score,0);
+                const nbParcours = Object.keys(res).length;
                 let bg = "bg-slate-800";
-                if(!s.absent && Object.keys(res).length>0) {
+                if(!s.absent && nbParcours > 0) {
                     if(pts >= q1 && pts > 0) bg = "bg-green-600"; else if(pts >= med && pts > 0) bg = "bg-yellow-500 text-black"; else bg = "bg-red-600";
                 }
                 const [col, num] = s.code.split('_');
-                return `<div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-4 rounded-2xl border border-white/10 cursor-pointer active:scale-95 text-center">
-                    <div class="flex justify-between items-center mb-3"><span class="pastille-bilan ${colStyles[col]}">${num}</span><span class="text-2xl font-black">${pts}</span></div>
-                    <p class="text-xs font-black uppercase leading-tight">${s.last}<br><span class="opacity-70 font-bold">${s.first}</span></p></div>`;
+                return `
+                    <div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-6 rounded-3xl border border-white/10 cursor-pointer text-center shadow-xl">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="pastille-bilan ${colStyles[col]}">${num}</span>
+                            <div class="text-right">
+                                <span class="text-4xl font-black">${pts}</span><br>
+                                <span class="text-[10px] uppercase font-bold opacity-60">${nbParcours} parcours</span>
+                            </div>
+                        </div>
+                        <p class="text-xs uppercase font-bold opacity-60 mb-1">${s.last}</p>
+                        <p class="prenom-bilan truncate">${s.first}</p>
+                    </div>`;
             }).join('');
         }
 
@@ -148,7 +166,7 @@
                 const [col, num] = s.code.split('_');
                 return `<div class="bg-slate-800 p-6 rounded-[30px] border border-slate-700 flex flex-col items-center">
                     <div id="past-${s.id}" class="big-pastille ${colStyles[col]} mb-4 shadow-2xl">${num}</div>
-                    <div class="mb-4 text-center"><p class="text-[10px] uppercase font-bold opacity-60">${s.last}</p><p class="text-2xl font-black uppercase text-blue-400">${s.first}</p></div>
+                    <div class="mb-4 text-center"><p class="text-[10px] uppercase font-bold opacity-60">${s.last}</p><p class="text-2xl font-black uppercase text-blue-400 leading-none">${s.first}</p></div>
                     <select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 p-3 rounded-xl border border-slate-600 w-full text-xs font-bold text-center">
                         <option value="ABS" ${s.absent?'selected':''}>ABSENT</option>
                         ${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}
@@ -159,26 +177,33 @@
         function changeCode(id, val) {
             const s = mapping[currentClass].find(x => x.id == id);
             if(val === "ABS") s.absent = true; else { s.absent = false; s.code = val; }
-            localStorage.setItem('co_v4_mapping', JSON.stringify(mapping));
-            if(val !== "ABS") {
-                const [col, num] = val.split('_'); const past = document.getElementById(`past-${id}`);
-                past.className = `big-pastille ${colStyles[col]} mb-4 shadow-2xl`; past.innerText = num;
-            }
+            localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping));
+            if(val !== "ABS") { const [col, num] = val.split('_'); const p = document.getElementById(`past-${id}`); p.className = `big-pastille ${colStyles[col]} mb-4 shadow-2xl`; p.innerText = num; }
             updateBilan();
         }
 
         function openModal(name, code) {
             document.getElementById('mName').innerText = name; document.getElementById('mCode').innerText = code.replace('_',' ');
             const res = classResults[code] || {}; const hist = Object.entries(res).sort((a,b)=>b[1].timestamp - a[1].timestamp);
-            document.getElementById('mHistory').innerHTML = hist.map(([c, v]) => `
+            document.getElementById('mHistory').innerHTML = hist.map(([cKey, v]) => `
                 <div class="bg-slate-900 p-4 rounded-2xl flex justify-between items-center mb-2 border border-slate-700">
-                    <div><p class="font-black text-blue-400 uppercase">Parcours ${c.replace('C','')}</p><p class="text-[10px] opacity-40">${new Date(v.timestamp).toLocaleTimeString()}</p></div>
-                    <input type="number" value="${v.score}" onchange="editScore('${code}','${c}',this.value)" class="w-16 bg-slate-800 p-2 text-center rounded-lg font-black text-xl border border-slate-600 text-white">
-                </div>`).join('') || "<p class='text-center opacity-50 italic'>Aucun passage.</p>";
+                    <div><p class="font-black text-blue-400 uppercase">Parcours ${cKey.replace('C','')}</p><p class="text-[10px] opacity-40">${new Date(v.timestamp).toLocaleTimeString()}</p></div>
+                    <div class="flex items-center gap-3">
+                        <input type="number" value="${v.score}" onchange="editScore('${code}','${cKey}',this.value)" class="w-16 bg-slate-800 p-2 text-center rounded-lg font-black text-xl border border-slate-600 text-white">
+                        <button onclick="deletePassage('${code}','${cKey}')" class="bg-red-600 p-2 rounded-lg text-xs font-bold">🗑️</button>
+                    </div>
+                </div>`).join('') || "<p class='text-center opacity-50 italic py-10'>Aucun passage enregistré.</p>";
             document.getElementById('modalDetails').classList.remove('hidden');
         }
 
-        function editScore(code, c, v) { db.ref(`sessions/${currentClass}/${code}/${c}/score`).set(parseInt(v)); }
+        function deletePassage(studentCode, circuitKey) {
+            if(confirm("Réinitialiser ce parcours ? L'élève pourra le recommencer.")) {
+                db.ref(`sessions/${currentClass}/${studentCode}/${circuitKey}`).remove();
+                document.getElementById('modalDetails').classList.add('hidden');
+            }
+        }
+
+        function editScore(st, ci, v) { db.ref(`sessions/${currentClass}/${st}/${ci}/score`).set(parseInt(v)); }
 
         db.ref('settings/matrix').on('value', snap => {
             const matrix = snap.val(); let html = "";
@@ -204,12 +229,12 @@
         }
 
         function exportIdoceo() {
-            let csv = "Nom;Parcours;Score\n";
+            let csv = "Nom;Parcours_Termines;Total_Points\n";
             mapping[currentClass].forEach(s => { const r = classResults[s.code] || {}; csv += `${s.last} ${s.first};${Object.keys(r).length};${Object.values(r).reduce((a,b)=>a+b.score,0)}\n`; });
             const blob = new Blob([csv], {type:'text/csv'}); const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`Resultats_${currentClass}.csv`; a.click();
         }
 
-        function resetData() { if(prompt("RNE :")==="0680013V" && confirm("Tout vider ?")) db.ref(`sessions/${currentClass}`).remove(); }
+        function resetData() { if(prompt("Code RNE :")==="0680013V" && confirm("Vider les scores de cette classe ?")) db.ref(`sessions/${currentClass}`).remove(); }
     </script>
 </body>
 </html>
