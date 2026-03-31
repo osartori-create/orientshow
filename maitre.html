@@ -25,7 +25,7 @@
     <script>if (sessionStorage.getItem("co_logic_auth") !== "granted") { window.location.href = "index.html"; }</script>
 
     <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4">
-        <h1 class="text-3xl font-black italic text-blue-500 uppercase tracking-tighter">ORIENT'SHOW <span class="text-white">MAÎTRE</span></h1>
+        <h1 class="text-3xl font-black italic text-blue-500 uppercase tracking-tighter">ORIENT'SHOW MAÎTRE</h1>
         
         <div class="flex items-center gap-4">
             <div class="flex bg-slate-800 rounded-xl p-1 border border-slate-700">
@@ -33,8 +33,8 @@
                 <button onclick="setMode('TIME_ATTACK')" id="btnTime" class="px-3 py-1 rounded-lg text-[10px] font-black uppercase">Vitesse</button>
             </div>
             <div class="flex items-center gap-2">
-                <select id="activeClasse" onchange="loadClasseData()" class="bg-slate-800 p-2 rounded-lg font-bold border border-slate-700"></select>
-                <button onclick="addNewClasse()" class="bg-blue-600 w-10 h-10 rounded-full font-black text-xl">+</button>
+                <select id="activeClasse" onchange="loadClasseData()" class="bg-slate-800 p-2 rounded-lg font-bold border border-slate-700 min-w-[120px]"></select>
+                <button onclick="addNewClasse()" class="bg-blue-600 w-10 h-10 rounded-full font-black text-xl hover:bg-blue-500 shadow-lg">+</button>
             </div>
         </div>
 
@@ -77,61 +77,109 @@
         const db = firebase.database();
         const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
         const colStyles = { NOIR:"bg-black", ROUGE:"bg-red-600", BLEU:"bg-blue-600", VERT:"bg-green-600", JAUNE:"bg-yellow-500 text-black" };
-        let mapping = JSON.parse(localStorage.getItem('orient_v5_mapping') || '{}');
-        let currentClass = ""; let classResults = {}; let gMode = "CLASSIC";
+        
+        // Initialisation propre du mapping local
+        let mapping = JSON.parse(localStorage.getItem('orient_v5_mapping')) || {};
+        let currentClass = ""; let classResults = {};
 
+        // Ecouter les classes sur Firebase
         db.ref('settings/classes').on('value', snap => {
-            const classes = Object.keys(snap.val() || {}).filter(c => isNaN(c));
+            const data = snap.val() || {};
+            const classes = Object.keys(data).filter(c => isNaN(c));
             const sel = document.getElementById('activeClasse');
+            
             sel.innerHTML = classes.map(c => `<option value="${c}" ${c===currentClass?'selected':''}>${c}</option>`).join('');
-            if(!currentClass && classes.length>0) { currentClass = classes[0]; loadClasseData(); }
+            
+            if (classes.length > 0 && !currentClass) {
+                currentClass = classes[0];
+                loadClasseData();
+            } else if (classes.length === 0) {
+                sel.innerHTML = '<option value="">-- Créer une classe --</option>';
+            }
         });
 
         db.ref('settings/gameMode').on('value', snap => {
-            gMode = snap.val() || "CLASSIC";
-            document.getElementById('btnNormal').className = gMode === "CLASSIC" ? "px-3 py-1 rounded-lg text-[10px] font-black uppercase bg-blue-600" : "px-3 py-1 rounded-lg text-[10px] font-black uppercase bg-slate-900";
-            document.getElementById('btnTime').className = gMode === "TIME_ATTACK" ? "px-3 py-1 rounded-lg text-[10px] font-black uppercase bg-orange-600" : "px-3 py-1 rounded-lg text-[10px] font-black uppercase bg-slate-900";
+            let gMode = snap.val() || "CLASSIC";
+            document.getElementById('btnNormal').className = gMode === "CLASSIC" ? "px-3 py-1 rounded-lg text-[10px] font-black bg-blue-600" : "px-3 py-1 rounded-lg text-[10px] font-black bg-slate-900";
+            document.getElementById('btnTime').className = gMode === "TIME_ATTACK" ? "px-3 py-1 rounded-lg text-[10px] font-black bg-orange-600" : "px-3 py-1 rounded-lg text-[10px] font-black bg-slate-900";
         });
 
         function setMode(m) { db.ref('settings/gameMode').set(m); }
 
         function addNewClasse() {
-            const name = prompt("Nom de la classe :");
-            if(name) { db.ref(`settings/classes/${name.toUpperCase()}`).set(true); mapping[name.toUpperCase()] = []; localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping)); }
-        }
-
-        function addStudentManually() {
-            const last = prompt("NOM :"); const first = prompt("PRÉNOM :");
-            if(last && first) {
-                const idx = mapping[currentClass].length;
-                mapping[currentClass].push({ id: Date.now(), last: last.toUpperCase(), first: first, code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, absent: false });
-                localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping)); loadClasseData();
+            const name = prompt("Nom de la nouvelle classe (ex: 504) :");
+            if(name && name.trim() !== "") {
+                const cleanName = name.trim().toUpperCase();
+                // 1. Enregistrer sur Firebase pour synchronisation
+                db.ref(`settings/classes/${cleanName}`).set(true);
+                // 2. Initialiser localement
+                if (!mapping[cleanName]) mapping[cleanName] = [];
+                localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping));
+                // 3. Charger
+                currentClass = cleanName;
+                loadClasseData();
             }
         }
 
         function loadClasseData() {
             currentClass = document.getElementById('activeClasse').value;
-            db.ref(`sessions/${currentClass}`).on('value', snap => { classResults = snap.val() || {}; updateBilan(); });
+            if(!currentClass) return;
+            db.ref(`sessions/${currentClass}`).on('value', snap => {
+                classResults = snap.val() || {};
+                updateBilan();
+            });
             drawAttribution();
+        }
+
+        function addStudentManually() {
+            if(!currentClass) return alert("Choisissez une classe d'abord !");
+            const last = prompt("NOM :"); const first = prompt("PRÉNOM :");
+            if(last && first) {
+                const idx = mapping[currentClass].length;
+                mapping[currentClass].push({ 
+                    id: Date.now(), 
+                    last: last.toUpperCase().trim(), 
+                    first: first.trim(), 
+                    code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, 
+                    absent: false 
+                });
+                localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping));
+                loadClasseData();
+            }
         }
 
         function importCSV(input) {
             Papa.parse(input.files[0], { header: true, complete: res => {
                 const data = res.data.filter(r => r['@lastname']);
-                const className = data[0]['@classe'] || currentClass || "IMPORT";
-                mapping[className] = data.map((row, idx) => ({ id: idx + Date.now(), last: row['@lastname'].toUpperCase(), first: row['@name'], code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, absent: false }));
+                if(data.length === 0) return alert("CSV invalide");
+                const className = data[0]['@classe'] || prompt("Nom de la classe ?") || "IMPORT";
+                const cleanName = className.toUpperCase();
+                
+                mapping[cleanName] = data.map((row, idx) => ({
+                    id: idx + Date.now(),
+                    last: row['@lastname'].toUpperCase().trim(),
+                    first: row['@name'].trim(),
+                    code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`,
+                    absent: false
+                }));
+                
                 localStorage.setItem('orient_v5_mapping', JSON.stringify(mapping));
-                db.ref(`settings/classes/${className.toUpperCase()}`).set(true); location.reload();
+                db.ref(`settings/classes/${cleanName}`).set(true);
+                currentClass = cleanName;
+                location.reload();
             }});
         }
 
         function updateBilan() {
             const list = mapping[currentClass] || [];
+            const view = document.getElementById('viewBilan');
+            if(list.length === 0) { view.innerHTML = "<p class='col-span-full text-center opacity-30 italic py-10'>Classe vide</p>"; return; }
+
             let scs = list.map(s => Object.values(classResults[s.code] || {}).reduce((a,b)=>a+b.score, 0)).sort((a,b)=>b-a);
             const q1 = scs[Math.floor(scs.length*0.25)] || 0;
             const med = scs[Math.floor(scs.length*0.5)] || 0;
 
-            document.getElementById('viewBilan').innerHTML = list.sort((a,b)=>a.last.localeCompare(b.last)).map(s => {
+            view.innerHTML = list.sort((a,b)=>a.last.localeCompare(b.last)).map(s => {
                 const res = classResults[s.code] || {};
                 const passages = Object.values(res);
                 const pts = passages.reduce((a,b)=>a+b.score,0);
@@ -164,7 +212,7 @@
             document.getElementById('gridGroupes').innerHTML = list.map(s => {
                 const [col, num] = s.code.split('_');
                 return `<div class="bg-slate-800 p-6 rounded-[30px] border border-slate-700 flex flex-col items-center">
-                    <div id="p-${s.id}" class="big-pastille ${colStyles[col]} mb-4 shadow-2xl">${num}</div>
+                    <div class="big-pastille ${colStyles[col]} mb-4 shadow-2xl">${num}</div>
                     <div class="mb-4 text-center"><p class="text-[10px] uppercase font-bold opacity-40">${s.last}</p><p class="text-2xl font-black uppercase text-blue-400 leading-none truncate w-full">${s.first}</p></div>
                     <select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 p-3 rounded-xl border border-slate-600 w-full text-xs font-bold text-center">
                         <option value="ABS" ${s.absent?'selected':''}>ABSENT</option>
@@ -184,7 +232,7 @@
             const r = classResults[c] || {}; const hist = Object.entries(r).sort((a,b)=>b[1].timestamp - a[1].timestamp);
             document.getElementById('mHistory').innerHTML = hist.map(([cK, v]) => `
                 <div class="bg-slate-900 p-4 rounded-2xl flex justify-between items-center mb-2 border border-slate-700">
-                    <div><p class="font-black text-blue-400 uppercase">Parcours ${cK.replace('C','')}</p><p class="text-[10px] opacity-30">${new Date(v.timestamp).toLocaleTimeString()} | ⏱️ ${v.time}s</p></div>
+                    <div><p class="font-black text-blue-400 uppercase">Parcours ${cK.replace('C','')}</p><p class="text-[10px] opacity-30">⏱️ ${v.time}s</p></div>
                     <div class="flex items-center gap-3">
                         <input type="number" step="0.1" value="${v.score}" onchange="editS('${c}','${cK}',this.value)" class="w-16 bg-slate-800 p-2 text-center rounded-lg font-black text-xl text-white">
                         <button onclick="delP('${c}','${cK}')" class="bg-red-600 p-2 rounded-lg text-xs">🗑️</button>
@@ -211,7 +259,7 @@
 
         function updL(c, col, i, v) { db.ref(`settings/matrix/${c}/${col}/${i}`).set(v.toUpperCase().trim()); }
         function switchTab(t) { ['viewBilan', 'viewGroupes', 'viewCorrection'].forEach(id => document.getElementById(id).classList.add('hidden')); document.getElementById('view' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('hidden'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active')); document.getElementById('btnTab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.add('tab-active'); }
-        function exportIdoceo() { let csv = "Nom;Parcours;Score\n"; mapping[currentClass].forEach(s => { const r = classResults[s.code] || {}; csv += `${s.last} ${s.first};${Object.keys(r).length};${Object.values(r).reduce((a,b)=>a+b.score,0)}\n`; }); const blob = new Blob([csv], {type:'text/csv'}); const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`Resultats_${currentClass}.csv`; a.click(); }
+        function exportIdoceo() { let csv = "Nom;Parcours;Score\n"; (mapping[currentClass]||[]).forEach(s => { const r = classResults[s.code] || {}; csv += `${s.last} ${s.first};${Object.keys(r).length};${Object.values(r).reduce((a,b)=>a+b.score,0)}\n`; }); const blob = new Blob([csv], {type:'text/csv'}); const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`Resultats_${currentClass}.csv`; a.click(); }
         function resetData() { if(prompt("Code RNE :")==="0680013V" && confirm("Vider la classe ?")) db.ref(`sessions/${currentClass}`).remove(); }
     </script>
 </body>
