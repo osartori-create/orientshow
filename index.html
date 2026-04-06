@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CO-Logic | Accueil</title>
+    <title>Orient'Show | Accueil</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-[#0f172a] text-white flex flex-col items-center justify-center min-h-screen p-6 font-sans">
-    <h1 class="text-5xl font-black mb-12 tracking-tighter uppercase italic text-blue-500 text-center">CO-LOGIC <span class="text-white">EPS</span></h1>
+    <h1 class="text-6xl font-black mb-12 tracking-tighter uppercase italic text-blue-500 text-center">ORIENT'SHOW <span class="text-white">EPS</span></h1>
     
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
         <a href="eleve.html" class="bg-blue-600 hover:bg-blue-700 p-12 rounded-3xl text-center shadow-2xl transition-all active:scale-95 group">
@@ -16,22 +16,13 @@
             <p class="opacity-70 mt-2">Saisir mes balises</p>
         </a>
 
-        <button onclick="checkAdmin()" class="bg-slate-800 hover:bg-slate-700 p-12 rounded-3xl text-center shadow-2xl transition-all active:scale-95 border-2 border-slate-700 group">
-            <div class="text-7xl mb-4 group-hover:scale-110 transition-transform">📋</div>
+        <!-- Accès direct sans mot de passe pour la Beta -->
+        <a href="maitre.html" class="bg-slate-800 hover:bg-slate-700 p-12 rounded-3xl text-center shadow-2xl transition-all active:scale-95 border-2 border-slate-700 group">
+            <div class="text-7xl mb-4 group-hover:rotate-12 transition-transform">📋</div>
             <div class="text-3xl font-bold uppercase">Maître</div>
-            <p class="opacity-70 mt-2">Suivi & Résultats</p>
-        </button>
+            <p class="opacity-70 mt-2">Console de Gestion</p>
+        </a>
     </div>
-
-    <script>
-        function checkAdmin() {
-            const code = prompt("Code de sécurité (RNE) :");
-            if (code === "0680013V") { 
-                sessionStorage.setItem("co_logic_auth", "granted");
-                window.location.href = "maitre.html"; 
-            }
-            else if (code !== null) { alert("Code incorrect"); }
-        }
-    </script>
+    <p class="mt-12 text-[10px] opacity-30 uppercase font-bold tracking-widest text-white">Mode Beta Test - Accès Libre</p>
 </body>
 </html>
