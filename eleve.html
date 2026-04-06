@@ -19,6 +19,7 @@
 </head>
 <body class="text-white p-4 font-sans select-none">
     <div id="app" class="max-w-md mx-auto">
+        <!-- TRIPLE CLIC CACHÉ SUR LE TITRE -->
         <h1 onclick="secretTV()" class="text-4xl font-black text-blue-500 italic text-center uppercase py-4 active:scale-95 transition-transform cursor-pointer">Orient'Show</h1>
         
         <div id="waitChrono" class="hidden text-center py-20 flex-col items-center justify-center">
@@ -62,9 +63,14 @@
             </div>
         </div>
 
+        <!-- FEEDBACK VISUEL AVEC CORRECTION DES LETTRES -->
         <div id="feedback" class="hidden fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center transition-colors duration-300">
             <div id="fbIcon" class="text-8xl mb-4"></div>
             <div id="fbPoints" class="text-7xl font-black mb-4 italic"></div>
+            
+            <!-- Affichage des lettres validées / barrées -->
+            <div id="fbLetters" class="flex gap-6 text-6xl font-black mb-6 justify-center uppercase bg-black/30 p-6 rounded-3xl w-full max-w-xs"></div>
+            
             <div id="fbMsg" class="text-2xl font-bold mb-8"></div>
             <button onclick="fermerFeedback()" class="bg-white text-black px-10 py-4 rounded-full font-black uppercase text-xl shadow-2xl">Continuer</button>
         </div>
@@ -76,7 +82,7 @@
         let curN, curC, curP, startT, matrix = {}, lastPunchTime = 0;
         let clickCount = 0, clickTimer;
 
-        // ACCÈS SECRET TV
+        // FONCTION TRIPLE CLIC TV
         function secretTV() {
             clickCount++;
             clearTimeout(clickTimer);
@@ -84,13 +90,11 @@
             if (clickCount === 3) window.location.href = "tv.html";
         }
 
-        // Écoute de la liste des classes
         db.ref('settings/classes').on('value', snap => {
             const sel = document.getElementById('selectClasse'); sel.innerHTML = '<option value="">-- CHOISIR LA CLASSE --</option>';
             Object.keys(snap.val() || {}).forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
         });
 
-        // Chargement de la matrice de correction
         db.ref('settings/matrix').on('value', snap => { matrix = snap.val() || {}; });
 
         function checkChrono() {
@@ -117,17 +121,13 @@
             if(!curN || !startT) return alert("Choisis ton numéro d'abord !");
             curC = c; 
             
-            // AUTOMATISME : On bascule l'interface
             document.getElementById('labelDossard').innerText = `${curC} ${curN}`;
             document.getElementById('stepDossard').classList.add('hidden');
             document.getElementById('stepSaisie').classList.remove('hidden');
             
-            // Écoute des parcours déjà faits et du timer anti-triche
             db.ref(`sessions/${document.getElementById('selectClasse').value}/${curC}_${curN}`).on('value', snap => {
                 const res = snap.val() || {};
-                lastPunchTime = res.lastTime || 0; // Récupère l'heure de la dernière validation
-                
-                // Griser les parcours validés
+                lastPunchTime = res.lastTime || 0; 
                 Object.keys(res).forEach(k => {
                     if(k !== "lastTime") {
                         const btn = document.getElementById('pBtn'+k.replace('C',''));
@@ -140,7 +140,6 @@
         function retourDossard() {
             document.getElementById('stepSaisie').classList.add('hidden');
             document.getElementById('stepDossard').classList.remove('hidden');
-            // Reset des variables
             curC = null; curP = null;
             document.getElementById('l1').value = ""; document.getElementById('l2').value = "";
             document.querySelectorAll('#pList button').forEach(b => { b.classList.remove('btn-active'); b.classList.remove('done'); });
@@ -160,7 +159,6 @@
             const l2 = document.getElementById('l2').value.toUpperCase().trim();
             if(!l1 && !l2) return alert("Saisis les lettres de la balise !");
 
-            // RÈGLE ANTI-TRICHE : 90 SECONDES
             const tempsEcoule = Date.now() - lastPunchTime;
             if (tempsEcoule < 90000) {
                 const secondesRestantes = Math.ceil((90000 - tempsEcoule) / 1000);
@@ -170,14 +168,27 @@
             const cl = document.getElementById('selectClasse').value;
             const sol = matrix[curP]?.[curC];
             let pts = 0; let msg = "Faux !"; let icon = "❌"; let bgClass = "bg-red-600";
+            
+            // Logique de correction lettre par lettre
+            let l1Status = "text-red-400 line-through decoration-4";
+            let l2Status = "text-red-400 line-through decoration-4";
 
-            if(sol && ((l1==sol[0] && l2==sol[1]) || (l1==sol[1] && l2==sol[0]))) { 
-                pts = 5; msg = "Parfait !"; icon = "🏆"; bgClass = "bg-green-600"; 
-            } else if(sol && (l1==sol[0] || l1==sol[1] || l2==sol[0] || l2==sol[1])) { 
-                pts = 2; msg = "1 lettre juste !"; icon = "🆗"; bgClass = "bg-orange-500"; 
+            if(sol) {
+                let solCopy = [...sol]; // Copie pour éviter qu'une même lettre ne valide les deux champs
+                
+                let idx1 = solCopy.indexOf(l1);
+                if(idx1 !== -1 && l1 !== "") { l1Status = "text-green-400"; solCopy.splice(idx1, 1); }
+                
+                let idx2 = solCopy.indexOf(l2);
+                if(idx2 !== -1 && l2 !== "") { l2Status = "text-green-400"; solCopy.splice(idx2, 1); }
+
+                if(l1Status === "text-green-400" && l2Status === "text-green-400") { 
+                    pts = 5; msg = "Parfait !"; icon = "🏆"; bgClass = "bg-green-600"; 
+                } else if(l1Status === "text-green-400" || l2Status === "text-green-400") { 
+                    pts = 2; msg = "1 lettre juste !"; icon = "🆗"; bgClass = "bg-orange-500"; 
+                }
             }
 
-            // Envoi groupé (Score + Update du lastTime)
             const updates = {};
             updates[`sessions/${cl}/${curC}_${curN}/C${curP}`] = { score: pts, time: Math.floor((Date.now()-startT)/1000) };
             updates[`sessions/${cl}/${curC}_${curN}/lastTime`] = Date.now();
@@ -186,12 +197,19 @@
                 document.getElementById('l1').value = ""; document.getElementById('l2').value = "";
                 curP = null; document.querySelectorAll('#pList button').forEach(b => b.classList.remove('btn-active'));
                 
-                // Affichage du Feedback
                 const fb = document.getElementById('feedback');
                 fb.className = `fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center ${bgClass}`;
                 if(pts === 0) fb.classList.add('animate-shake');
+                
                 document.getElementById('fbIcon').innerText = icon;
                 document.getElementById('fbPoints').innerText = `+${pts} PTS`;
+                
+                // INJECTION DU RÉSULTAT VISUEL
+                document.getElementById('fbLetters').innerHTML = `
+                    <span class="${l1Status} drop-shadow-md">${l1 || '?'}</span>
+                    <span class="${l2Status} drop-shadow-md">${l2 || '?'}</span>
+                `;
+                
                 document.getElementById('fbMsg').innerText = msg;
                 fb.classList.remove('hidden');
             });
