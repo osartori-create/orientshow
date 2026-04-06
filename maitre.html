@@ -20,16 +20,24 @@
         .m-line { position: absolute; left: 0; width: 100%; border-top: 1px dashed rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); font-size: 10px; padding-left: 10px; }
         .m-pion { position: absolute; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; transition: all 1s; z-index: 10; color: white; }
         .m-pion-name { position: absolute; top: 110%; font-size: 9px; font-weight: 900; white-space: nowrap; background: rgba(0,0,0,0.8); padding: 2px 5px; border-radius: 4px; color: white !important; border: 1px solid rgba(255,255,255,0.1); }
+        .btn-chrono { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body class="p-4">
 
     <header class="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4 uppercase font-black italic">
-        <h1 class="text-2xl text-blue-500 tracking-tighter">Orient'Show Master</h1>
+        <div class="flex items-center gap-4">
+            <h1 class="text-2xl text-blue-500 tracking-tighter">Orient'Show Master</h1>
+            <button id="btnChrono" onclick="startChrono()" class="hidden bg-green-600 px-6 py-2 rounded-full text-sm btn-chrono shadow-[0_0_20px_rgba(22,163,74,0.5)]">🚀 TOP DÉPART</button>
+            <div id="chronoDisplay" class="hidden text-2xl font-mono text-yellow-400">00:00</div>
+        </div>
+        
         <div class="flex items-center gap-2">
             <select id="activeClasse" onchange="loadClasse()" class="bg-slate-800 p-2 rounded-lg border border-slate-700 min-w-[160px] text-white"></select>
             <button onclick="addClasse()" class="bg-blue-600 w-10 h-10 rounded-full text-xl shadow-lg hover:bg-blue-500">+</button>
         </div>
+
         <div class="flex gap-2">
             <button onclick="document.getElementById('csv').click()" class="bg-slate-700 px-4 py-2 rounded-lg text-[10px]">Import CSV</button>
             <input type="file" id="csv" class="hidden" accept=".csv" onchange="importCSV(this)">
@@ -65,7 +73,6 @@
         
         let mapping = JSON.parse(localStorage.getItem('os_map_v6') || '{}'), curCl = localStorage.getItem('os_last_cl') || "", results = {};
 
-        // INJECTION DES CODES DE L'IMAGE
         const myCodes = {
             1: { NOIR:["D","Q"], ROUGE:["O","U"], BLEU:["Y","A"], VERT:["E","R"], JAUNE:["N","K"] },
             2: { NOIR:["E","X"], ROUGE:["X","Y"], BLEU:["T","L"], VERT:["R","O"], JAUNE:["A","L"] },
@@ -81,35 +88,39 @@
             12: { NOIR:["U","W"], ROUGE:["L","I"], BLEU:["T","N"], VERT:["R","C"], JAUNE:["A","H"] }
         };
 
-        // Vérifier et injecter les codes si absents
-        db.ref('settings/matrix').once('value', snap => {
-            if (!snap.exists()) { db.ref('settings/matrix').set(myCodes); }
-        });
+        db.ref('settings/matrix').once('value', snap => { if (!snap.exists()) db.ref('settings/matrix').set(myCodes); });
 
         db.ref('settings/classes').on('value', snap => {
             const clArr = Object.keys(snap.val() || {}).filter(c => c !== "null");
             document.getElementById('activeClasse').innerHTML = clArr.map(c => `<option value="${c}" ${c===curCl?'selected':''}>${c}</option>`).join('');
-            if(!curCl && clArr.length > 0) curCl = clArr[0]; loadClasse();
+            if(!curCl && clArr.length > 0) { curCl = clArr[0]; loadClasse(); }
         });
-
-        function addClasse() { const n = prompt("Nom :"); if(n) { const clean = n.toUpperCase(); db.ref(`settings/classes/${clean}`).set(true); if(!mapping[clean]) mapping[clean] = []; localStorage.setItem('os_map_v6', JSON.stringify(mapping)); location.reload(); } }
-
-        function importCSV(input) {
-            Papa.parse(input.files[0], { header: true, complete: res => {
-                const colNom = res.meta.fields.find(c => c.toLowerCase().includes('lastname'));
-                const colPre = res.meta.fields.find(c => c.toLowerCase().includes('name') && !c.toLowerCase().includes('last'));
-                if(!colNom || !colPre) return alert("CSV Invalide");
-                const data = res.data.filter(r => r[colNom]); const cName = (data[0]['@classe'] || prompt("Nom ?")).toUpperCase();
-                mapping[cName] = data.map((r, i) => ({ id: Date.now()+i, last: r[colNom].toUpperCase(), first: r[colPre], code: `${colors[i % 5]}_${Math.floor(i / 5) + 1}`, absent: false }));
-                db.ref(`settings/classes/${cName}`).set(true); localStorage.setItem('os_map_v6', JSON.stringify(mapping)); location.reload();
-            }});
-        }
 
         function loadClasse() {
             curCl = document.getElementById('activeClasse').value; if(!curCl) return;
-            localStorage.setItem('os_last_cl', curCl); db.ref('settings/activeClassName').set(curCl);
+            localStorage.setItem('os_last_cl', curCl); 
+            db.ref('settings/activeClassName').set(curCl);
+            
+            // Gestion du chrono
+            db.ref(`settings/startTime/${curCl}`).on('value', snap => {
+                const start = snap.val();
+                if(!start) {
+                    document.getElementById('btnChrono').classList.remove('hidden');
+                    document.getElementById('chronoDisplay').classList.add('hidden');
+                } else {
+                    document.getElementById('btnChrono').classList.add('hidden');
+                    document.getElementById('chronoDisplay').classList.remove('hidden');
+                    setInterval(() => {
+                        const sec = Math.floor((Date.now() - start) / 1000);
+                        document.getElementById('chronoDisplay').innerText = new Date(sec * 1000).toISOString().substr(14, 5);
+                    }, 1000);
+                }
+            });
+
             db.ref(`sessions/${curCl}`).on('value', snap => { results = snap.val() || {}; updateUI(); });
         }
+
+        function startChrono() { if(confirm("Lancer le chrono pour toute la classe ?")) db.ref(`settings/startTime/${curCl}`).set(Date.now()); }
 
         function updateUI() {
             const list = mapping[curCl] || []; const bil = document.getElementById('viewBilan'); const grp = document.getElementById('viewGroupes'); const mtn = document.getElementById('m-players-layer');
@@ -118,10 +129,13 @@
             const q1 = scores[Math.floor(scores.length*0.25)] || 0;
 
             list.sort((a,b)=>a.last.localeCompare(b.last)).forEach((s, i) => {
-                const passages = Object.values(results[s.code] || {}); const pts = passages.reduce((a,b)=>a+b.score, 0);
+                const pts = Object.values(results[s.code] || {}).reduce((a,b)=>a+b.score, 0);
                 let bg = pts >= q1 && pts > 0 ? "bg-green-600" : pts > 0 ? "bg-yellow-500 text-black" : "bg-slate-800";
                 
-                bil.innerHTML += `<div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-4 rounded-2xl cursor-pointer text-center shadow-lg transition-all active:scale-95 border border-white/5"><div class="flex justify-between font-black"><span class="pastille ${colStyles[s.code.split('_')[0]]} !w-10 !h-10 !text-sm">${s.code.split('_')[1]}</span><span class="text-2xl">${pts}</span></div><p class="text-lg font-black mt-2 truncate leading-none">${s.first}</p></div>`;
+                // BILAN (Grille de 5)
+                bil.innerHTML += `<div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-4 rounded-2xl cursor-pointer text-center shadow-lg border border-white/5"><div class="flex justify-between font-black"><span class="pastille ${colStyles[s.code.split('_')[0]]} !w-10 !h-10 !text-sm">${s.code.split('_')[1]}</span><span class="text-2xl">${pts}</span></div><p class="text-lg font-black mt-2 truncate leading-none">${s.first}</p></div>`;
+                
+                // GROUPES (Grille de 5)
                 grp.innerHTML += `<div class="bg-slate-800 p-4 rounded-2xl text-center border border-slate-700"><div class="pastille ${colStyles[s.code.split('_')[0]]} mx-auto mb-2 !w-12 !h-12 !text-lg">${s.code.split('_')[1]}</div><p class="font-bold text-[10px] truncate uppercase opacity-50">${s.last}</p><p class="font-black text-xs truncate mb-2">${s.first}</p><select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 p-1 rounded text-[10px] w-full border border-slate-700 text-white"><option value="ABS" ${s.absent?'selected':''}>ABSENT</option>${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}</select></div>`;
                 
                 if(!s.absent) {
@@ -132,16 +146,12 @@
             });
         }
 
+        // --- Fonctions utilitaires ---
         function switchTab(t) { ['viewBilan','viewGroupes','viewCarte','viewCodes'].forEach(v => document.getElementById(v).classList.add('hidden')); document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active')); document.getElementById('btnTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('tab-active'); }
+        function addClasse() { const n = prompt("Nom :"); if(n) { const clean = n.toUpperCase(); db.ref(`settings/classes/${clean}`).set(true); if(!mapping[clean]) mapping[clean] = []; localStorage.setItem('os_map_v6', JSON.stringify(mapping)); location.reload(); } }
         function changeCode(id, val) { const s = mapping[curCl].find(x => x.id == id); s.absent = (val === "ABS"); if(!s.absent) s.code = val; localStorage.setItem('os_map_v6', JSON.stringify(mapping)); updateUI(); }
-
-        function openModal(n, c) {
-            document.getElementById('mName').innerText = n; document.getElementById('modalDetails').classList.remove('hidden');
-            db.ref(`sessions/${curCl}/${c}`).once('value', snap => {
-                const res = snap.val() || {};
-                document.getElementById('mHistory').innerHTML = Object.entries(res).map(([k, v]) => `<div class="bg-slate-900 p-3 rounded-xl flex justify-between items-center border border-slate-700 font-bold"><span>P${k.replace('C','')} - ${v.score} pts</span><button onclick="if(confirm('Sûr?')) db.ref('sessions/${curCl}/${c}/${k}').remove().then(()=>document.getElementById('modalDetails').classList.add('hidden'))" class="bg-red-600 px-3 rounded text-[10px] uppercase">Suppr</button></div>`).join('') || "Rien";
-            });
-        }
+        function importCSV(input) { Papa.parse(input.files[0], { header: true, complete: res => { const colNom = res.meta.fields.find(c => c.toLowerCase().includes('lastname')); const colPre = res.meta.fields.find(c => c.toLowerCase().includes('name') && !c.toLowerCase().includes('last')); if(!colNom || !colPre) return alert("CSV Invalide"); const data = res.data.filter(r => r[colNom]); const cName = (data[0]['@classe'] || prompt("Nom ?")).toUpperCase(); mapping[cName] = data.map((r, i) => ({ id: Date.now()+i, last: r[colNom].toUpperCase(), first: r[colPre], code: `${colors[i % 5]}_${Math.floor(i / 5) + 1}`, absent: false })); db.ref(`settings/classes/${cName}`).set(true); localStorage.setItem('os_map_v6', JSON.stringify(mapping)); location.reload(); }}); }
+        function openModal(n, c) { document.getElementById('mName').innerText = n; document.getElementById('modalDetails').classList.remove('hidden'); db.ref(`sessions/${curCl}/${c}`).once('value', snap => { const res = snap.val() || {}; document.getElementById('mHistory').innerHTML = Object.entries(res).map(([k, v]) => `<div class="bg-slate-900 p-3 rounded-xl flex justify-between items-center border border-slate-700 font-bold"><span>P${k.replace('C','')} - ${v.score} pts</span><button onclick="if(confirm('Sûr?')) db.ref('sessions/${curCl}/${c}/${k}').remove().then(()=>document.getElementById('modalDetails').classList.add('hidden'))" class="bg-red-600 px-3 rounded text-[10px] uppercase">Suppr</button></div>`).join('') || "Rien"; }); }
 
         db.ref('settings/matrix').on('value', snap => {
             let matrix = snap.val() || {}; let html = `<tr class="bg-slate-900 text-[10px]"><th>#</th><th colspan="2">NOIR</th><th colspan="2">ROUGE</th><th colspan="2">BLEU</th><th colspan="2">VERT</th><th colspan="2">JAUNE</th></tr>`;
@@ -160,12 +170,12 @@
                     db.ref('sessions').remove();
                     db.ref('settings/classes').remove();
                     db.ref('settings/activeClassName').remove();
+                    db.ref('settings/startTime').remove();
                     localStorage.clear(); 
                 } 
                 location.reload(); 
             } 
         }
-        function exportCSV() { let csv = "Nom;Parcours;Score\n"; mapping[curCl].forEach(s => { const pts = Object.values(results[s.code] || {}).reduce((a,b)=>a+b.score,0); csv += `${s.last} ${s.first};${Object.keys(results[s.code] || {}).length};${pts}\n`; }); const blob = new Blob([csv], {type:'text/csv'}); const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`OS_${curCl}.csv`; a.click(); }
     </script>
 </body>
 </html>
