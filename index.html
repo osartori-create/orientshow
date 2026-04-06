@@ -5,37 +5,21 @@
     <title>Orient'Show | Accueil</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-[#0f172a] text-white flex flex-col items-center justify-center min-h-screen p-6 font-sans">
-    <h1 id="mainTitle" class="text-6xl font-black mb-12 tracking-tighter uppercase italic text-blue-500 text-center select-none">
-        ORIENT'SHOW <span class="text-white">EPS</span>
-    </h1>
-    
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl text-center uppercase font-black">
-        <!-- Accès libre élève -->
-        <a href="eleve.html" class="bg-blue-600 hover:bg-blue-700 p-12 rounded-3xl shadow-2xl transition-all active:scale-95 group border-b-8 border-blue-800">
-            <div class="text-7xl mb-4 group-hover:scale-110 transition-transform">🏃‍♂️</div>
-            <div class="text-3xl tracking-tight">Élève</div>
-            <p class="opacity-70 mt-2 text-sm font-normal normal-case italic font-sans">Saisir mes balises</p>
+<body class="bg-[#0f172a] text-white flex flex-col items-center justify-center min-h-screen p-6 font-sans uppercase font-black">
+    <h1 class="text-6xl mb-12 tracking-tighter italic text-blue-500 text-center">ORIENT'SHOW <span class="text-white text-sm">PRO</span></h1>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl text-center">
+        <a href="eleve.html" class="bg-blue-600 p-12 rounded-3xl shadow-2xl active:scale-95 border-b-8 border-blue-800 flex flex-col items-center">
+            <span class="text-7xl mb-4">🏃‍♂️</span><span class="text-3xl tracking-tight">Élève</span>
         </a>
-
-        <!-- Accès protégé Maître -->
-        <button onclick="checkAdmin()" class="bg-slate-800 hover:bg-slate-700 p-12 rounded-3xl shadow-2xl transition-all active:scale-95 border-2 border-slate-700 group">
-            <div class="text-7xl mb-4 group-hover:rotate-12 transition-transform">📋</div>
-            <div class="text-3xl tracking-tight">Maître</div>
-            <p class="opacity-70 mt-2 text-sm font-normal normal-case italic font-sans">Console de Gestion</p>
+        <button onclick="checkAdmin()" class="bg-slate-800 p-12 rounded-3xl shadow-2xl active:scale-95 border-2 border-slate-700 flex flex-col items-center">
+            <span class="text-7xl mb-4">📋</span><span class="text-3xl tracking-tight">Maître</span>
         </button>
     </div>
-
     <script>
         function checkAdmin() {
             const code = prompt("Code de sécurité (RNE) :");
-            if (code === "0680013V") { 
-                // On crée un jeton de session temporaire
-                sessionStorage.setItem("os_access", "granted");
-                window.location.href = "maitre.html"; 
-            } else if (code !== null) {
-                alert("Code incorrect.");
-            }
+            if (code === "0680013V") { sessionStorage.setItem("os_access", "granted"); window.location.href = "maitre.html"; }
+            else if (code !== null) alert("Code incorrect");
         }
     </script>
 </body>
