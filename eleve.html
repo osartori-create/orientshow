@@ -9,67 +9,52 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
         body { background-color: #0f172a; touch-action: manipulation; }
-        .btn-tap:active { transform: scale(0.95); }
         .letter-input { text-transform: uppercase; border: 2px solid #334155; caret-color: transparent; }
-        .wrong { color: #ef4444; text-decoration: line-through; }
-        .correct { color: #22c55e; }
-        @keyframes flash {
-            0%, 100% { background-color: #1e293b; border-color: #3b82f6; }
-            50% { background-color: #3b82f6; border-color: #ffffff; box-shadow: 0 0 25px #3b82f6; }
-        }
+        @keyframes flash { 0%, 100% { border-color: #3b82f6; } 50% { border-color: #ffffff; box-shadow: 0 0 20px #3b82f6; } }
         .animate-flash { animation: flash 1s infinite; border-width: 4px !important; }
-        .badge-restant { background: #334155; color: #94a3b8; padding: 6px 10px; border-radius: 8px; font-weight: bold; margin: 3px; display: inline-block; font-size: 14px; }
     </style>
 </head>
-<body class="text-white font-sans overflow-x-hidden">
-    <div id="app" class="max-w-md mx-auto p-4 min-h-screen flex flex-col">
+<body class="text-white font-sans overflow-x-hidden p-4">
+    <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col">
         
         <div id="step1" class="space-y-4">
-            <h2 class="text-3xl font-black uppercase text-center py-6 text-blue-500 italic">Orient'Show</h2>
-            <select id="selectClasse" class="w-full p-4 bg-slate-900 rounded-xl text-xl font-bold border border-slate-700"></select>
-            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700">
-                <div class="grid grid-cols-5 gap-2">
-                    <script>for(let i=1;i<=10;i++) document.write(`<button onclick="setNum(${i})" id="btnN${i}" class="bg-slate-900 p-3 rounded-lg font-bold border border-slate-700 num-btn">${i}</button>`)</script>
-                </div>
+            <h2 class="text-3xl font-black uppercase text-center py-4 text-blue-500 italic">Orient'Show</h2>
+            <select id="selectClasse" class="w-full p-4 bg-slate-900 rounded-xl text-xl font-bold border border-slate-700 text-white"></select>
+            <div class="grid grid-cols-5 gap-2">
+                <script>for(let i=1;i<=10;i++) document.write(`<button onclick="setNum(${i})" id="btnN${i}" class="bg-slate-900 p-3 rounded-lg font-bold border border-slate-700 num-btn">${i}</button>`)</script>
             </div>
             <div class="grid grid-cols-2 gap-3">
-                <button onclick="selectColor('NOIR')" class="bg-black border-2 border-slate-600 p-5 rounded-2xl font-bold btn-tap">NOIR</button>
-                <button onclick="selectColor('ROUGE')" class="bg-red-600 p-5 rounded-2xl font-bold btn-tap">ROUGE</button>
-                <button onclick="selectColor('BLEU')" class="bg-blue-600 p-5 rounded-2xl font-bold btn-tap">BLEU</button>
-                <button onclick="selectColor('VERT')" class="bg-green-600 p-5 rounded-2xl font-bold btn-tap">VERT</button>
-                <button onclick="selectColor('JAUNE')" class="bg-yellow-500 text-black p-5 rounded-2xl font-bold btn-tap col-span-2">JAUNE</button>
+                <button onclick="selectColor('NOIR')" class="bg-black border border-slate-600 p-5 rounded-2xl font-bold">NOIR</button>
+                <button onclick="selectColor('ROUGE')" class="bg-red-600 p-5 rounded-2xl font-bold">ROUGE</button>
+                <button onclick="selectColor('BLEU')" class="bg-blue-600 p-5 rounded-2xl font-bold">BLEU</button>
+                <button onclick="selectColor('VERT')" class="bg-green-600 p-5 rounded-2xl font-bold">VERT</button>
+                <button onclick="selectColor('JAUNE')" class="bg-yellow-500 text-black p-5 rounded-2xl font-bold col-span-2">JAUNE</button>
             </div>
         </div>
 
         <div id="step2" class="hidden space-y-6">
             <div class="flex justify-between items-center bg-slate-800 p-4 rounded-2xl border border-slate-700">
-                <span id="displayUser" class="font-black text-xl tracking-wide uppercase text-blue-400"></span>
-                <button onclick="location.reload()" class="bg-slate-700 px-3 py-1 rounded-lg text-[10px] uppercase">Changer</button>
+                <span id="displayUser" class="font-black text-xl text-blue-400"></span>
+                <button onclick="location.reload()" class="bg-slate-700 px-3 py-1 rounded-lg text-xs">Changer</button>
             </div>
-            <div class="bg-slate-800 p-6 rounded-3xl shadow-2xl border border-slate-700">
-                <div class="text-center mb-4"><span class="text-4xl">🚀</span><h3 class="text-2xl font-black text-blue-400 uppercase italic">Choisis ton parcours !</h3></div>
-                <select id="circuitNum" onchange="this.classList.remove('animate-flash')" class="animate-flash w-full p-6 bg-slate-900 rounded-2xl text-4xl font-black mb-8 border-2 text-center text-white appearance-none">
-                    <option value="" disabled selected>-- CLIQUER ICI --</option>
+            <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-2xl">
+                <h3 class="text-center text-xl font-black text-blue-400 uppercase italic mb-4">Choisis ton parcours !</h3>
+                <select id="circuitNum" onchange="this.classList.remove('animate-flash')" class="animate-flash w-full p-6 bg-slate-900 rounded-2xl text-4xl font-black mb-8 border-2 text-center text-white">
+                    <option value="" disabled selected>-- CLIQUE ICI --</option>
                     <script>for(let i=1;i<=12;i++) document.write(`<option value="${i}">PARCOURS ${i}</option>`)</script>
                 </select>
                 <div class="flex gap-4 justify-center mb-8">
-                    <input type="text" id="l1" maxlength="1" class="letter-input w-24 h-24 text-center text-6xl font-black bg-white text-slate-900 rounded-2xl" autocomplete="off">
-                    <input type="text" id="l2" maxlength="1" class="letter-input w-24 h-24 text-center text-6xl font-black bg-white text-slate-900 rounded-2xl" autocomplete="off">
+                    <input type="text" id="l1" maxlength="1" class="letter-input w-24 h-24 text-center text-6xl font-black bg-white text-slate-900 rounded-2xl">
+                    <input type="text" id="l2" maxlength="1" class="letter-input w-24 h-24 text-center text-6xl font-black bg-white text-slate-900 rounded-2xl">
                 </div>
-                <button onclick="validerSaisie()" class="w-full bg-blue-600 p-6 rounded-2xl text-2xl font-black uppercase btn-tap shadow-lg">Valider</button>
-                <div class="mt-8 border-t border-slate-700 pt-4"><p class="text-[10px] font-bold opacity-50 uppercase mb-2 text-center">Parcours à valider :</p><div id="listeRestants" class="flex flex-wrap justify-center"></div></div>
+                <button onclick="validerSaisie()" class="w-full bg-blue-600 p-6 rounded-2xl text-2xl font-black uppercase">Valider</button>
             </div>
         </div>
 
         <div id="feedback" class="hidden fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50 p-8 text-center">
             <div id="iconScore" class="text-9xl mb-4"></div>
-            <div id="msgPoints" class="text-6xl font-black mb-2 uppercase italic tracking-tighter"></div>
-            <div class="flex gap-4 mb-8">
-                <div id="fbL1" class="text-6xl font-black p-4 bg-slate-900 rounded-xl border-2 min-w-[90px]"></div>
-                <div id="fbL2" class="text-6xl font-black p-4 bg-slate-900 rounded-xl border-2 min-w-[90px]"></div>
-            </div>
-            <p id="bilanStats" class="text-xl font-bold text-blue-300 mb-4"></p>
-            <div id="msgAlerte" class="hidden bg-red-600 p-4 rounded-xl text-white font-black animate-pulse uppercase">⚠️ VA VOIR LE PROFESSEUR (Déficit d'orientation)</div>
+            <div id="msgPoints" class="text-6xl font-black mb-4 uppercase italic"></div>
+            <div id="msgAlerte" class="hidden bg-red-600 p-6 rounded-2xl text-white font-black animate-pulse text-xl">⚠️ VA VOIR LE PROFESSEUR !<br>(Difficultés d'orientation)</div>
         </div>
     </div>
 
@@ -77,33 +62,23 @@
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        let CORRECTION = {}; let selectedColor = ""; let selectedNum = ""; let currentClass = ""; let gameMode = "CLASSIC";
+        let CORRECTION = {}; let selectedColor = ""; let selectedNum = ""; let currentClass = "";
 
         db.ref('settings/classes').on('value', snap => {
             const select = document.getElementById('selectClasse');
-            select.innerHTML = '<option value="">-- CHOISIS TA CLASSE --</option>';
+            select.innerHTML = '<option value="">-- CLASSE --</option>';
             if(snap.val()) Object.keys(snap.val()).forEach(c => { if(isNaN(c)) select.innerHTML += `<option value="${c}">${c}</option>`; });
         });
         db.ref('settings/matrix').on('value', snap => { CORRECTION = snap.val(); });
-        db.ref('settings/gameMode').on('value', snap => { gameMode = snap.val() || "CLASSIC"; });
 
         function setNum(n) { selectedNum = n; document.querySelectorAll('.num-btn').forEach(b => b.classList.remove('bg-blue-600')); document.getElementById('btnN'+n).classList.add('bg-blue-600'); }
-
         function selectColor(color) {
             currentClass = document.getElementById('selectClasse').value;
-            if(!currentClass || !selectedNum) { alert("Saisis ta classe et ton numéro !"); return; }
+            if(!currentClass || !selectedNum) return alert("Classe + Numéro !");
             selectedColor = color;
             document.getElementById('displayUser').innerText = `${selectedColor} ${selectedNum}`;
             document.getElementById('step1').classList.add('hidden');
             document.getElementById('step2').classList.remove('hidden');
-            updateRestantsList();
-        }
-
-        function updateRestantsList() {
-            db.ref(`sessions/${currentClass}/${selectedColor}_${selectedNum}`).once('value', snap => {
-                const data = snap.val() || {}; const cont = document.getElementById('listeRestants'); cont.innerHTML = "";
-                for(let i=1; i<=12; i++) { if(!data[`C${i}`]) cont.innerHTML += `<span class="badge-restant">${i}</span>`; }
-            });
         }
 
         function validerSaisie() {
@@ -114,42 +89,29 @@
 
             const now = Date.now();
             const userKey = `${selectedColor}_${selectedNum}`;
-            const lastTime = localStorage.getItem(`lastFinish_${currentClass}_${userKey}`) || now;
-            const duration = Math.floor((now - lastTime) / 1000);
+            const lastFinish = localStorage.getItem(`os_last_${userKey}`) || now;
+            const duration = Math.floor((now - lastFinish) / 1000);
 
             const sol = CORRECTION[cNum][selectedColor];
             let pts = (l1 === sol[0] && l2 === sol[1]) || (l1 === sol[1] && l2 === sol[0]) ? 5 : (l1 === sol[0] || l1 === sol[1] || l2 === sol[0] || l2 === sol[1]) ? 2 : 0;
-            
-            let finalScore = pts;
-            if(gameMode === "TIME_ATTACK" && pts === 5) {
-                const speedBonus = Math.max(0, 5 - (duration * 0.1)); 
-                finalScore = parseFloat((pts + speedBonus).toFixed(1));
-            }
 
-            let hist = JSON.parse(localStorage.getItem(`hist_${currentClass}_${userKey}`) || "[]");
-            hist.push(pts); if(hist.length > 2) hist.shift(); localStorage.setItem(`hist_${currentClass}_${userKey}`, JSON.stringify(hist));
+            let hist = JSON.parse(localStorage.getItem(`os_hist_${userKey}`) || "[]");
+            hist.push(pts); if(hist.length > 2) hist.shift();
+            localStorage.setItem(`os_hist_${userKey}`, JSON.stringify(hist));
 
-            db.ref(`sessions/${currentClass}/${userKey}/C${cNum}`).set({ score: finalScore, time: duration, timestamp: now }).then(() => {
-                localStorage.setItem(`lastFinish_${currentClass}_${userKey}`, now);
-                showFeedback(finalScore, s1=l1, s2=l2, sol, hist);
+            db.ref(`sessions/${currentClass}/${userKey}/C${cNum}`).set({ score: pts, time: duration, timestamp: now }).then(() => {
+                localStorage.setItem(`os_last_${userKey}`, now);
+                showFeedback(pts, hist);
             });
         }
 
-        function showFeedback(p, s1, s2, sol, hist) {
+        function showFeedback(p, hist) {
             const fb = document.getElementById('feedback');
-            document.getElementById('fbL1').innerText = s1;
-            document.getElementById('fbL1').className = (s1 === sol[0] || s1 === sol[1]) ? "text-6xl font-black p-4 bg-slate-900 rounded-xl border-2 border-green-500" : "text-6xl font-black p-4 bg-slate-900 rounded-xl border-2 border-red-500 wrong";
-            document.getElementById('fbL2').innerText = s2;
-            document.getElementById('fbL2').className = (s2 === sol[0] || s2 === sol[1]) ? "text-6xl font-black p-4 bg-slate-900 rounded-xl border-2 border-green-500" : "text-6xl font-black p-4 bg-slate-900 rounded-xl border-2 border-red-500 wrong";
-            
-            const msgP = document.getElementById('msgPoints');
-            if(p >= 5) { msgP.innerText = `+${p} PTS`; msgP.className="text-6xl font-black text-green-500 italic"; document.getElementById('iconScore').innerText = "⭐"; }
-            else if(p > 0) { msgP.innerText = `+${p} PTS`; msgP.className="text-6xl font-black text-yellow-500 italic"; document.getElementById('iconScore').innerText = "🆗"; }
-            else { msgP.innerText = "0 POINT"; msgP.className="text-6xl font-black text-red-500 italic"; document.getElementById('iconScore').innerText = "❌"; }
-
+            document.getElementById('msgPoints').innerText = (p > 0) ? `+${p} POINTS` : "0 POINT";
+            document.getElementById('iconScore').innerText = (p === 5) ? "⭐" : (p === 2) ? "🆗" : "❌";
             if(hist.length === 2 && hist[0] === 0 && hist[1] === 0) document.getElementById('msgAlerte').classList.remove('hidden');
-
-            fb.classList.remove('hidden'); setTimeout(() => { location.reload(); }, 4000);
+            fb.classList.remove('hidden');
+            setTimeout(() => { location.reload(); }, 4000);
         }
     </script>
 </body>
