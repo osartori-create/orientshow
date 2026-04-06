@@ -107,11 +107,8 @@
                 const data = res.data.filter(r => r[colNom]);
                 const cName = (data[0]['@classe'] || prompt("Nom de la classe ?")).toUpperCase();
                 
-                // Sauvegarde 100% LOCALE
                 mapping[cName] = data.map((r, i) => ({ id: Date.now()+i, last: r[colNom].toUpperCase(), first: r[colPre], code: `${colors[i % 5]}_${Math.floor(i / 5) + 1}`, absent: false }));
                 localStorage.setItem('os_map_final', JSON.stringify(mapping));
-                
-                // Signal Firebase anonyme
                 db.ref(`settings/classes/${cName}`).set(true).then(() => location.reload());
             }});
         }
@@ -122,15 +119,15 @@
             const list = mapping[curCl] || [];
             
             list.forEach((s, i) => {
-                const passages = Object.values(results[s.code] || {}); 
+                const sessionData = results[s.code] || {}; 
                 
-                // FILTRE ANTI-NAN : On ne compte que les objets ayant une propriété 'score'
-                const pts = passages.reduce((total, passage) => {
-                    if (typeof passage === 'object' && passage !== null && 'score' in passage) { 
-                        return total + passage.score; 
+                // NOUVEAU FILTRE INCASSABLE : On ne regarde QUE les clés C1, C2, C3...
+                let pts = 0;
+                Object.keys(sessionData).forEach(key => {
+                    if (key.startsWith('C') && sessionData[key].score !== undefined) {
+                        pts += Number(sessionData[key].score) || 0;
                     }
-                    return total;
-                }, 0);
+                });
 
                 const colorCode = s.code.split('_')[0]; 
                 const numCode = s.code.split('_')[1];
@@ -142,10 +139,10 @@
                 // GROUPES
                 grp.innerHTML += `<div class="bg-slate-800 p-4 rounded-2xl text-center border border-slate-700"><div class="pastille ${colStyles[colorCode]} mx-auto mb-2">${numCode}</div><p class="font-bold text-[10px] truncate uppercase opacity-50">${s.last}</p><p class="font-black text-xs truncate mb-2">${s.first}</p><select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 p-1 rounded text-[10px] w-full border border-slate-700 text-white"><option value="ABS" ${s.absent?'selected':''}>ABSENT</option>${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}</select></div>`;
                 
-                // CARTE
+                // CARTE (Avec sécurité NaN)
                 if(!s.absent) {
                     const pion = document.createElement('div'); pion.className = `m-pion ${colStyles[colorCode]}`;
-                    const safePts = isNaN(pts) ? 0 : pts; // Sécurité graphique supplémentaire
+                    const safePts = isNaN(pts) ? 0 : pts; 
                     pion.style.top = `${90 - (Math.min(60, safePts) * (75/60))}%`; 
                     pion.style.left = `${5 + (i * (90/list.length))}%`;
                     pion.innerHTML = `${numCode}<span class="m-pion-name">${s.first}</span>`; mtn.appendChild(pion);
@@ -158,7 +155,7 @@
             db.ref(`sessions/${curCl}/${c}`).once('value', snap => {
                 const res = snap.val() || {};
                 document.getElementById('mHistory').innerHTML = Object.entries(res).map(([k, v]) => {
-                    if (k === 'lastTime') return ''; // On masque l'heure de pointage anti-triche
+                    if (!k.startsWith('C')) return ''; // Filtre d'affichage
                     return `<div class="bg-slate-900 p-3 rounded-xl flex justify-between items-center border border-slate-700 font-bold"><span>P${k.replace('C','')} - ${v.score} pts</span><button onclick="if(confirm('Sûr?')) db.ref('sessions/${curCl}/${c}/${k}').remove().then(()=>document.getElementById('modalDetails').classList.add('hidden'))" class="bg-red-600 px-3 rounded text-[10px] uppercase">Suppr</button></div>`;
                 }).join('') || "<p class='text-center opacity-50'>Aucun passage</p>";
             });
@@ -178,7 +175,6 @@
             } 
         }
 
-        // Affichage de la Matrice (Onglet Codes)
         db.ref('settings/matrix').on('value', snap => {
             let m = snap.val() || {}; let h = `<tr class="bg-slate-900 text-[10px]"><th>#</th><th colspan="2">NOIR</th><th colspan="2">ROUGE</th><th colspan="2">BLEU</th><th colspan="2">VERT</th><th colspan="2">JAUNE</th></tr>`;
             for(let c=1; c<=12; c++) { h += `<tr class="border-b border-slate-800"><td>P${c}</td>`; colors.forEach(col => { const l = m[c]?.[col] || ["",""]; h += `<td><input class="w-8 bg-transparent text-center font-bold text-blue-400" value="${l[0]}" onchange="db.ref('settings/matrix/${c}/${col}/0').set(this.value.toUpperCase())"></td><td class="border-r border-slate-800"><input class="w-8 bg-transparent text-center font-bold text-blue-400" value="${l[1]}" onchange="db.ref('settings/matrix/${c}/${col}/1').set(this.value.toUpperCase())"></td>`; }); h += `</tr>`; }
