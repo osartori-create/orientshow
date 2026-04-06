@@ -1,3 +1,4 @@
+<!-- Fichier : eleve.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -9,50 +10,65 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
         body { background-color: #0f172a; touch-action: manipulation; }
-        .letter-input { text-transform: uppercase; border: 2px solid #334155; caret-color: transparent; outline: none; }
-        @keyframes flash { 0%, 100% { border-color: #3b82f6; } 50% { border-color: #ffffff; box-shadow: 0 0 20px #3b82f6; } }
-        .animate-flash { animation: flash 1s infinite; border-width: 4px !important; }
+        .btn-num { background: #1e293b; border: 1px solid #334155; padding: 15px; border-radius: 12px; font-weight: 900; }
+        .btn-active { background: #3b82f6 !important; border-color: #fff !important; }
+        .done { opacity: 0.3; pointer-events: none; background: #020617 !important; border: none; }
+        .input-box { background: #1e293b; border: 2px solid #334155; text-align: center; font-size: 3rem; font-weight: 900; border-radius: 15px; width: 80px; height: 80px; text-transform: uppercase; }
     </style>
 </head>
 <body class="text-white font-sans p-4">
-    <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col">
+    <div id="app" class="max-w-md mx-auto">
+        
+        <!-- SELECTION IDENTITE -->
         <div id="step1" class="space-y-4">
-            <h2 class="text-4xl font-black uppercase text-center py-4 text-blue-500 italic">Orient'Show</h2>
-            <select id="selectClasse" class="w-full p-4 bg-slate-900 rounded-xl text-xl font-bold border border-slate-700 text-white"></select>
-            <div class="grid grid-cols-5 gap-2">
-                <script>for(let i=1;i<=10;i++) document.write(`<button onclick="setNum(${i})" id="btnN${i}" class="bg-slate-900 p-3 rounded-lg font-bold border border-slate-700 num-btn transition-colors">${i}</button>`)</script>
+            <h1 class="text-3xl font-black text-blue-500 italic text-center uppercase tracking-tighter">Orient'Show</h1>
+            <select id="selectClasse" class="w-full p-4 bg-slate-800 rounded-xl font-bold border border-slate-700"></select>
+            
+            <div class="grid grid-cols-5 gap-2" id="gridNums">
+                <script>for(let i=1;i<=10;i++) document.write(`<button onclick="setNum(${i})" id="btnN${i}" class="btn-num">${i}</button>`)</script>
             </div>
-            <div class="grid grid-cols-2 gap-3 font-black italic">
-                <button onclick="selectColor('NOIR')" class="bg-black border border-slate-600 p-5 rounded-2xl">NOIR</button>
-                <button onclick="selectColor('ROUGE')" class="bg-red-600 p-5 rounded-2xl">ROUGE</button>
-                <button onclick="selectColor('BLEU')" class="bg-blue-600 p-5 rounded-2xl">BLEU</button>
-                <button onclick="selectColor('VERT')" class="bg-green-600 p-5 rounded-2xl">VERT</button>
-                <button onclick="selectColor('JAUNE')" class="bg-yellow-500 text-black p-5 rounded-2xl col-span-2">JAUNE</button>
+            
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="setColor('NOIR')" class="p-5 bg-black rounded-2xl font-black border border-slate-600">NOIR</button>
+                <button onclick="setColor('ROUGE')" class="p-5 bg-red-600 rounded-2xl font-black border border-red-400">ROUGE</button>
+                <button onclick="setColor('BLEU')" class="p-5 bg-blue-600 rounded-2xl font-black border border-blue-400">BLEU</button>
+                <button onclick="setColor('VERT')" class="p-5 bg-green-600 rounded-2xl font-black border border-green-400">VERT</button>
+                <button onclick="setColor('JAUNE')" class="p-5 bg-yellow-500 text-black rounded-2xl font-black col-span-2">JAUNE</button>
             </div>
         </div>
 
+        <!-- INTERFACE SAISIE -->
         <div id="step2" class="hidden space-y-6">
-            <div class="flex justify-between items-center bg-slate-800 p-4 rounded-2xl border border-slate-700">
-                <span id="displayUser" class="font-black text-xl text-blue-400"></span>
-                <button onclick="location.reload()" class="bg-slate-700 px-3 py-1 rounded-lg text-xs font-bold uppercase">Changer</button>
+            <div class="flex justify-between items-center bg-slate-800 p-3 rounded-xl border border-slate-700">
+                <span id="identite" class="font-black text-blue-400 uppercase"></span>
+                <button onclick="location.reload()" class="text-xs bg-slate-700 px-3 py-1 rounded-lg">Changer</button>
             </div>
+
+            <div id="timerWarning" class="hidden bg-orange-600/20 border border-orange-500 p-4 rounded-xl text-center">
+                <p class="text-orange-500 font-bold">⏳ Attends encore <span id="timeLeft"></span>s</p>
+            </div>
+
             <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-2xl">
-                <select id="circuitNum" onchange="this.classList.remove('animate-flash')" class="animate-flash w-full p-6 bg-slate-900 rounded-2xl text-4xl font-black mb-8 border-2 text-center text-white">
-                    <option value="" disabled selected>-- PARCOURS --</option>
-                    <script>for(let i=1;i<=12;i++) document.write(`<option value="${i}">P${i}</option>`)</script>
-                </select>
-                <div class="flex gap-4 justify-center mb-8">
-                    <input type="text" id="l1" maxlength="1" class="letter-input w-24 h-24 text-center text-6xl font-black bg-white text-slate-900 rounded-2xl">
-                    <input type="text" id="l2" maxlength="1" class="letter-input w-24 h-24 text-center text-6xl font-black bg-white text-slate-900 rounded-2xl">
+                <p class="text-xs uppercase font-bold opacity-50 mb-2">Choisir le parcours :</p>
+                <div class="grid grid-cols-4 gap-2 mb-6" id="parcoursSelection">
+                    <script>for(let i=1;i<=12;i++) document.write(`<button onclick="setParcours(${i})" id="pBtn${i}" class="p-3 bg-slate-900 rounded-lg font-black border border-slate-700">P${i}</button>`)</script>
                 </div>
-                <button onclick="validerSaisie()" class="w-full bg-blue-600 p-6 rounded-2xl text-2xl font-black uppercase shadow-xl active:scale-95 transition-transform">Valider</button>
+
+                <div class="flex justify-center gap-4 mb-6">
+                    <input type="text" id="l1" maxlength="1" class="input-box" autocomplete="off">
+                    <input type="text" id="l2" maxlength="1" class="input-box" autocomplete="off">
+                </div>
+
+                <button id="btnValider" onclick="valider()" class="w-full bg-blue-600 p-6 rounded-2xl text-2xl font-black uppercase shadow-lg active:scale-95 transition-transform">Valider</button>
             </div>
         </div>
 
+        <!-- FEEDBACK -->
         <div id="feedback" class="hidden fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50 p-8 text-center">
-            <div id="iconScore" class="text-9xl mb-4"></div>
-            <div id="msgPoints" class="text-6xl font-black mb-4 uppercase italic"></div>
-            <div id="msgAlerte" class="hidden bg-red-600 p-6 rounded-2xl text-white font-black animate-pulse text-xl">⚠️ VA VOIR LE PROFESSEUR !</div>
+            <div id="fbIcon" class="text-9xl mb-4"></div>
+            <div id="fbPoints" class="text-6xl font-black mb-4 italic tracking-tighter"></div>
+            <div id="fbMsg" class="text-xl font-bold opacity-70 mb-8"></div>
+            <button onclick="location.reload()" class="bg-blue-600 px-10 py-4 rounded-full font-black uppercase">Ok, au suivant !</button>
         </div>
     </div>
 
@@ -60,51 +76,105 @@
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        let CORRECTION = {}; let selectedColor = ""; let selectedNum = ""; let currentClass = "";
 
+        let currentNum = null; let currentColor = null; let currentParcours = null;
+        let CORRECTION = {}; let classResults = {};
+
+        // Récupérer la matrice de correction
+        db.ref('settings/matrix').on('value', snap => { CORRECTION = snap.val() || {}; });
+
+        // Liste des classes
         db.ref('settings/classes').on('value', snap => {
-            const select = document.getElementById('selectClasse');
-            select.innerHTML = '<option value="">-- CHOISIS TA CLASSE --</option>';
-            if(snap.val()) Object.keys(snap.val()).forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
+            const sel = document.getElementById('selectClasse');
+            sel.innerHTML = '<option>-- CHOISIR CLASSE --</option>';
+            Object.keys(snap.val() || {}).forEach(c => { if(isNaN(c)) sel.innerHTML += `<option value="${c}">${c}</option>`; });
         });
-        db.ref('settings/matrix').on('value', snap => { CORRECTION = snap.val(); });
 
-        function setNum(n) { selectedNum = n; document.querySelectorAll('.num-btn').forEach(b => b.classList.remove('bg-blue-600')); document.getElementById('btnN'+n).classList.add('bg-blue-600'); }
-        function selectColor(color) {
-            currentClass = document.getElementById('selectClasse').value;
-            if(!currentClass || !selectedNum) return alert("Choisis Classe + Dossard !");
-            selectedColor = color;
-            document.getElementById('displayUser').innerText = `${selectedColor} ${selectedNum}`;
-            document.getElementById('step1').classList.add('hidden');
-            document.getElementById('step2').classList.remove('hidden');
+        function setNum(n) { 
+            currentNum = n; 
+            document.querySelectorAll('#gridNums button').forEach(b => b.classList.remove('btn-active'));
+            document.getElementById('btnN'+n).classList.add('btn-active');
         }
 
-        function validerSaisie() {
-            const cNum = document.getElementById('circuitNum').value;
-            const l1 = document.getElementById('l1').value.toUpperCase().trim();
-            const l2 = document.getElementById('l2').value.toUpperCase().trim();
-            if(!cNum || !l1 || !l2) return;
-            const now = Date.now();
-            const userKey = `${selectedColor}_${selectedNum}`;
-            const lastFinish = localStorage.getItem(`os_last_${userKey}`) || now;
-            const duration = Math.floor((now - lastFinish) / 1000);
-            const sol = CORRECTION[cNum][selectedColor];
-            let pts = (l1 === sol[0] && l2 === sol[1]) || (l1 === sol[1] && l2 === sol[0]) ? 5 : (l1 === sol[0] || l1 === sol[1] || l2 === sol[0] || l2 === sol[1]) ? 2 : 0;
-            let hist = JSON.parse(localStorage.getItem(`os_hist_${userKey}`) || "[]");
-            hist.push(pts); if(hist.length > 2) hist.shift();
-            localStorage.setItem(`os_hist_${userKey}`, JSON.stringify(hist));
-            db.ref(`sessions/${currentClass}/${userKey}/C${cNum}`).set({ score: pts, time: duration, timestamp: now }).then(() => {
-                localStorage.setItem(`os_last_${userKey}`, now);
-                showFeedback(pts, hist);
+        function setColor(c) {
+            const classe = document.getElementById('selectClasse').value;
+            if(!currentNum || classe.includes('--')) return alert("Classe + Dossard !");
+            currentColor = c;
+            document.getElementById('identite').innerText = `${classe} | ${currentColor} ${currentNum}`;
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+            
+            // Écouter les résultats déjà faits pour griser les boutons
+            db.ref(`sessions/${classe}/${currentColor}_${currentNum}`).on('value', snap => {
+                classResults = snap.val() || {};
+                Object.keys(classResults).forEach(pKey => {
+                    const pIdx = pKey.replace('C','');
+                    const btn = document.getElementById('pBtn'+pIdx);
+                    if(btn) btn.classList.add('done', 'bg-slate-950');
+                });
             });
         }
 
-        function showFeedback(p, hist) {
+        function setParcours(p) {
+            currentParcours = p;
+            document.querySelectorAll('#parcoursSelection button').forEach(b => b.classList.remove('btn-active'));
+            document.getElementById('pBtn'+p).classList.add('btn-active');
+        }
+
+        function valider() {
+            const classe = document.getElementById('selectClasse').value;
+            const userKey = `${currentColor}_${currentNum}`;
+            const pKey = `C${currentParcours}`;
+            const l1 = document.getElementById('l1').value.toUpperCase().trim();
+            const l2 = document.getElementById('l2').value.toUpperCase().trim();
+
+            if(!currentParcours) return alert("Choisis un parcours !");
+            if(classResults[pKey]) return alert("Parcours déjà validé !");
+            if(!l1 || !l2) return alert("Saisis les 2 lettres !");
+
+            // --- VERIFICATION TIMER 1'30 (90s) ---
+            const lastTime = localStorage.getItem(`lastFinish_${userKey}`) || 0;
+            const diff = (Date.now() - lastTime) / 1000;
+            if(diff < 90) {
+                const wait = Math.ceil(90 - diff);
+                document.getElementById('timerWarning').classList.remove('hidden');
+                document.getElementById('timeLeft').innerText = wait;
+                return;
+            }
+
+            // Calcul du score (5/2/0)
+            const sol = CORRECTION[currentParcours] ? CORRECTION[currentParcours][currentColor] : null;
+            let pts = 0;
+            if(sol) {
+                const match1 = (l1 === sol[0] || l1 === sol[1]);
+                const match2 = (l2 === sol[0] || l2 === sol[1]);
+                if(match1 && match2 && l1 !== l2) pts = 5;
+                else if(match1 || match2) pts = 2;
+            }
+
+            // Envoi Firebase
+            db.ref(`sessions/${classe}/${userKey}/${pKey}`).set({
+                score: pts,
+                time: Math.floor(diff),
+                timestamp: Date.now()
+            }).then(() => {
+                localStorage.setItem(`lastFinish_${userKey}`, Date.now());
+                showFeedback(pts);
+            });
+        }
+
+        function showFeedback(p) {
             const fb = document.getElementById('feedback');
-            document.getElementById('msgPoints').innerText = (p > 0) ? `+${p} POINTS` : "0 POINT";
-            document.getElementById('iconScore').innerText = (p === 5) ? "⭐" : (p === 2) ? "🆗" : "❌";
-            if(hist.length === 2 && hist[0] === 0 && hist[1] === 0) document.getElementById('msgAlerte').classList.remove('hidden');
-            fb.classList.remove('hidden'); setTimeout(() => { location.reload(); }, 3000);
+            const icon = document.getElementById('fbIcon');
+            const ptsTxt = document.getElementById('fbPoints');
+            const msg = document.getElementById('fbMsg');
+
+            if(p === 5) { icon.innerText = "⭐"; ptsTxt.innerText = "+5 PTS"; ptsTxt.className = "text-6xl font-black text-green-500 italic"; msg.innerText = "Parfait ! Lecture précise."; }
+            else if(p === 2) { icon.innerText = "🆗"; ptsTxt.innerText = "+2 PTS"; ptsTxt.className = "text-6xl font-black text-yellow-500 italic"; msg.innerText = "Une erreur de lettre, sois vigilant."; }
+            else { icon.innerText = "❌"; ptsTxt.innerText = "0 PT"; ptsTxt.className = "text-6xl font-black text-red-500 italic"; msg.innerText = "Erreur totale. Recalage nécessaire."; }
+
+            document.getElementById('step2').classList.add('hidden');
+            fb.classList.remove('hidden');
         }
     </script>
 </body>
