@@ -1,49 +1,39 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orient'Show | Master Console</title>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orient'Show | Maître</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <script>
-        // Sécurité d'accès
-        if (sessionStorage.getItem("os_access") !== "granted") { window.location.href = "index.html"; }
-    </script>
+    <script>if (sessionStorage.getItem("os_access") !== "granted") window.location.href = "index.html";</script>
     <style>
-        body { background-color: #0f172a; color: white; font-family: sans-serif; }
-        .tab-btn { flex: 1; padding: 20px; text-align: center; font-weight: 900; text-transform: uppercase; background: #1e293b; border-bottom: 5px solid transparent; transition: 0.3s; font-size: 1.1rem; }
-        .tab-active { background: #3b82f6; border-color: white; color: white; }
-        .pastille-xxl { width: 55px; height: 55px; border-radius: 50%; border: 3px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; color: white; }
-        
-        /* Montagne */
+        body { background-color: #0f172a; color: white; }
+        .tab-btn { flex: 1; padding: 25px; font-weight: 900; text-transform: uppercase; background: #1e293b; border-bottom: 5px solid transparent; font-size: 1.2rem; }
+        .tab-active { background: #3b82f6; border-color: white; }
+        .pastille { width: 55px; height: 55px; border-radius: 50%; border: 3px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; color: white; }
         #m-mountain { position: relative; width: 100%; height: 65vh; background: #1e293b; border-radius: 1.5rem; overflow: hidden; border: 1px solid #334155; 
             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="none"><path d="M0 1000 L300 400 L500 600 L700 200 L1000 1000 Z" fill="%230f172a" opacity="0.5"/></svg>'); background-size: cover; background-position: bottom;
         }
         .m-line { position: absolute; left: 0; width: 100%; border-top: 1px dashed rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); font-size: 10px; padding-left: 10px; }
-        .m-pion { position: absolute; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; transition: all 1s cubic-bezier(0.4, 0, 0.2, 1); z-index: 10; }
-        .m-pion-name { position: absolute; top: 110%; font-size: 9px; font-weight: bold; white-space: nowrap; background: rgba(0,0,0,0.6); padding: 1px 4px; border-radius: 4px; }
+        .m-pion { position: absolute; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; transition: all 1s; z-index: 10; color: white; }
+        /* PRÉNOMS TOUJOURS BLANCS */
+        .m-pion-name { position: absolute; top: 110%; font-size: 9px; font-weight: 900; white-space: nowrap; background: rgba(0,0,0,0.7); padding: 1px 4px; border-radius: 4px; color: white !important; }
     </style>
 </head>
 <body class="p-4">
-
-    <header class="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4">
-        <div class="flex items-center gap-4">
-            <h1 class="text-2xl font-black italic text-blue-500 uppercase tracking-tighter">Orient'Show <span class="text-white text-sm">PRO</span></h1>
-            <select id="activeClasse" onchange="loadClasse()" class="bg-slate-800 p-2 rounded-lg font-bold border border-slate-700 min-w-[150px] text-white"></select>
-            <button onclick="addClasse()" class="bg-blue-600 w-10 h-10 rounded-full font-black text-xl shadow-lg">+</button>
+    <header class="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4 uppercase font-black italic">
+        <h1 class="text-2xl text-blue-500">Master Console</h1>
+        <div class="flex items-center gap-2">
+            <select id="activeClasse" onchange="loadClasse()" class="bg-slate-800 p-2 rounded-lg border border-slate-700 min-w-[150px]"></select>
+            <button onclick="addClasse()" class="bg-blue-600 w-10 h-10 rounded-full text-xl shadow-lg">+</button>
         </div>
-        
         <div class="flex gap-2">
-            <button onclick="document.getElementById('csv').click()" class="bg-slate-700 px-4 py-2 rounded-lg text-[10px] font-bold uppercase">Import CSV</button>
+            <button onclick="document.getElementById('csv').click()" class="bg-slate-700 px-4 py-2 rounded-lg text-[10px]">Import CSV</button>
             <input type="file" id="csv" class="hidden" accept=".csv" onchange="importCSV(this)">
-            <button onclick="exportCSV()" class="bg-green-600 px-4 py-2 rounded-lg text-[10px] font-bold uppercase">Export iDoceo</button>
-            <div class="flex border border-red-900 rounded-lg overflow-hidden">
-                <button onclick="resetData('scores')" class="bg-red-600 px-3 py-2 font-bold text-[10px] uppercase">Vider Scores</button>
-                <button onclick="resetData('base')" class="bg-red-900 px-3 py-2 font-bold text-[10px] uppercase border-l border-red-700 text-white">Purger Base</button>
-            </div>
+            <button onclick="resetData('scores')" class="bg-red-600 px-3 py-2 text-[10px]">Vider Scores</button>
+            <button onclick="resetData('base')" class="bg-red-900 px-3 py-2 text-[10px]">Purger Base</button>
         </div>
     </header>
 
@@ -54,33 +44,15 @@
         <button onclick="switchTab('codes')" id="btnTabCodes" class="tab-btn !flex-none !w-24 text-[10px]">📝 Codes</button>
     </nav>
 
-    <!-- VUE BILAN -->
     <div id="viewBilan" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
-
-    <!-- VUE CARTE (MONTAGNE) -->
-    <div id="viewCarte" class="hidden">
-        <div id="m-mountain">
-            <script>for(let s=0; s<=60; s+=10) { const pos = 90 - (s * (75/60)); document.write(`<div class="m-line" style="top: ${pos}%;">${s} PTS</div>`); }</script>
-            <div id="m-players-layer"></div>
-        </div>
-    </div>
-    
-    <!-- VUE GROUPES -->
+    <div id="viewCarte" class="hidden"><div id="m-mountain"><script>for(let s=0; s<=60; s+=10) { const pos = 90 - (s * (75/60)); document.write(`<div class="m-line" style="top: ${pos}%;">${s} PTS</div>`); }</script><div id="m-players-layer"></div></div></div>
     <div id="viewGroupes" class="hidden grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
-    
-    <!-- VUE CODES -->
-    <div id="viewCodes" class="hidden overflow-auto border border-slate-700 rounded-xl">
-        <table class="w-full text-xs text-center" id="matrixTable"></table>
-    </div>
+    <div id="viewCodes" class="hidden overflow-auto border border-slate-700 rounded-xl"><table class="w-full text-xs text-center uppercase font-bold" id="matrixTable"></table></div>
 
-    <!-- MODAL EDITION (HISTORIQUE) -->
     <div id="modalDetails" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4">
-        <div class="bg-slate-800 w-full max-w-xl rounded-3xl p-6 border border-slate-700 shadow-2xl">
-            <div class="flex justify-between items-start mb-6">
-                <div><h2 id="mName" class="text-3xl font-black italic text-blue-400"></h2><p id="mCode" class="text-sm opacity-50 uppercase font-bold"></p></div>
-                <button onclick="closeModal()" class="text-4xl">&times;</button>
-            </div>
-            <div id="mHistory" class="space-y-3 max-h-[60vh] overflow-auto pr-2"></div>
+        <div class="bg-slate-800 w-full max-w-xl rounded-3xl p-6 border border-slate-700">
+            <div class="flex justify-between items-start mb-6"><h2 id="mName" class="text-2xl font-black text-blue-400 italic"></h2><button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl">&times;</button></div>
+            <div id="mHistory" class="space-y-2 max-h-[60vh] overflow-auto"></div>
         </div>
     </div>
 
@@ -89,61 +61,46 @@
         firebase.initializeApp(firebaseConfig); const db = firebase.database();
         const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
         const colStyles = { NOIR:"bg-black", ROUGE:"bg-red-600", BLEU:"bg-blue-600", VERT:"bg-green-600", JAUNE:"bg-yellow-500 text-black" };
-        
-        let mapping = JSON.parse(localStorage.getItem('os_map_v6') || '{}');
-        let curCl = localStorage.getItem('os_last_cl') || "";
-        let results = {};
+        let mapping = JSON.parse(localStorage.getItem('os_map_v6') || '{}'), curCl = localStorage.getItem('os_last_cl') || "", results = {};
 
-        // SYNC CLASSES
         db.ref('settings/classes').on('value', snap => {
             const clArr = Object.keys(snap.val() || {}).filter(c => c !== "null");
             document.getElementById('activeClasse').innerHTML = clArr.map(c => `<option value="${c}" ${c===curCl?'selected':''}>${c}</option>`).join('');
             if(!curCl && clArr.length > 0) curCl = clArr[0]; loadClasse();
         });
 
-        function addClasse() {
-            const n = prompt("Nom de la classe :");
-            if(n) { const clean = n.toUpperCase(); db.ref(`settings/classes/${clean}`).set(true); if(!mapping[clean]) mapping[clean] = []; saveMap(); location.reload(); }
-        }
+        function addClasse() { const n = prompt("Nom :"); if(n) { const clean = n.toUpperCase(); db.ref(`settings/classes/${clean}`).set(true); if(!mapping[clean]) mapping[clean] = []; localStorage.setItem('os_map_v6', JSON.stringify(mapping)); location.reload(); } }
 
         function importCSV(input) {
             Papa.parse(input.files[0], { header: true, complete: res => {
                 const colNom = res.meta.fields.find(c => c.toLowerCase().includes('lastname'));
                 const colPre = res.meta.fields.find(c => c.toLowerCase().includes('name') && !c.toLowerCase().includes('last'));
-                if(!colNom || !colPre) return alert("CSV iDoceo non reconnu.");
-                const data = res.data.filter(r => r[colNom]);
-                const cName = (data[0]['@classe'] || prompt("Nom ?")).toUpperCase();
-                mapping[cName] = data.map((r, i) => ({ id: i+Date.now(), last: r[colNom].toUpperCase(), first: r[colPre], code: `${colors[i % 5]}_${Math.floor(i / 5) + 1}`, absent: false }));
-                db.ref(`settings/classes/${cName}`).set(true); saveMap(); location.reload();
+                if(!colNom || !colPre) return alert("CSV Invalide");
+                const data = res.data.filter(r => r[colNom]); const cName = (data[0]['@classe'] || prompt("Nom ?")).toUpperCase();
+                mapping[cName] = data.map((r, i) => ({ id: Date.now()+i, last: r[colNom].toUpperCase(), first: r[colPre], code: `${colors[i % 5]}_${Math.floor(i / 5) + 1}`, absent: false }));
+                db.ref(`settings/classes/${cName}`).set(true); localStorage.setItem('os_map_v6', JSON.stringify(mapping)); location.reload();
             }});
         }
 
         function loadClasse() {
             curCl = document.getElementById('activeClasse').value; if(!curCl) return;
-            localStorage.setItem('os_last_cl', curCl);
-            db.ref('settings/activeClassName').set(curCl);
+            localStorage.setItem('os_last_cl', curCl); db.ref('settings/activeClassName').set(curCl);
             db.ref(`sessions/${curCl}`).on('value', snap => { results = snap.val() || {}; updateUI(); });
         }
 
         function updateUI() {
             const list = mapping[curCl] || []; const bil = document.getElementById('viewBilan'); const grp = document.getElementById('viewGroupes'); const mtn = document.getElementById('m-players-layer');
             bil.innerHTML = ""; grp.innerHTML = ""; mtn.innerHTML = "";
-            
-            let allScores = list.map(s => Object.values(results[s.code] || {}).reduce((a,b)=>a+b.score, 0)).sort((a,b)=>b-a);
-            const q1 = allScores[Math.floor(allScores.length*0.25)] || 0;
+            let scores = list.map(s => Object.values(results[s.code] || {}).reduce((a,b)=>a+b.score, 0)).sort((a,b)=>b-a);
+            const q1 = scores[Math.floor(scores.length*0.25)] || 0;
 
             list.sort((a,b)=>a.last.localeCompare(b.last)).forEach((s, i) => {
-                const pts = Object.values(results[s.code] || {}).reduce((a,b)=>a+b.score, 0);
-                const avgT = Object.values(results[s.code] || {}).length > 0 ? Math.floor(Object.values(results[s.code] || {}).reduce((a,b)=>a+b.time, 0)/Object.values(results[s.code] || {}).length) : 0;
-                
-                // Bilan
+                const passages = Object.values(results[s.code] || {}); const pts = passages.reduce((a,b)=>a+b.score, 0);
                 let bg = pts >= q1 && pts > 0 ? "bg-green-600" : pts > 0 ? "bg-yellow-500 text-black" : "bg-slate-800";
-                bil.innerHTML += `<div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-4 rounded-2xl cursor-pointer text-center"><div class="flex justify-between font-black"><span class="pastille-xxl ${colStyles[s.code.split('_')[0]]}">${s.code.split('_')[1]}</span><span class="text-3xl">${pts}</span></div><p class="text-xl font-black mt-2 truncate">${s.first}</p><p class="text-[9px] opacity-60 uppercase font-bold tracking-tighter">Moyenne: ${avgT}s</p></div>`;
                 
-                // Groupes
-                grp.innerHTML += `<div class="bg-slate-800 p-4 rounded-2xl text-center"><div class="pastille-xxl ${colStyles[s.code.split('_')[0]]} mx-auto mb-2">${s.code.split('_')[1]}</div><p class="font-bold truncate text-xs">${s.last} ${s.first}</p><select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 mt-2 p-1 rounded text-[10px] w-full border border-slate-700 text-white"><option value="ABS" ${s.absent?'selected':''}>ABSENT</option>${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}</select></div>`;
+                bil.innerHTML += `<div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-4 rounded-2xl cursor-pointer text-center"><div class="flex justify-between font-black"><span class="pastille ${colStyles[s.code.split('_')[0]]}">${s.code.split('_')[1]}</span><span class="text-3xl">${pts}</span></div><p class="text-xl font-black mt-2 truncate">${s.first}</p></div>`;
+                grp.innerHTML += `<div class="bg-slate-800 p-4 rounded-2xl text-center"><div class="pastille ${colStyles[s.code.split('_')[0]]} mx-auto mb-2">${s.code.split('_')[1]}</div><p class="font-bold text-xs truncate">${s.last} ${s.first}</p><select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 mt-2 p-1 rounded text-[10px] w-full border border-slate-700 text-white"><option value="ABS" ${s.absent?'selected':''}>ABSENT</option>${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}</select></div>`;
                 
-                // Carte (Prénoms visibles car Maître)
                 if(!s.absent) {
                     const pion = document.createElement('div'); pion.className = `m-pion ${colStyles[s.code.split('_')[0]]}`;
                     pion.style.top = `${90 - (Math.min(60, pts) * (75/60))}%`; pion.style.left = `${5 + (i * (90/list.length))}%`;
@@ -153,21 +110,19 @@
         }
 
         function switchTab(t) { ['viewBilan','viewGroupes','viewCarte','viewCodes'].forEach(v => document.getElementById(v).classList.add('hidden')); document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active')); document.getElementById('btnTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('tab-active'); }
-        
+        function changeCode(id, val) { const s = mapping[curCl].find(x => x.id == id); s.absent = (val === "ABS"); if(!s.absent) s.code = val; localStorage.setItem('os_map_v6', JSON.stringify(mapping)); updateUI(); }
+
         function openModal(n, c) {
-            document.getElementById('mName').innerText = n; document.getElementById('mCode').innerText = c.replace('_',' ');
+            document.getElementById('mName').innerText = n; document.getElementById('modalDetails').classList.remove('hidden');
             db.ref(`sessions/${curCl}/${c}`).once('value', snap => {
                 const res = snap.val() || {};
                 document.getElementById('mHistory').innerHTML = Object.entries(res).map(([k, v]) => `
-                    <div class="bg-slate-900 p-4 rounded-xl flex justify-between items-center border border-slate-700">
-                        <div class="font-black text-blue-400">P${k.replace('C','')} <span class="text-[10px] text-white opacity-40 ml-2">${v.time}s</span></div>
-                        <div class="flex gap-2"><input type="number" value="${v.score}" onchange="db.ref('sessions/${curCl}/${c}/${k}/score').set(parseInt(this.value))" class="w-12 bg-slate-800 p-1 rounded text-center font-bold text-white"><button onclick="if(confirm('Supprimer?')) db.ref('sessions/${curCl}/${c}/${k}').remove().then(closeModal)" class="bg-red-600 px-2 rounded text-xs font-black uppercase">X</button></div>
-                    </div>`).join('') || "<p class='text-center opacity-30 italic py-10'>Aucun passage.</p>";
+                    <div class="bg-slate-900 p-3 rounded-xl flex justify-between items-center border border-slate-700 font-bold">
+                        <span>P${k.replace('C','')} - ${v.score} pts</span>
+                        <button onclick="if(confirm('Sûr?')) db.ref('sessions/${curCl}/${c}/${k}').remove().then(()=>document.getElementById('modalDetails').classList.add('hidden'))" class="bg-red-600 px-2 rounded text-[10px]">X</button>
+                    </div>`).join('') || "Rien";
             });
-            document.getElementById('modalDetails').classList.remove('hidden');
         }
-
-        function closeModal() { document.getElementById('modalDetails').classList.add('hidden'); }
 
         db.ref('settings/matrix').on('value', snap => {
             let matrix = snap.val() || {}; let html = `<tr class="bg-slate-900"><th>#</th><th colspan="2">NOIR</th><th colspan="2">ROUGE</th><th colspan="2">BLEU</th><th colspan="2">VERT</th><th colspan="2">JAUNE</th></tr>`;
@@ -179,10 +134,7 @@
             document.getElementById('matrixTable').innerHTML = html;
         });
 
-        function changeCode(id, val) { const s = mapping[curCl].find(x => x.id == id); if(val === "ABS") s.absent = true; else { s.absent = false; s.code = val; } saveMap(); updateUI(); }
-        function saveMap() { localStorage.setItem('os_map_v6', JSON.stringify(mapping)); }
         function resetData(type) { if(prompt("RNE (0680013V) :")==="0680013V" && confirm("Sûr ?")) { if(type==='scores') db.ref(`sessions/${curCl}`).remove(); else { db.ref().remove(); localStorage.clear(); } location.reload(); } }
-        function exportCSV() { let csv = "Nom;Parcours;Score\n"; (mapping[curCl]||[]).forEach(s => { const pts = Object.values(results[s.code] || {}).reduce((a,b)=>a+b.score,0); csv += `${s.last} ${s.first};${Object.keys(results[s.code] || {}).length};${pts}\n`; }); const blob = new Blob([csv], {type:'text/csv'}); const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`OS_${curCl}.csv`; a.click(); }
     </script>
 </body>
 </html>
