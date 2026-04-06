@@ -1,90 +1,272 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orient'Show | Maître</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orient'Show | Master Console</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        body { background-color: #0f172a; color: white; }
-        .tab-btn { flex: 1; padding: 20px; font-weight: 900; text-transform: uppercase; background: #1e293b; border-bottom: 5px solid transparent; }
-        .tab-active { background: #3b82f6; border-color: white; }
-        .pastille { width: 60px; height: 60px; border-radius: 50%; border: 3px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; }
-        #m-mountain { position: relative; width: 100%; height: 70vh; background: #1e293b; border-radius: 1rem; overflow: hidden; }
-        .m-pion { position: absolute; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #000; font-size: 10px; font-weight: 900; display: flex; align-items: center; justify-content: center; transition: all 1s; }
-        .m-name { position: absolute; top: 110%; font-size: 8px; white-space: nowrap; background: rgba(0,0,0,0.5); padding: 2px; }
+        body { background-color: #0f172a; color: white; font-family: sans-serif; }
+        .tab-btn { flex: 1; padding: 20px; text-align: center; font-weight: 900; text-transform: uppercase; background: #1e293b; border-bottom: 5px solid transparent; transition: 0.3s; font-size: 1.2rem; }
+        .tab-active { background: #3b82f6; border-color: white; color: white; }
+        .tab-small { flex: 0.4; font-size: 0.8rem; background: #0f172a; border: 1px solid #334155; opacity: 0.6; }
+        
+        .table-wrap { max-height: 70vh; overflow: auto; border: 1px solid #334155; }
+        thead th { position: sticky; top: 0; z-index: 30; background: #0f172a; }
+        
+        /* Styles Pastilles & Prénoms */
+        .pastille-xxl { width: 60px; height: 60px; border-radius: 50%; border: 3px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; color: white; }
+        .prenom-xxl { font-size: 1.8rem; font-weight: 900; text-transform: uppercase; color: #3b82f6; line-height: 1; }
+        
+        /* Montagne Maître */
+        #m-mountain-container { position: relative; width: 100%; height: 75vh; background: #1e293b; border-radius: 1rem; overflow: hidden; border: 1px solid #334155; 
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="none"><path d="M0 1000 L300 400 L500 600 L700 200 L1000 1000 Z" fill="%230f172a" opacity="0.5"/></svg>');
+            background-size: cover; background-position: bottom;
+        }
+        .m-score-line { position: absolute; left: 0; width: 100%; border-top: 1px dashed rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); font-size: 10px; padding-left: 10px; }
+        .m-pion { position: absolute; width: 35px; height: 35px; border-radius: 50%; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; color: white; transition: all 1s; z-index: 10; }
+        .m-pion-name { position: absolute; top: 110%; font-size: 9px; font-weight: bold; white-space: nowrap; background: rgba(0,0,0,0.6); padding: 1px 4px; border-radius: 4px; }
     </style>
 </head>
 <body class="p-4">
-    <header class="flex flex-col md:flex-row justify-between items-center mb-6 border-b border-slate-800 pb-4">
-        <h1 class="text-3xl font-black italic text-blue-500 uppercase">Orient'Show Maître</h1>
-        <div class="flex gap-2">
-            <select id="activeClasse" onchange="loadClasse()" class="bg-slate-800 p-2 rounded-lg font-bold"></select>
-            <button onclick="addClasse()" class="bg-blue-600 w-10 h-10 rounded-full font-black">+</button>
+
+    <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4">
+        <div class="flex items-center gap-4">
+            <h1 class="text-2xl font-black italic text-blue-500 uppercase tracking-tighter">Orient'Show <span class="text-white">Maître</span></h1>
+            <select id="activeClasse" onchange="loadClasseData()" class="bg-slate-800 p-2 rounded-lg font-bold border border-slate-700 min-w-[150px]"></select>
+            <button onclick="addNewClasse()" class="bg-blue-600 w-10 h-10 rounded-full font-black text-xl shadow-lg">+</button>
         </div>
+        
         <div class="flex gap-2">
-            <button onclick="document.getElementById('csv').click()" class="bg-slate-700 px-4 py-2 rounded-lg text-xs font-bold uppercase">Import iDoceo</button>
-            <input type="file" id="csv" class="hidden" accept=".csv" onchange="importCSV(this)">
-            <button onclick="resetData('scores')" class="bg-red-600 px-4 py-2 rounded-lg text-xs font-bold uppercase">Vider Scores</button>
-            <button onclick="resetData('base')" class="bg-red-900 px-4 py-2 rounded-lg text-xs font-bold uppercase">Purger Base</button>
+            <button onclick="document.getElementById('csvFile').click()" class="bg-slate-700 px-4 py-2 rounded-lg font-bold text-xs uppercase">Import CSV</button>
+            <input type="file" id="csvFile" class="hidden" accept=".csv" onchange="importCSV(this)">
+            <button onclick="exportCSV()" class="bg-green-600 px-4 py-2 rounded-lg font-bold text-xs uppercase">Export iDoceo</button>
+            <div class="flex border border-red-900 rounded-lg overflow-hidden">
+                <button onclick="resetData('scores')" class="bg-red-600 px-3 py-2 font-bold text-[10px] uppercase">Vider Scores</button>
+                <button onclick="resetData('base')" class="bg-red-900 px-3 py-2 font-bold text-[10px] uppercase border-l border-red-700">Purger Base</button>
+            </div>
         </div>
     </header>
 
     <nav class="flex gap-2 mb-6">
-        <button onclick="switchTab('bilan')" id="btnTabBilan" class="tab-btn tab-active">📊 Bilan</button>
-        <button onclick="switchTab('groupes')" id="btnTabGroupes" class="tab-btn">👥 Groupes</button>
-        <button onclick="switchTab('carte')" id="btnTabCarte" class="tab-btn">🏔️ Carte</button>
-        <button onclick="switchTab('codes')" id="btnTabCodes" class="tab-btn !flex-none !w-24 text-[10px]">📝 Codes</button>
+        <button id="btnTabBilan" onclick="switchTab('bilan')" class="tab-btn tab-active">📊 Bilan</button>
+        <button id="btnTabGroupes" onclick="switchTab('groupes')" class="tab-btn">👥 Groupes</button>
+        <button id="btnTabCarte" onclick="switchTab('carte')" class="tab-btn">🏔️ Carte</button>
+        <button id="btnTabCorrection" onclick="switchTab('correction')" class="tab-btn tab-small">📝 Codes</button>
     </nav>
 
-    <div id="viewBilan" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+    <!-- VUES -->
+    <div id="viewBilan" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+    
     <div id="viewGroupes" class="hidden grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
-    <div id="viewCarte" class="hidden"><div id="m-mountain"></div></div>
-    <div id="viewCodes" class="hidden overflow-auto"><table class="w-full text-xs" id="matrixTable"></table></div>
+    
+    <div id="viewCarte" class="hidden">
+        <div id="m-mountain-container">
+            <script>
+                for(let s=0; s<=60; s+=10) {
+                    const pos = 90 - (s * (75/60)); 
+                    document.write(`<div class="m-score-line" style="top: ${pos}%;">${s} PTS</div>`);
+                }
+            </script>
+            <div id="m-players-layer"></div>
+        </div>
+    </div>
+
+    <div id="viewCorrection" class="hidden">
+        <div class="table-wrap rounded-xl overflow-hidden">
+            <table class="w-full border-collapse text-xs">
+                <thead class="bg-slate-900 font-black italic">
+                    <tr><th class="p-4">#</th><th colspan="2" class="bg-gray-800">NOIR</th><th colspan="2" class="bg-red-900">ROUGE</th><th colspan="2" class="bg-blue-900">BLEU</th><th colspan="2" class="bg-green-900">VERT</th><th colspan="2" class="bg-yellow-600 text-black">JAUNE</th></tr>
+                </thead>
+                <tbody id="matrixTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- MODAL DETAILS -->
+    <div id="modalDetails" class="hidden fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4">
+        <div class="bg-slate-800 w-full max-w-xl rounded-3xl p-6 border border-slate-700">
+            <div class="flex justify-between items-start mb-6">
+                <div><h2 id="mName" class="text-3xl font-black italic text-blue-400"></h2><p id="mCode" class="text-sm opacity-50 uppercase"></p></div>
+                <button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl">&times;</button>
+            </div>
+            <div id="mHistory" class="space-y-3 max-h-[60vh] overflow-auto pr-2"></div>
+        </div>
+    </div>
 
     <script>
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
-        firebase.initializeApp(firebaseConfig); const db = firebase.database();
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
         const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
-        let mapping = JSON.parse(localStorage.getItem('os_map') || '{}'), curCl = "", results = {};
+        const colStyles = { NOIR:"bg-black", ROUGE:"bg-red-600", BLEU:"bg-blue-600", VERT:"bg-green-600", JAUNE:"bg-yellow-500 text-black" };
+        
+        let mapping = JSON.parse(localStorage.getItem('os_mapping_v6') || '{}');
+        let currentClass = localStorage.getItem('os_last_class') || "";
+        let classResults = {};
 
+        // SYNC CLASSES
         db.ref('settings/classes').on('value', snap => {
-            const clArr = Object.keys(snap.val() || {}).filter(c => isNaN(c));
-            document.getElementById('activeClasse').innerHTML = clArr.map(c => `<option value="${c}">${c}</option>`).join('');
-            if(!curCl && clArr.length > 0) curCl = clArr[0]; loadClasse();
+            const classes = Object.keys(snap.val() || {}).filter(c => c !== "null");
+            const sel = document.getElementById('activeClasse');
+            sel.innerHTML = classes.map(c => `<option value="${c}" ${c===currentClass?'selected':''}>${c}</option>`).join('');
+            if(!currentClass && classes.length > 0) currentClass = classes[0];
+            loadClasseData();
         });
 
-        function addClasse() { const n = prompt("Nom :"); if(n) { const clean = n.toUpperCase(); db.ref(`settings/classes/${clean}`).set(true); if(!mapping[clean]) mapping[clean] = []; localStorage.setItem('os_map', JSON.stringify(mapping)); location.reload(); } }
+        function addNewClasse() {
+            const name = prompt("Nom de la classe :");
+            if(name) {
+                const clean = name.trim().toUpperCase();
+                db.ref(`settings/classes/${clean}`).set(true);
+                if(!mapping[clean]) mapping[clean] = [];
+                localStorage.setItem('os_mapping_v6', JSON.stringify(mapping));
+                currentClass = clean;
+                location.reload();
+            }
+        }
 
         function importCSV(input) {
             Papa.parse(input.files[0], { header: true, complete: res => {
-                const data = res.data.filter(r => r['@lastname']); const cName = (data[0]['@classe'] || prompt("Nom ?")).toUpperCase();
-                mapping[cName] = data.map((r, i) => ({ id: i+Date.now(), last: r['@lastname'].toUpperCase(), first: r['@name'], code: `${colors[i % 5]}_${Math.floor(i / 5) + 1}` }));
-                db.ref(`settings/classes/${cName}`).set(true); localStorage.setItem('os_map', JSON.stringify(mapping)); location.reload();
+                const colNom = res.meta.fields.find(c => c.toLowerCase().includes('lastname'));
+                const colPre = res.meta.fields.find(c => c.toLowerCase().includes('name') && !c.toLowerCase().includes('last'));
+                if(!colNom || !colPre) return alert("Format CSV invalide.");
+                const data = res.data.filter(r => r[colNom]);
+                const cName = (data[0]['@classe'] || prompt("Nom de la classe ?")).toUpperCase();
+                mapping[cName] = data.map((r, i) => ({
+                    id: Date.now() + i, last: r[colNom].toUpperCase().trim(), first: r[colPre].trim(),
+                    code: `${colors[i % 5]}_${Math.floor(i / 5) + 1}`, absent: false
+                }));
+                db.ref(`settings/classes/${cName}`).set(true);
+                localStorage.setItem('os_mapping_v6', JSON.stringify(mapping));
+                currentClass = cName;
+                location.reload();
             }});
         }
 
-        function loadClasse() {
-            curCl = document.getElementById('activeClasse').value; if(!curCl) return;
-            db.ref('settings/activeClassName').set(curCl);
-            db.ref(`sessions/${curCl}`).on('value', snap => { results = snap.val() || {}; updateUI(); });
-        }
-
-        function updateUI() {
-            const list = mapping[curCl] || []; const bil = document.getElementById('viewBilan'); const grp = document.getElementById('viewGroupes'); const mtn = document.getElementById('m-mountain');
-            bil.innerHTML = ""; grp.innerHTML = ""; mtn.innerHTML = "";
-            list.forEach((s, i) => {
-                const pts = Object.values(results[s.code] || {}).reduce((a,b)=>a+b.score, 0);
-                bil.innerHTML += `<div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center"><div class="flex justify-between font-black"><span class="pastille bg-${s.code.split('_')[0].toLowerCase()}">${s.code.split('_')[1]}</span><span class="text-3xl">${pts}</span></div><p class="text-xl font-black text-blue-400 mt-2">${s.first}</p></div>`;
-                grp.innerHTML += `<div class="bg-slate-800 p-4 rounded-2xl text-center"><div class="pastille bg-${s.code.split('_')[0].toLowerCase()} mx-auto mb-2">${s.code.split('_')[1]}</div><p class="font-bold">${s.last} ${s.first}</p></div>`;
-                const pion = document.createElement('div'); pion.className = `m-pion bg-${s.code.split('_')[0].toLowerCase()}`; pion.style.bottom = `${10+(pts*1.33)}%`; pion.style.left = `${5+(i*(90/list.length))}%`; pion.innerText = s.code.split('_')[1]; pion.innerHTML += `<span class="m-name">${s.first}</span>`; mtn.appendChild(pion);
+        function loadClasseData() {
+            currentClass = document.getElementById('activeClasse').value;
+            if(!currentClass) return;
+            localStorage.setItem('os_last_class', currentClass);
+            db.ref('settings/activeClassName').set(currentClass);
+            db.ref(`sessions/${currentClass}`).on('value', snap => {
+                classResults = snap.val() || {};
+                updateUI();
             });
         }
 
-        function switchTab(t) { ['viewBilan','viewGroupes','viewCarte','viewCodes'].forEach(v => document.getElementById(v).classList.add('hidden')); document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active')); document.getElementById('btnTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('tab-active'); }
-        function resetData(type) { if(prompt("RNE :")==="0680013V" && confirm("Sûr ?")) { if(type==='scores') db.ref(`sessions/${curCl}`).remove(); else { db.ref().remove(); localStorage.clear(); } location.reload(); } }
+        function updateUI() {
+            const list = mapping[currentClass] || [];
+            const viewB = document.getElementById('viewBilan');
+            const viewG = document.getElementById('viewGroupes');
+            const viewC = document.getElementById('m-players-layer');
+            
+            viewB.innerHTML = ""; viewG.innerHTML = ""; viewC.innerHTML = "";
+
+            let scoresSorted = list.map(s => Object.values(classResults[s.code] || {}).reduce((a,b)=>a+b.score, 0)).sort((a,b)=>b-a);
+            const q1 = scoresSorted[Math.floor(scoresSorted.length*0.25)] || 0;
+
+            list.sort((a,b)=>a.last.localeCompare(b.last)).forEach((s, i) => {
+                const res = classResults[s.code] || {};
+                const passages = Object.values(res);
+                const pts = passages.reduce((a,b)=>a+b.score, 0);
+                const avgT = passages.length > 0 ? Math.floor(passages.reduce((a,b)=>a+b.time, 0)/passages.length) : 0;
+                
+                // Bilan
+                let bg = pts >= q1 && pts > 0 ? "bg-green-600" : pts > 0 ? "bg-yellow-500 text-black" : "bg-slate-800";
+                viewB.innerHTML += `<div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-6 rounded-3xl cursor-pointer text-center shadow-lg transition-transform active:scale-95">
+                    <div class="flex justify-between items-center mb-4"><span class="pastille-xxl ${colStyles[s.code.split('_')[0]]}">${s.code.split('_')[1]}</span><div class="text-right text-4xl font-black">${pts}</div></div>
+                    <p class="text-[10px] uppercase font-bold opacity-50 mb-1">${s.last}</p><p class="prenom-xxl truncate mb-3">${s.first}</p>
+                    <div class="text-[10px] font-black opacity-60 italic">⏱️ MOYENNE : ${avgT}s</div>
+                </div>`;
+
+                // Groupes
+                viewG.innerHTML += `<div class="bg-slate-800 p-6 rounded-[30px] flex flex-col items-center">
+                    <div class="pastille-xxl ${colStyles[s.code.split('_')[0]]} mb-4 !w-20 !h-20 !text-4xl shadow-2xl">${s.code.split('_')[1]}</div>
+                    <p class="text-[10px] opacity-40 font-bold uppercase">${s.last}</p><p class="text-2xl font-black text-blue-400 uppercase leading-none mb-4">${s.first}</p>
+                    <select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 p-3 rounded-xl border border-slate-600 w-full text-xs font-bold text-center text-white">
+                        <option value="ABS" ${s.absent?'selected':''}>ABSENT</option>
+                        ${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}
+                    </select>
+                </div>`;
+
+                // Carte
+                if(!s.absent) {
+                    const pion = document.createElement('div');
+                    pion.className = `m-pion bg-${s.code.split('_')[0].toLowerCase()}`;
+                    pion.style.top = `${90 - (Math.min(60, pts) * (75/60))}%`;
+                    pion.style.left = `${5 + (i * (90/list.length))}%`;
+                    pion.innerHTML = `${s.code.split('_')[1]}<span class="m-pion-name">${s.first}</span>`;
+                    viewC.appendChild(pion);
+                }
+            });
+        }
+
+        function changeCode(id, val) {
+            const s = mapping[currentClass].find(x => x.id == id);
+            if(val === "ABS") s.absent = true; else { s.absent = false; s.code = val; }
+            localStorage.setItem('os_mapping_v6', JSON.stringify(mapping));
+            updateUI();
+        }
+
+        function openModal(n, c) {
+            document.getElementById('mName').innerText = n;
+            document.getElementById('mCode').innerText = c.replace('_',' ');
+            db.ref(`sessions/${currentClass}/${c}`).once('value', snap => {
+                const res = snap.val() || {};
+                document.getElementById('mHistory').innerHTML = Object.entries(res).map(([cKey, v]) => `
+                    <div class="bg-slate-900 p-4 rounded-2xl flex justify-between items-center border border-slate-700">
+                        <div><p class="font-black text-blue-400 uppercase">Parcours ${cKey.replace('C','')}</p><p class="text-[10px] opacity-40">⏱️ ${v.time}s</p></div>
+                        <div class="flex items-center gap-3">
+                            <input type="number" value="${v.score}" onchange="db.ref('sessions/${currentClass}/${c}/${cKey}/score').set(parseInt(this.value))" class="w-16 bg-slate-800 p-2 text-center rounded-lg font-black text-xl text-white outline-none">
+                            <button onclick="if(confirm('Supprimer?')) db.ref('sessions/${currentClass}/${c}/${cKey}').remove().then(()=>document.getElementById('modalDetails').classList.add('hidden'))" class="bg-red-600 p-2 rounded-lg text-xs font-black uppercase">X</button>
+                        </div>
+                    </div>`).join('') || "<p class='text-center opacity-30 italic py-10'>Aucun passage.</p>";
+            });
+            document.getElementById('modalDetails').classList.remove('hidden');
+        }
+
+        db.ref('settings/matrix').on('value', snap => {
+            const matrix = snap.val() || {}; let html = "";
+            for(let c=1; c<=12; c++) {
+                html += `<tr class="border-b border-slate-800"><td class="p-4 font-black italic bg-slate-900 text-blue-500 text-center">#${c}</td>`;
+                colors.forEach(col => {
+                    const l = matrix[c]?.[col] || ["",""];
+                    html += `<td class="p-2 ${colStyles[col]} bg-opacity-10"><input class="w-full bg-transparent text-center font-bold text-white border-none outline-none uppercase" value="${l[0]}" onchange="db.ref('settings/matrix/${c}/${col}/0').set(this.value.toUpperCase())"></td>
+                             <td class="p-2 ${colStyles[col]} bg-opacity-10 border-r border-slate-800"><input class="w-full bg-transparent text-center font-bold text-white border-none outline-none uppercase" value="${l[1]}" onchange="db.ref('settings/matrix/${c}/${col}/1').set(this.value.toUpperCase())"></td>`;
+                });
+                html += `</tr>`;
+            }
+            document.getElementById('matrixTable').innerHTML = html;
+        });
+
+        function switchTab(t) {
+            ['viewBilan', 'viewGroupes', 'viewCorrection', 'viewCarte'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById('view' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('hidden');
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
+            document.getElementById('btnTab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.add('tab-active');
+        }
+
+        function resetData(type) {
+            if(prompt("RNE (0680013V) :") === "0680013V" && confirm("Attention ! Action irréversible.")) {
+                if(type === 'scores') db.ref(`sessions/${currentClass}`).remove();
+                else { db.ref().remove(); localStorage.clear(); }
+                location.reload();
+            }
+        }
+        
+        function exportCSV() {
+            let csv = "Nom;Parcours;Score\n";
+            (mapping[currentClass]||[]).forEach(s => {
+                const pts = Object.values(classResults[s.code] || {}).reduce((a,b)=>a+b.score,0);
+                csv += `${s.last} ${s.first};${Object.keys(classResults[s.code] || {}).length};${pts}\n`;
+            });
+            const blob = new Blob([csv], {type:'text/csv'});
+            const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`OrientShow_${currentClass}.csv`; a.click();
+        }
     </script>
 </body>
 </html>
