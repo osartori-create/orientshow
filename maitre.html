@@ -14,36 +14,36 @@
         .table-wrap { max-height: 70vh; overflow: auto; border: 1px solid #334155; }
         thead th { position: sticky; top: 0; z-index: 30; }
         td:first-child, th:first-child { position: sticky; left: 0; z-index: 40; background: #0f172a !important; border-right: 3px solid #334155; }
-        .pastille-xxl { width: 60px; height: 60px; border-radius: 50%; border: 3px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; color: white; }
+        .pastille-xxl { width: 60px; height: 60px; border-radius: 50%; border: 3px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; }
         .prenom-xxl { font-size: 1.8rem; font-weight: 900; text-transform: uppercase; line-height: 1; color: #3b82f6; }
     </style>
 </head>
 <body class="p-4">
 
     <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4">
-        <h1 class="text-3xl font-black italic text-blue-500 uppercase">ORIENT'SHOW MAÎTRE</h1>
+        <h1 class="text-3xl font-black italic text-blue-500 uppercase">ORIENT'SHOW <span class="text-white">MAÎTRE</span></h1>
         <div class="flex items-center gap-2">
             <select id="activeClasse" onchange="loadClasseData()" class="bg-slate-800 p-2 rounded-lg font-bold border border-slate-700 min-w-[150px]"></select>
-            <button onclick="addNewClasse()" class="bg-blue-600 w-10 h-10 rounded-full font-black text-xl hover:bg-blue-500 shadow-lg transition-colors">+</button>
+            <button onclick="addNewClasse()" class="bg-blue-600 w-10 h-10 rounded-full font-black text-xl hover:bg-blue-500 shadow-lg">+</button>
         </div>
         <div class="flex gap-2">
-            <button onclick="document.getElementById('csvFile').click()" class="bg-slate-700 px-4 py-2 rounded-lg font-bold text-[10px] uppercase border border-slate-600 italic">Import iDoceo</button>
+            <button onclick="document.getElementById('csvFile').click()" class="bg-slate-700 px-4 py-2 rounded-lg font-bold text-[10px] uppercase">Import CSV</button>
             <input type="file" id="csvFile" class="hidden" accept=".csv" onchange="importCSV(this)">
-            <button onclick="exportCSV()" class="bg-green-600 px-4 py-2 rounded-lg font-bold text-[10px] uppercase shadow-lg shadow-green-900/20">Export CSV</button>
-            <button onclick="resetData()" class="bg-red-600 px-4 py-2 rounded-lg font-bold text-[10px] uppercase shadow-lg shadow-red-900/20">Vider</button>
+            <button onclick="exportCSV()" class="bg-green-600 px-4 py-2 rounded-lg font-bold text-[10px] uppercase">Export</button>
+            <button onclick="resetData()" class="bg-red-600 px-4 py-2 rounded-lg font-bold text-[10px] uppercase">Vider</button>
         </div>
     </header>
 
     <nav class="flex border-b border-slate-700 mb-6 uppercase text-[10px] font-black tracking-widest overflow-x-auto">
-        <button id="btnTabBilan" onclick="switchTab('bilan')" class="px-6 py-4 tab-active whitespace-nowrap">📊 Bilan Classe</button>
+        <button id="btnTabBilan" onclick="switchTab('bilan')" class="px-6 py-4 tab-active whitespace-nowrap">📊 Bilan</button>
         <button id="btnTabGroupes" onclick="switchTab('groupes')" class="px-6 py-4 whitespace-nowrap">👥 Groupes</button>
-        <button id="btnTabCorrection" onclick="switchTab('correction')" class="px-6 py-4 whitespace-nowrap">📝 Grille Codes</button>
+        <button id="btnTabCorrection" onclick="switchTab('correction')" class="px-6 py-4 whitespace-nowrap">📝 Codes</button>
     </nav>
 
     <div id="viewBilan" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
     <div id="viewGroupes" class="hidden grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
     <div id="viewCorrection" class="hidden">
-        <div class="table-wrap rounded-2xl overflow-hidden">
+        <div class="table-wrap rounded-2xl overflow-hidden border border-slate-700">
             <table class="w-full border-collapse">
                 <thead class="bg-slate-900 text-[10px] font-black italic">
                     <tr><th class="p-6">#</th><th colspan="2" class="bg-gray-800">NOIR</th><th colspan="2" class="bg-red-900">ROUGE</th><th colspan="2" class="bg-blue-900">BLEU</th><th colspan="2" class="bg-green-900">VERT</th><th colspan="2" class="bg-yellow-600">JAUNE</th></tr>
@@ -55,8 +55,8 @@
 
     <div id="modalDetails" class="hidden fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4">
         <div class="bg-slate-800 w-full max-w-xl rounded-3xl p-6 border border-slate-700">
-            <div class="flex justify-between items-start mb-6">
-                <div><h2 id="mName" class="text-3xl font-black italic text-blue-400"></h2><p id="mCode" class="text-sm opacity-50 uppercase font-bold"></p></div>
+            <div class="flex justify-between items-start mb-6 text-white">
+                <div><h2 id="mName" class="text-3xl font-black italic text-blue-400 leading-none"></h2><p id="mCode" class="text-sm opacity-50 uppercase font-bold mt-2"></p></div>
                 <button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl">&times;</button>
             </div>
             <div id="mHistory" class="space-y-3 max-h-[60vh] overflow-auto pr-2"></div>
@@ -73,19 +73,14 @@
         let mapping = JSON.parse(localStorage.getItem('os_mapping_v6') || '{}');
         let currentClass = localStorage.getItem('os_last_class') || "";
 
-        db.ref('settings/classes').on('value', snap => {
-            const data = snap.val() || {};
-            const classes = Object.keys(data).filter(c => isNaN(c));
+        // SYNC SELECTOR
+        function updateSelector() {
             const sel = document.getElementById('activeClasse');
+            const classes = Object.keys(mapping);
             sel.innerHTML = classes.map(c => `<option value="${c}" ${c === currentClass ? 'selected' : ''}>${c}</option>`).join('');
-            
-            if (classes.length > 0 && !currentClass) {
-                currentClass = classes[0];
-                loadClasseData();
-            } else if (classes.length > 0) {
-                loadClasseData();
-            }
-        });
+            if (classes.length > 0 && !currentClass) { currentClass = classes[0]; }
+            loadClasseData();
+        }
 
         function addNewClasse() {
             const name = prompt("Nom de la classe (ex: 6A) :");
@@ -93,7 +88,9 @@
                 const clean = name.trim().toUpperCase();
                 db.ref(`settings/classes/${clean}`).set(true);
                 if(!mapping[clean]) mapping[clean] = [];
-                saveAndReload(clean);
+                currentClass = clean;
+                saveLocal();
+                updateSelector();
             }
         }
 
@@ -110,25 +107,25 @@
                 const clean = className.toUpperCase();
 
                 mapping[clean] = data.map((row, idx) => ({
-                    id: Date.now() + idx, 
-                    last: row[colNom].toUpperCase().trim(), 
-                    first: row[colPrenom].trim(),
+                    id: Date.now() + idx, last: row[colNom].toUpperCase().trim(), first: row[colPrenom].trim(),
                     code: `${colors[idx % 5]}_${Math.floor(idx / 5) + 1}`, absent: false
                 }));
                 db.ref(`settings/classes/${clean}`).set(true);
-                saveAndReload(clean);
+                currentClass = clean;
+                saveLocal();
+                updateSelector();
+                alert(data.length + " élèves importés !");
             }});
         }
 
-        function saveAndReload(c) {
+        function saveLocal() {
             localStorage.setItem('os_mapping_v6', JSON.stringify(mapping));
-            localStorage.setItem('os_last_class', c);
-            location.reload();
+            localStorage.setItem('os_last_class', currentClass);
         }
 
         function loadClasseData() {
-            const sel = document.getElementById('activeClasse');
-            if(sel.value) currentClass = sel.value;
+            currentClass = document.getElementById('activeClasse').value;
+            if(!currentClass) return;
             localStorage.setItem('os_last_class', currentClass);
             db.ref(`sessions/${currentClass}`).on('value', snap => {
                 const results = snap.val() || {};
@@ -140,7 +137,7 @@
         function updateBilan(results) {
             const list = mapping[currentClass] || [];
             const view = document.getElementById('viewBilan');
-            if(!list.length) { view.innerHTML = "<p class='col-span-full text-center py-20 opacity-30'>Aucun élève.</p>"; return; }
+            if(!list.length) { view.innerHTML = "<p class='col-span-full text-center py-20 opacity-30'>Aucun élève chargé.</p>"; return; }
 
             let allScores = list.map(s => Object.values(results[s.code] || {}).reduce((a,b)=>a+b.score, 0)).sort((a,b)=>b-a);
             const q1 = allScores[Math.floor(allScores.length*0.25)] || 0;
@@ -156,10 +153,10 @@
                 let bg = "bg-slate-800";
                 if(pts >= q1 && pts > 0) bg = "bg-green-600";
                 else if(pts >= med && pts > 0) bg = "bg-yellow-500 text-black";
-                else if(pts > 0) bg = "bg-red-600";
+                else if(pts > 0) bg = "bg-red-600 text-white";
 
                 const [col, num] = s.code.split('_');
-                return `<div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-6 rounded-3xl cursor-pointer text-center shadow-lg transition-all active:scale-95">
+                return `<div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-6 rounded-3xl cursor-pointer text-center shadow-lg transition-transform active:scale-95">
                     <div class="flex justify-between items-center mb-4"><span class="pastille-xxl ${colStyles[col]}">${num}</span><div class="text-right text-4xl font-black">${pts}</div></div>
                     <p class="text-[10px] uppercase font-bold opacity-50 mb-1">${s.last}</p><p class="prenom-xxl truncate mb-3">${s.first}</p>
                     <div class="bg-black/20 rounded-xl py-1 px-3 flex justify-between items-center text-[10px] font-black"><span>⏱️ ${avgT}s</span><span class="italic">${luc}</span></div>
@@ -173,7 +170,7 @@
                 const [col, num] = s.code.split('_');
                 return `<div class="bg-slate-800 p-6 rounded-[30px] flex flex-col items-center">
                     <div class="pastille-xxl ${colStyles[col]} mb-4 !w-20 !h-20 !text-4xl shadow-2xl">${num}</div>
-                    <div class="text-center mb-4"><p class="text-[10px] opacity-40 font-bold uppercase">${s.last}</p><p class="text-2xl font-black text-blue-400 uppercase leading-none">${s.first}</p></div>
+                    <div class="text-center mb-4"><p class="text-[10px] opacity-40 font-bold uppercase">${s.last}</p><p class="text-2xl font-black text-blue-400 uppercase leading-none truncate">${s.first}</p></div>
                     <select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 p-3 rounded-xl border border-slate-600 w-full text-xs font-bold text-center text-white">
                         <option value="ABS" ${s.absent?'selected':''}>ABSENT</option>
                         ${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}` && !s.absent?'selected':''}>${c} ${n+1}</option>`)).join('')}
@@ -185,7 +182,7 @@
         function changeCode(id, val) {
             const s = mapping[currentClass].find(x => x.id == id);
             if(val === "ABS") s.absent = true; else { s.absent = false; s.code = val; }
-            localStorage.setItem('os_mapping_v6', JSON.stringify(mapping));
+            saveLocal();
             loadClasseData();
         }
 
@@ -195,10 +192,10 @@
             db.ref(`sessions/${currentClass}/${c}`).once('value', snap => {
                 const res = snap.val() || {};
                 document.getElementById('mHistory').innerHTML = Object.entries(res).map(([cKey, v]) => `
-                    <div class="bg-slate-900 p-4 rounded-2xl flex justify-between items-center border border-slate-700">
+                    <div class="bg-slate-900 p-4 rounded-2xl flex justify-between items-center border border-slate-700 text-white">
                         <div><p class="font-black text-blue-400 uppercase">Parcours ${cKey.replace('C','')}</p><p class="text-[10px] opacity-40">⏱️ ${v.time}s</p></div>
                         <div class="flex items-center gap-3">
-                            <input type="number" value="${v.score}" onchange="updateScore('${c}','${cKey}',this.value)" class="w-16 bg-slate-800 p-2 text-center rounded-lg font-black text-xl text-white outline-none">
+                            <input type="number" value="${v.score}" onchange="updateScore('${c}','${cKey}',this.value)" class="w-16 bg-slate-800 p-2 text-center rounded-lg font-black text-xl">
                             <button onclick="deletePassage('${c}','${cKey}')" class="bg-red-600 p-2 rounded-lg text-xs uppercase font-bold">Suppr</button>
                         </div>
                     </div>`).join('') || "<p class='text-center opacity-30 italic py-10'>Aucun passage.</p>";
@@ -206,7 +203,7 @@
             document.getElementById('modalDetails').classList.remove('hidden');
         }
 
-        function deletePassage(sCode, cKey) { if(confirm("Supprimer ce parcours ?")) db.ref(`sessions/${currentClass}/${sCode}/${cKey}`).remove().then(()=>document.getElementById('modalDetails').classList.add('hidden')); }
+        function deletePassage(sCode, cKey) { if(confirm("Supprimer ?")) db.ref(`sessions/${currentClass}/${sCode}/${cKey}`).remove().then(()=>document.getElementById('modalDetails').classList.add('hidden')); }
         function updateScore(sCode, cKey, val) { db.ref(`sessions/${currentClass}/${sCode}/${cKey}/score`).set(parseInt(val)); }
 
         db.ref('settings/matrix').on('value', snap => {
@@ -224,8 +221,26 @@
 
         function updL(c, col, i, v) { db.ref(`settings/matrix/${c}/${col}/${i}`).set(v.toUpperCase().trim()); }
         function switchTab(t) { ['viewBilan', 'viewGroupes', 'viewCorrection'].forEach(id => document.getElementById(id).classList.add('hidden')); document.getElementById('view' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('hidden'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active')); document.getElementById('btnTab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.add('tab-active'); }
-        function exportCSV() { let csv = "Nom;Parcours;Score\n"; (mapping[currentClass]||[]).forEach(s => { db.ref(`sessions/${currentClass}/${s.code}`).once('value', snap => { const r = snap.val()||{}; const pts = Object.values(r).reduce((a,b)=>a+b.score,0); csv += `${s.last} ${s.first};${Object.keys(r).length};${pts}\n`; }); }); setTimeout(()=> { const blob = new Blob([csv], {type:'text/csv'}); const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`Resultats_${currentClass}.csv`; a.click(); }, 1000); }
-        function resetData() { if(prompt("RNE (0680013V) :")==="0680013V" && confirm("Vider les scores de " + currentClass + " ?")) db.ref(`sessions/${currentClass}`).remove(); }
+        
+        function exportCSV() { 
+            let csv = "Nom;Parcours;Score\n"; 
+            const list = mapping[currentClass] || [];
+            list.forEach(s => { 
+                db.ref(`sessions/${currentClass}/${s.code}`).once('value', snap => { 
+                    const r = snap.val()||{}; const pts = Object.values(r).reduce((a,b)=>a+b.score,0);
+                    csv += `${s.last} ${s.first};${Object.keys(r).length};${pts}\n`; 
+                }); 
+            }); 
+            setTimeout(()=> { 
+                const blob = new Blob([csv], {type:'text/csv'}); 
+                const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`Resultats_${currentClass}.csv`; a.click(); 
+            }, 1500); 
+        }
+
+        function resetData() { if(prompt("RNE (0680013V) :")==="0680013V" && confirm("Vider les scores ?")) db.ref(`sessions/${currentClass}`).remove(); }
+
+        // INITIAL LAUNCH
+        updateSelector();
     </script>
 </body>
 </html>
