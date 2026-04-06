@@ -1,4 +1,3 @@
-<!-- Fichier : eleve.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -12,17 +11,15 @@
         body { background-color: #0f172a; touch-action: manipulation; }
         .btn-num { background: #1e293b; border: 1px solid #334155; padding: 15px; border-radius: 12px; font-weight: 900; }
         .btn-active { background: #3b82f6 !important; border-color: #fff !important; }
-        .done { opacity: 0.3; pointer-events: none; background: #020617 !important; border: none; }
+        .done { opacity: 0.3; pointer-events: none; background: #020617 !important; }
         .input-box { background: #1e293b; border: 2px solid #334155; text-align: center; font-size: 3rem; font-weight: 900; border-radius: 15px; width: 80px; height: 80px; text-transform: uppercase; }
     </style>
 </head>
 <body class="text-white font-sans p-4">
     <div id="app" class="max-w-md mx-auto">
-        
-        <!-- SELECTION IDENTITE -->
         <div id="step1" class="space-y-4">
             <h1 class="text-3xl font-black text-blue-500 italic text-center uppercase tracking-tighter">Orient'Show</h1>
-            <select id="selectClasse" class="w-full p-4 bg-slate-800 rounded-xl font-bold border border-slate-700"></select>
+            <select id="selectClasse" class="w-full p-4 bg-slate-800 rounded-xl font-bold border border-slate-700 text-white"></select>
             
             <div class="grid grid-cols-5 gap-2" id="gridNums">
                 <script>for(let i=1;i<=10;i++) document.write(`<button onclick="setNum(${i})" id="btnN${i}" class="btn-num">${i}</button>`)</script>
@@ -37,38 +34,31 @@
             </div>
         </div>
 
-        <!-- INTERFACE SAISIE -->
         <div id="step2" class="hidden space-y-6">
             <div class="flex justify-between items-center bg-slate-800 p-3 rounded-xl border border-slate-700">
                 <span id="identite" class="font-black text-blue-400 uppercase"></span>
                 <button onclick="location.reload()" class="text-xs bg-slate-700 px-3 py-1 rounded-lg">Changer</button>
             </div>
-
             <div id="timerWarning" class="hidden bg-orange-600/20 border border-orange-500 p-4 rounded-xl text-center">
                 <p class="text-orange-500 font-bold">⏳ Attends encore <span id="timeLeft"></span>s</p>
             </div>
-
             <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-2xl">
-                <p class="text-xs uppercase font-bold opacity-50 mb-2">Choisir le parcours :</p>
                 <div class="grid grid-cols-4 gap-2 mb-6" id="parcoursSelection">
                     <script>for(let i=1;i<=12;i++) document.write(`<button onclick="setParcours(${i})" id="pBtn${i}" class="p-3 bg-slate-900 rounded-lg font-black border border-slate-700">P${i}</button>`)</script>
                 </div>
-
                 <div class="flex justify-center gap-4 mb-6">
                     <input type="text" id="l1" maxlength="1" class="input-box" autocomplete="off">
                     <input type="text" id="l2" maxlength="1" class="input-box" autocomplete="off">
                 </div>
-
-                <button id="btnValider" onclick="valider()" class="w-full bg-blue-600 p-6 rounded-2xl text-2xl font-black uppercase shadow-lg active:scale-95 transition-transform">Valider</button>
+                <button id="btnValider" onclick="valider()" class="w-full bg-blue-600 p-6 rounded-2xl text-2xl font-black uppercase">Valider</button>
             </div>
         </div>
 
-        <!-- FEEDBACK -->
         <div id="feedback" class="hidden fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50 p-8 text-center">
             <div id="fbIcon" class="text-9xl mb-4"></div>
-            <div id="fbPoints" class="text-6xl font-black mb-4 italic tracking-tighter"></div>
+            <div id="fbPoints" class="text-6xl font-black mb-4 italic"></div>
             <div id="fbMsg" class="text-xl font-bold opacity-70 mb-8"></div>
-            <button onclick="location.reload()" class="bg-blue-600 px-10 py-4 rounded-full font-black uppercase">Ok, au suivant !</button>
+            <button onclick="location.reload()" class="bg-blue-600 px-10 py-4 rounded-full font-black uppercase">Ok</button>
         </div>
     </div>
 
@@ -80,15 +70,17 @@
         let currentNum = null; let currentColor = null; let currentParcours = null;
         let CORRECTION = {}; let classResults = {};
 
-        // Récupérer la matrice de correction
-        db.ref('settings/matrix').on('value', snap => { CORRECTION = snap.val() || {}; });
-
-        // Liste des classes
+        // Correction de la lecture des classes
         db.ref('settings/classes').on('value', snap => {
             const sel = document.getElementById('selectClasse');
-            sel.innerHTML = '<option>-- CHOISIR CLASSE --</option>';
-            Object.keys(snap.val() || {}).forEach(c => { if(isNaN(c)) sel.innerHTML += `<option value="${c}">${c}</option>`; });
+            const data = snap.val() || {};
+            sel.innerHTML = '<option value="">-- CHOISIR CLASSE --</option>';
+            Object.keys(data).forEach(c => {
+                if(c && c !== "null") sel.innerHTML += `<option value="${c}">${c}</option>`;
+            });
         });
+
+        db.ref('settings/matrix').on('value', snap => { CORRECTION = snap.val() || {}; });
 
         function setNum(n) { 
             currentNum = n; 
@@ -98,19 +90,18 @@
 
         function setColor(c) {
             const classe = document.getElementById('selectClasse').value;
-            if(!currentNum || classe.includes('--')) return alert("Classe + Dossard !");
+            if(!currentNum || !classe) return alert("Classe + Dossard !");
             currentColor = c;
             document.getElementById('identite').innerText = `${classe} | ${currentColor} ${currentNum}`;
             document.getElementById('step1').classList.add('hidden');
             document.getElementById('step2').classList.remove('hidden');
             
-            // Écouter les résultats déjà faits pour griser les boutons
             db.ref(`sessions/${classe}/${currentColor}_${currentNum}`).on('value', snap => {
                 classResults = snap.val() || {};
                 Object.keys(classResults).forEach(pKey => {
                     const pIdx = pKey.replace('C','');
                     const btn = document.getElementById('pBtn'+pIdx);
-                    if(btn) btn.classList.add('done', 'bg-slate-950');
+                    if(btn) btn.classList.add('done');
                 });
             });
         }
@@ -128,21 +119,16 @@
             const l1 = document.getElementById('l1').value.toUpperCase().trim();
             const l2 = document.getElementById('l2').value.toUpperCase().trim();
 
-            if(!currentParcours) return alert("Choisis un parcours !");
-            if(classResults[pKey]) return alert("Parcours déjà validé !");
-            if(!l1 || !l2) return alert("Saisis les 2 lettres !");
-
-            // --- VERIFICATION TIMER 1'30 (90s) ---
+            if(!currentParcours || classResults[pKey]) return alert("Parcours invalide ou déjà fait");
+            
             const lastTime = localStorage.getItem(`lastFinish_${userKey}`) || 0;
             const diff = (Date.now() - lastTime) / 1000;
             if(diff < 90) {
-                const wait = Math.ceil(90 - diff);
                 document.getElementById('timerWarning').classList.remove('hidden');
-                document.getElementById('timeLeft').innerText = wait;
+                document.getElementById('timeLeft').innerText = Math.ceil(90 - diff);
                 return;
             }
 
-            // Calcul du score (5/2/0)
             const sol = CORRECTION[currentParcours] ? CORRECTION[currentParcours][currentColor] : null;
             let pts = 0;
             if(sol) {
@@ -152,11 +138,8 @@
                 else if(match1 || match2) pts = 2;
             }
 
-            // Envoi Firebase
             db.ref(`sessions/${classe}/${userKey}/${pKey}`).set({
-                score: pts,
-                time: Math.floor(diff),
-                timestamp: Date.now()
+                score: pts, time: Math.floor(diff), timestamp: Date.now()
             }).then(() => {
                 localStorage.setItem(`lastFinish_${userKey}`, Date.now());
                 showFeedback(pts);
@@ -165,14 +148,8 @@
 
         function showFeedback(p) {
             const fb = document.getElementById('feedback');
-            const icon = document.getElementById('fbIcon');
-            const ptsTxt = document.getElementById('fbPoints');
-            const msg = document.getElementById('fbMsg');
-
-            if(p === 5) { icon.innerText = "⭐"; ptsTxt.innerText = "+5 PTS"; ptsTxt.className = "text-6xl font-black text-green-500 italic"; msg.innerText = "Parfait ! Lecture précise."; }
-            else if(p === 2) { icon.innerText = "🆗"; ptsTxt.innerText = "+2 PTS"; ptsTxt.className = "text-6xl font-black text-yellow-500 italic"; msg.innerText = "Une erreur de lettre, sois vigilant."; }
-            else { icon.innerText = "❌"; ptsTxt.innerText = "0 PT"; ptsTxt.className = "text-6xl font-black text-red-500 italic"; msg.innerText = "Erreur totale. Recalage nécessaire."; }
-
+            document.getElementById('fbIcon').innerText = (p === 5) ? "⭐" : (p === 2) ? "🆗" : "❌";
+            document.getElementById('fbPoints').innerText = `+${p} PTS`;
             document.getElementById('step2').classList.add('hidden');
             fb.classList.remove('hidden');
         }
