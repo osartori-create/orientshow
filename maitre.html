@@ -14,12 +14,17 @@
         .tab-btn { flex: 1; padding: 20px; font-weight: 900; text-transform: uppercase; background: #1e293b; border-bottom: 5px solid transparent; }
         .tab-active { background: #3b82f6; border-color: white; }
         .pastille { width: 45px; height: 45px; border-radius: 50%; border: 3px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; color: white; }
-        #m-mountain { position: relative; width: 100%; height: 65vh; background: #1e293b; border-radius: 1.5rem; overflow: hidden; border: 1px solid #334155; 
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="none"><path d="M0 1000 L300 400 L500 600 L700 200 L1000 1000 Z" fill="%230f172a" opacity="0.5"/></svg>'); background-size: cover; background-position: bottom;
+        
+        /* LA MONTAGNE TV */
+        #m-mountain { 
+            position: relative; width: 100%; height: 65vh; background: #1e293b; border-radius: 1.5rem; overflow: hidden; border: 1px solid #334155; 
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="none"><path d="M0 1000 L300 400 L500 600 L700 200 L1000 1000 Z" fill="%230f172a" opacity="0.5"/></svg>'); 
+            background-size: cover; background-position: bottom;
         }
         .m-line { position: absolute; left: 0; width: 100%; border-top: 1px dashed rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); font-size: 10px; padding-left: 10px; }
         .m-pion { position: absolute; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; transition: all 1s; z-index: 10; color: white; }
-        .m-pion-name { position: absolute; top: 110%; font-size: 9px; font-weight: 900; white-space: nowrap; background: rgba(0,0,0,0.8); padding: 2px 5px; border-radius: 4px; color: white !important; }
+        /* NOM EN BLANC SUR FOND SOMBRE POUR TOUTES LES COULEURS */
+        .m-pion-name { position: absolute; top: 110%; font-size: 9px; font-weight: 900; white-space: nowrap; background: rgba(0,0,0,0.8); padding: 2px 5px; border-radius: 4px; color: white !important; border: 1px solid rgba(255,255,255,0.2); }
     </style>
 </head>
 <body class="p-4">
@@ -32,7 +37,7 @@
         </div>
         <div class="flex items-center gap-2">
             <select id="activeClasse" onchange="loadClasse()" class="bg-slate-800 p-2 rounded-lg border border-slate-700 min-w-[150px]"></select>
-            <button onclick="addClasse()" class="bg-blue-600 w-10 h-10 rounded-full text-xl">+</button>
+            <button onclick="addClasse()" class="bg-blue-600 w-10 h-10 rounded-full text-xl shadow-lg">+</button>
         </div>
         <div class="flex gap-2">
             <button onclick="document.getElementById('csv').click()" class="bg-slate-700 px-4 py-2 rounded-lg text-[10px]">Import iDoceo</button>
@@ -51,8 +56,15 @@
 
     <div id="viewBilan" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
     <div id="viewGroupes" class="hidden grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
-    <div id="viewCarte" class="hidden"><div id="m-mountain"><script>for(let s=0; s<=60; s+=10) { const pos = 90 - (s * (75/60)); document.write(`<div class="m-line" style="top: ${pos}%;">${s} PTS</div>`); }</script><div id="m-players-layer"></div></div></div>
-    <div id="viewCodes" class="hidden overflow-auto border border-slate-700 rounded-xl"><table class="w-full text-xs text-center font-bold" id="matrixTable"></table></div>
+
+    <div id="viewCarte" class="hidden">
+        <div id="m-mountain">
+            <script>for(let s=0; s<=60; s+=10) { const pos = 90 - (s * (75/60)); document.write(`<div class="m-line" style="top: ${pos}%;">${s} PTS</div>`); }</script>
+            <div id="m-players-layer"></div>
+        </div>
+    </div>
+    
+    <div id="viewCodes" class="hidden overflow-auto border border-slate-700 rounded-xl"><table class="w-full text-xs text-center font-bold uppercase" id="matrixTable"></table></div>
 
     <script>
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
@@ -61,7 +73,7 @@
         const colStyles = { NOIR:"bg-black", ROUGE:"bg-red-600", BLEU:"bg-blue-600", VERT:"bg-green-600", JAUNE:"bg-yellow-500 text-black" };
         let curCl = "", results = {}, students = [];
 
-        // CODES FIXES (Image)
+        // CODES ISSUS DE L'IMAGE
         const myCodes = {
             1: { NOIR:["D","Q"], ROUGE:["O","U"], BLEU:["Y","A"], VERT:["E","R"], JAUNE:["N","K"] },
             2: { NOIR:["E","X"], ROUGE:["X","Y"], BLEU:["T","L"], VERT:["R","O"], JAUNE:["A","L"] },
@@ -109,13 +121,18 @@
         function updateUI() {
             const bil = document.getElementById('viewBilan'); const grp = document.getElementById('viewGroupes'); const mtn = document.getElementById('m-players-layer');
             bil.innerHTML = ""; grp.innerHTML = ""; mtn.innerHTML = "";
+            
             students.forEach((s, i) => {
                 const pts = Object.values(results[s.code] || {}).reduce((a,b)=>a+b.score, 0);
                 const html = `<div class="bg-slate-800 p-4 rounded-2xl text-center border border-white/5 shadow-lg"><div class="flex justify-between font-black"><span class="pastille ${colStyles[s.code.split('_')[0]]}">${s.code.split('_')[1]}</span><span class="text-2xl">${pts}</span></div><p class="text-lg font-black mt-2 truncate">${s.first}</p></div>`;
                 bil.innerHTML += html; grp.innerHTML += html;
+                
+                // AJOUT SUR LA CARTE TV
                 const pion = document.createElement('div'); pion.className = `m-pion ${colStyles[s.code.split('_')[0]]}`;
-                pion.style.top = `${90 - (Math.min(60, pts) * (75/60))}%`; pion.style.left = `${5 + (i * (90/students.length))}%`;
-                pion.innerHTML = `${s.code.split('_')[1]}<span class="m-pion-name">${s.first}</span>`; mtn.appendChild(pion);
+                pion.style.top = `${90 - (Math.min(60, pts) * (75/60))}%`; 
+                pion.style.left = `${5 + (i * (90/students.length))}%`;
+                pion.innerHTML = `${s.code.split('_')[1]}<span class="m-pion-name">${s.first}</span>`; 
+                mtn.appendChild(pion);
             });
         }
 
@@ -125,7 +142,7 @@
         function resetData(type) { if(prompt("RNE :")==="0680013V") { if(type==='scores') db.ref(`sessions/${curCl}`).remove(); else { db.ref('classes').remove(); db.ref('sessions').remove(); db.ref('settings/classes').remove(); db.ref('settings/startTime').remove(); } location.reload(); } }
 
         db.ref('settings/matrix').on('value', snap => {
-            let m = snap.val() || {}; let h = `<tr class="bg-slate-900"><th>#</th><th colspan="2">NOIR</th><th colspan="2">ROUGE</th><th colspan="2">BLEU</th><th colspan="2">VERT</th><th colspan="2">JAUNE</th></tr>`;
+            let m = snap.val() || {}; let h = `<tr class="bg-slate-900 text-[10px]"><th>#</th><th colspan="2">NOIR</th><th colspan="2">ROUGE</th><th colspan="2">BLEU</th><th colspan="2">VERT</th><th colspan="2">JAUNE</th></tr>`;
             for(let c=1; c<=12; c++) {
                 h += `<tr class="border-b border-slate-800"><td>P${c}</td>`;
                 colors.forEach(col => { const l = m[c]?.[col] || ["",""]; h += `<td><input class="w-8 bg-transparent text-center" value="${l[0]}" onchange="db.ref('settings/matrix/${c}/${col}/0').set(this.value.toUpperCase())"></td><td><input class="w-8 bg-transparent text-center" value="${l[1]}" onchange="db.ref('settings/matrix/${c}/${col}/1').set(this.value.toUpperCase())"></td>`; });
