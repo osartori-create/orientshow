@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Master PRO | Orient'Show RGPD</title>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master PRO | Orient'Show</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -13,48 +12,31 @@
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
         .tab-btn { flex: 1; padding: 20px; font-weight: 900; text-transform: uppercase; background: #1e293b; border-bottom: 5px solid transparent; }
         .tab-active { background: #3b82f6; border-color: white; }
-        .pastille { width: 45px; height: 45px; border-radius: 50%; border: 3px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; color: white; }
-        #m-mountain { 
-            position: relative; width: 100%; height: 65vh; background: #1e293b; border-radius: 1.5rem; overflow: hidden; border: 1px solid #334155; 
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="none"><path d="M0 1000 L300 400 L500 600 L700 200 L1000 1000 Z" fill="%230f172a" opacity="0.5"/></svg>'); 
-            background-size: cover; background-position: bottom;
-        }
-        .m-line { position: absolute; left: 0; width: 100%; border-top: 1px dashed rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); font-size: 10px; padding-left: 10px; }
-        .m-pion { position: absolute; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; transition: all 1s; z-index: 10; color: white; }
-        .m-pion-name { position: absolute; top: 110%; font-size: 9px; font-weight: 900; white-space: nowrap; background: rgba(0,0,0,0.8); padding: 2px 5px; border-radius: 4px; color: white !important; border: 1px solid rgba(255,255,255,0.2); }
+        .pastille { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #000; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; color: white; }
     </style>
 </head>
 <body class="p-4">
-
-    <header class="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4 italic font-black uppercase text-xs">
+    <header class="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4 italic font-black uppercase">
         <div class="flex items-center gap-4">
             <h1 class="text-xl text-blue-500">Master PRO</h1>
-            <button id="btnChrono" onclick="startChrono()" class="hidden bg-green-600 px-6 py-2 rounded-full animate-pulse">🚀 TOP DÉPART</button>
+            <button id="btnChrono" onclick="startChrono()" class="hidden bg-green-600 px-6 py-2 rounded-full text-xs animate-pulse">🚀 TOP DÉPART</button>
             <div id="chronoDisplay" class="hidden text-xl font-mono text-yellow-400">00:00</div>
         </div>
-        <div class="flex items-center gap-2">
-            <select id="activeClasse" onchange="loadClasse()" class="bg-slate-800 p-2 rounded-lg border border-slate-700 min-w-[120px]"></select>
-            <button onclick="addClasse()" class="bg-blue-600 w-8 h-8 rounded-full text-lg">+</button>
-        </div>
+        <select id="activeClasse" onchange="loadClasse()" class="bg-slate-800 p-2 rounded-lg border border-slate-700 min-w-[150px]"></select>
         <div class="flex gap-1">
-            <button onclick="document.getElementById('csv').click()" class="bg-slate-700 px-3 py-2 rounded text-[9px]">Import CSV</button>
+            <button onclick="document.getElementById('csv').click()" class="bg-slate-700 px-3 py-2 rounded text-[10px]">IMPORT CSV</button>
             <input type="file" id="csv" class="hidden" accept=".csv" onchange="importCSV(this)">
-            <button onclick="resetData('scores')" class="bg-red-600 px-3 py-2 rounded text-[9px]">Vider Scores</button>
-            <button onclick="resetData('base')" class="bg-red-900 px-3 py-2 rounded text-[9px]">Purger Classes</button>
+            <button onclick="resetData()" class="bg-red-900 px-3 py-2 rounded text-[10px]">PURGER BASE</button>
         </div>
     </header>
 
     <nav class="flex gap-2 mb-6">
         <button onclick="switchTab('bilan')" id="btnTabBilan" class="tab-btn tab-active">📊 Bilan</button>
-        <button onclick="switchTab('carte')" id="btnTabCarte" class="tab-btn">🏔️ Carte</button>
-        <button onclick="switchTab('groupes')" id="btnTabGroupes" class="tab-btn">👥 Groupes</button>
-        <button onclick="switchTab('codes')" id="btnTabCodes" class="tab-btn !flex-none !w-20 text-[9px]">📝 Codes</button>
+        <button onclick="switchTab('codes')" id="btnTabCodes" class="tab-btn !flex-none !w-24 text-[10px]">📝 Codes</button>
     </nav>
 
     <div id="viewBilan" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
-    <div id="viewGroupes" class="hidden grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
-    <div id="viewCarte" class="hidden"><div id="m-mountain"><script>for(let s=0; s<=60; s+=10) { const pos = 90 - (s * (75/60)); document.write(`<div class="m-line" style="top: ${pos}%;">${s} PTS</div>`); }</script><div id="m-players-layer"></div></div></div>
-    <div id="viewCodes" class="hidden overflow-auto border border-slate-700 rounded-xl"><table class="w-full text-xs text-center font-bold uppercase" id="matrixTable"></table></div>
+    <div id="viewCodes" class="hidden overflow-auto"><table class="w-full text-xs text-center font-bold uppercase" id="matrixTable"></table></div>
 
     <script>
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
@@ -62,11 +44,9 @@
         const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
         const colStyles = { NOIR:"bg-black", ROUGE:"bg-red-600", BLEU:"bg-blue-600", VERT:"bg-green-600", JAUNE:"bg-yellow-500 text-black" };
         
-        // RECUPERATION LOCALE (RGPD)
-        let mapping = JSON.parse(localStorage.getItem('os_map_v8') || '{}');
-        let curCl = localStorage.getItem('os_last_cl') || "", results = {};
+        let mapping = JSON.parse(localStorage.getItem('os_map_v11') || '{}'), curCl = "", results = {};
 
-        // CODES FIXES (Image)
+        // INJECTION DES CODES DE TON IMAGE
         const myCodes = {
             1: { NOIR:["D","Q"], ROUGE:["O","U"], BLEU:["Y","A"], VERT:["E","R"], JAUNE:["N","K"] },
             2: { NOIR:["E","X"], ROUGE:["X","Y"], BLEU:["T","L"], VERT:["R","O"], JAUNE:["A","L"] },
@@ -81,18 +61,16 @@
             11: { NOIR:["P","T"], ROUGE:["A","U"], BLEU:["L","Y"], VERT:["U","A"], JAUNE:["D","U"] },
             12: { NOIR:["U","W"], ROUGE:["L","I"], BLEU:["T","N"], VERT:["R","C"], JAUNE:["A","H"] }
         };
-        db.ref('settings/matrix').once('value', snap => { if (!snap.exists()) db.ref('settings/matrix').set(myCodes); });
+        db.ref('settings/matrix').set(myCodes);
 
-        // SYNC CLASSES (Structure uniquement)
         db.ref('settings/classes').on('value', snap => {
             const clArr = Object.keys(snap.val() || {}).filter(c => c !== "null");
-            document.getElementById('activeClasse').innerHTML = clArr.map(c => `<option value="${c}" ${c===curCl?'selected':''}>${c}</option>`).join('');
+            document.getElementById('activeClasse').innerHTML = clArr.map(c => `<option value="${c}">${c}</option>`).join('');
             if(!curCl && clArr.length > 0) { curCl = clArr[0]; loadClasse(); }
         });
 
         function loadClasse() {
             curCl = document.getElementById('activeClasse').value; if(!curCl) return;
-            localStorage.setItem('os_last_cl', curCl);
             db.ref(`sessions/${curCl}`).on('value', snap => { results = snap.val() || {}; updateUI(); });
             db.ref(`settings/startTime/${curCl}`).on('value', snap => {
                 const s = snap.val(); if(!s) { document.getElementById('btnChrono').classList.remove('hidden'); document.getElementById('chronoDisplay').classList.add('hidden'); }
@@ -106,45 +84,29 @@
                 const colPre = res.meta.fields.find(c => c.toLowerCase().includes('name') && !c.toLowerCase().includes('last'));
                 const data = res.data.filter(r => r[colNom]);
                 const cName = (data[0]['@classe'] || prompt("Nom ?")).toUpperCase();
-                
-                // LES NOMS SONT STOCKÉS ICI (iPad Prof seulement)
                 mapping[cName] = data.map((r, i) => ({ first: r[colPre], last: r[colNom].toUpperCase(), code: `${colors[i % 5]}_${Math.floor(i / 5) + 1}` }));
-                localStorage.setItem('os_map_v8', JSON.stringify(mapping));
-                
-                // SIGNAL FIREBASE (On ne pousse que le nom de la classe)
+                localStorage.setItem('os_map_v11', JSON.stringify(mapping));
                 db.ref(`settings/classes/${cName}`).set(true).then(() => location.reload());
             }});
         }
 
         function updateUI() {
-            const bil = document.getElementById('viewBilan'); const grp = document.getElementById('viewGroupes'); const mtn = document.getElementById('m-players-layer');
-            bil.innerHTML = ""; grp.innerHTML = ""; mtn.innerHTML = "";
+            const bil = document.getElementById('viewBilan'); bil.innerHTML = "";
             const list = mapping[curCl] || [];
-
-            list.forEach((s, i) => {
+            list.forEach(s => {
                 const pts = Object.values(results[s.code] || {}).reduce((a,b)=>a+b.score, 0);
-                const html = `<div class="bg-slate-800 p-4 rounded-2xl text-center border border-white/5"><div class="flex justify-between font-black"><span class="pastille ${colStyles[s.code.split('_')[0]]}">${s.code.split('_')[1]}</span><span class="text-2xl">${pts}</span></div><p class="text-lg font-black mt-2 truncate">${s.first}</p></div>`;
-                bil.innerHTML += html; grp.innerHTML += html;
-                
-                const pion = document.createElement('div'); pion.className = `m-pion ${colStyles[s.code.split('_')[0]]}`;
-                pion.style.top = `${90 - (Math.min(60, pts) * (75/60))}%`; pion.style.left = `${5 + (i * (90/list.length))}%`;
-                pion.innerHTML = `${s.code.split('_')[1]}<span class="m-pion-name">${s.first}</span>`; mtn.appendChild(pion);
+                bil.innerHTML += `<div class="bg-slate-800 p-4 rounded-2xl border border-white/5"><div class="flex justify-between font-black"><span class="pastille ${colStyles[s.code.split('_')[0]]}">${s.code.split('_')[1]}</span><span class="text-2xl">${pts}</span></div><p class="text-lg font-black mt-2 truncate">${s.first}</p></div>`;
             });
         }
 
-        function startChrono() { if(confirm("Départ ?")) db.ref(`settings/startTime/${curCl}`).set(Date.now()); }
-        function startTimer(s) { clearInterval(window.it); window.it = setInterval(() => { const sec = Math.floor((Date.now()-s)/1000); document.getElementById('chronoDisplay').innerText = new Date(sec*1000).toISOString().substr(14,5); }, 1000); }
-        function switchTab(t) { ['viewBilan','viewGroupes','viewCarte','viewCodes'].forEach(v => document.getElementById(v).classList.add('hidden')); document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active')); document.getElementById('btnTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('tab-active'); }
-        function addClasse() { const n = prompt("Nom :"); if(n) { const clean = n.toUpperCase(); db.ref(`settings/classes/${clean}`).set(true); if(!mapping[clean]) mapping[clean] = []; localStorage.setItem('os_map_v8', JSON.stringify(mapping)); location.reload(); } }
-        function resetData(type) { if(prompt("RNE :")==="0680013V") { if(type==='scores') db.ref(`sessions/${curCl}`).remove(); else { db.ref('sessions').remove(); db.ref('settings/classes').remove(); db.ref('settings/startTime').remove(); localStorage.clear(); } location.reload(); } }
-
+        function startTimer(s) { clearInterval(window.it); window.it = setInterval(() => { const sec = Math.floor((Date.now()-s)/1000); document.getElementById('chronoDisplay').innerText = new Date(sec * 1000).toISOString().substr(14, 5); }, 1000); }
+        function startChrono() { if(confirm("Lancer le chrono ?")) db.ref(`settings/startTime/${curCl}`).set(Date.now()); }
+        function switchTab(t) { ['viewBilan','viewCodes'].forEach(v => document.getElementById(v).classList.add('hidden')); document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active')); document.getElementById('btnTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('tab-active'); }
+        function resetData() { if(prompt("RNE :")==="0680013V") { db.ref('sessions').remove(); db.ref('settings/classes').remove(); db.ref('settings/startTime').remove(); localStorage.clear(); location.reload(); } }
+        
         db.ref('settings/matrix').on('value', snap => {
             let m = snap.val() || {}; let h = `<tr class="bg-slate-900"><th>#</th><th colspan="2">NOIR</th><th colspan="2">ROUGE</th><th colspan="2">BLEU</th><th colspan="2">VERT</th><th colspan="2">JAUNE</th></tr>`;
-            for(let c=1; c<=12; c++) {
-                h += `<tr class="border-b border-slate-800"><td>P${c}</td>`;
-                colors.forEach(col => { const l = m[c]?.[col] || ["",""]; h += `<td><input class="w-8 bg-transparent text-center" value="${l[0]}" onchange="db.ref('settings/matrix/${c}/${col}/0').set(this.value.toUpperCase())"></td><td><input class="w-8 bg-transparent text-center" value="${l[1]}" onchange="db.ref('settings/matrix/${c}/${col}/1').set(this.value.toUpperCase())"></td>`; });
-                h += `</tr>`;
-            }
+            for(let c=1; c<=12; c++) { h += `<tr class="border-b border-slate-800"><td>P${c}</td>`; colors.forEach(col => { const l = m[c]?.[col] || ["",""]; h += `<td>${l[0]}</td><td>${l[1]}</td>`; }); h += `</tr>`; }
             document.getElementById('matrixTable').innerHTML = h;
         });
     </script>
