@@ -10,10 +10,9 @@
     <style>
         body { background-color: #0f172a; touch-action: manipulation; }
         .input-box { background: #1e293b; border: 2px solid #334155; text-align: center; font-size: 3rem; font-weight: 900; border-radius: 15px; width: 85px; height: 85px; text-transform: uppercase; outline: none; }
-        .input-box:focus { border-color: #3b82f6; }
         .btn-num { background: #1e293b; border: 1px solid #334155; padding: 15px; border-radius: 12px; font-weight: 900; }
         .btn-active { background: #3b82f6 !important; border-color: #fff !important; }
-        .done { opacity: 0.3; pointer-events: none; background: #020617 !important; }
+        .done { opacity: 0.2; pointer-events: none; background: #020617 !important; }
         .strike { text-decoration: line-through; color: #ef4444; opacity: 0.6; }
         .valid { color: #22c55e; }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
@@ -23,9 +22,11 @@
 <body class="text-white font-sans p-4">
     <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col">
         
-        <!-- STEP 1 : IDENTITÉ -->
+        <h1 id="mainTitle" onclick="secretTV()" class="text-4xl font-black text-blue-500 italic text-center uppercase tracking-tighter py-4 cursor-default select-none active:scale-95 transition-transform">
+            Orient'Show
+        </h1>
+
         <div id="step1" class="space-y-4">
-            <h1 class="text-4xl font-black text-blue-500 italic text-center uppercase tracking-tighter">Orient'Show</h1>
             <select id="selectClasse" class="w-full p-4 bg-slate-800 rounded-xl font-bold border border-slate-700 text-white text-lg"></select>
             <div class="grid grid-cols-5 gap-2" id="gridNums">
                 <script>for(let i=1;i<=10;i++) document.write(`<button onclick="setNum(${i})" id="btnN${i}" class="btn-num">${i}</button>`)</script>
@@ -39,18 +40,17 @@
             </div>
         </div>
 
-        <!-- STEP 2 : SAISIE -->
         <div id="step2" class="hidden space-y-6">
             <div class="flex justify-between items-center bg-slate-800 p-3 rounded-xl border border-slate-700">
-                <span id="identite" class="font-black text-blue-400 uppercase tracking-wide"></span>
-                <button onclick="location.reload()" class="text-xs bg-slate-700 px-3 py-1 rounded-lg">Changer</button>
+                <span id="identite" class="font-black text-blue-400 uppercase tracking-wide text-sm"></span>
+                <button onclick="location.reload()" class="text-xs bg-slate-700 px-3 py-1 rounded-lg">QUITTER</button>
             </div>
-            <div id="timerWarning" class="hidden bg-orange-600/20 border border-orange-500 p-4 rounded-xl text-center animate-pulse">
+            <div id="timerWarning" class="hidden bg-orange-600/20 border border-orange-500 p-4 rounded-xl text-center">
                 <p class="text-orange-500 font-bold">⏳ Attends encore <span id="timeLeft"></span>s</p>
             </div>
             <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-2xl">
                 <div class="grid grid-cols-4 gap-2 mb-6" id="parcoursSelection">
-                    <script>for(let i=1;i<=12;i++) document.write(`<button onclick="setParcours(${i})" id="pBtn${i}" class="p-3 bg-slate-900 rounded-lg font-black border border-slate-700 transition-all">P${i}</button>`)</script>
+                    <script>for(let i=1;i<=12;i++) document.write(`<button onclick="setParcours(${i})" id="pBtn${i}" class="p-3 bg-slate-900 rounded-lg font-black border border-slate-700">P${i}</button>`)</script>
                 </div>
                 <div class="flex justify-center gap-4 mb-6">
                     <input type="text" id="l1" maxlength="1" class="input-box" autocomplete="off">
@@ -60,18 +60,11 @@
             </div>
         </div>
 
-        <!-- FEEDBACK (MODAL PLEIN ÉCRAN) -->
         <div id="feedback" class="hidden fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center transition-colors duration-500">
             <div id="fbIcon" class="text-9xl mb-4"></div>
-            <div id="fbPoints" class="text-7xl font-black mb-2 italic tracking-tighter"></div>
-            
-            <div class="flex gap-4 mb-6 text-5xl font-black" id="fbCorrection">
-                <span id="resL1"></span>
-                <span id="resL2"></span>
-            </div>
-
+            <div id="fbPoints" class="text-7xl font-black mb-2 italic"></div>
+            <div class="flex gap-4 mb-6 text-5xl font-black" id="fbCorrection"><span id="resL1"></span><span id="resL2"></span></div>
             <div id="fbMsg" class="text-2xl font-bold mb-8 leading-tight"></div>
-            
             <button onclick="location.reload()" class="bg-white text-black px-12 py-5 rounded-full font-black uppercase text-xl shadow-2xl">Continuer</button>
         </div>
     </div>
@@ -80,158 +73,85 @@
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        let clickCount = 0; let clickTimer;
+        let currentNum, currentColor, currentParcours, CORRECTION = {}, classResults = {};
 
-        let currentNum = null; let currentColor = null; let currentParcours = null;
-        let CORRECTION = {}; let classResults = {};
+        function secretTV() {
+            clickCount++; clearTimeout(clickTimer);
+            clickTimer = setTimeout(() => { clickCount = 0; }, 500);
+            if (clickCount === 3) window.location.href = "tv.html";
+        }
 
-        // Audio synthétique (Beep)
         function playSound(type) {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            
-            if(type === 'win') {
-                osc.frequency.setValueAtTime(440, ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
-            } else if(type === 'mid') {
-                osc.frequency.setValueAtTime(440, ctx.currentTime);
-                osc.frequency.setValueAtTime(554, ctx.currentTime + 0.1);
-            } else {
-                osc.frequency.setValueAtTime(220, ctx.currentTime);
-                osc.frequency.linearRampToValueAtTime(110, ctx.currentTime + 0.3);
-            }
-            
-            osc.start();
-            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.4);
-            osc.stop(ctx.currentTime + 0.5);
+            const osc = ctx.createOscillator(); const gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            if(type === 'win') { osc.frequency.setValueAtTime(440, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3); }
+            else if(type === 'mid') { osc.frequency.setValueAtTime(440, ctx.currentTime); osc.frequency.setValueAtTime(554, ctx.currentTime + 0.1); }
+            else { osc.frequency.setValueAtTime(220, ctx.currentTime); osc.frequency.linearRampToValueAtTime(110, ctx.currentTime + 0.3); }
+            osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.4); osc.stop(ctx.currentTime + 0.5);
         }
 
         db.ref('settings/classes').on('value', snap => {
-            const sel = document.getElementById('selectClasse');
-            const data = snap.val() || {};
+            const sel = document.getElementById('selectClasse'); const data = snap.val() || {};
             sel.innerHTML = '<option value="">-- CHOISIR CLASSE --</option>';
             Object.keys(data).forEach(c => { if(c && c !== "null") sel.innerHTML += `<option value="${c}">${c}</option>`; });
         });
 
         db.ref('settings/matrix').on('value', snap => { CORRECTION = snap.val() || {}; });
 
-        function setNum(n) { 
-            currentNum = n; 
-            document.querySelectorAll('#gridNums button').forEach(b => b.classList.remove('btn-active'));
-            document.getElementById('btnN'+n).classList.add('btn-active');
-        }
-
+        function setNum(n) { currentNum = n; document.querySelectorAll('#gridNums button').forEach(b => b.classList.remove('btn-active')); document.getElementById('btnN'+n).classList.add('btn-active'); }
         function setColor(c) {
             const classe = document.getElementById('selectClasse').value;
             if(!currentNum || !classe) return alert("Classe + Dossard !");
-            currentColor = c;
-            document.getElementById('identite').innerText = `${classe} | ${currentColor} ${currentNum}`;
-            document.getElementById('step1').classList.add('hidden');
-            document.getElementById('step2').classList.remove('hidden');
-            
+            currentColor = c; document.getElementById('identite').innerText = `${classe} | ${currentColor} ${currentNum}`;
+            document.getElementById('step1').classList.add('hidden'); document.getElementById('step2').classList.remove('hidden');
             db.ref(`sessions/${classe}/${currentColor}_${currentNum}`).on('value', snap => {
                 classResults = snap.val() || {};
-                Object.keys(classResults).forEach(pKey => {
-                    const pIdx = pKey.replace('C','');
-                    const btn = document.getElementById('pBtn'+pIdx);
-                    if(btn) btn.classList.add('done');
-                });
+                Object.keys(classResults).forEach(pKey => { document.getElementById('pBtn'+pKey.replace('C',''))?.classList.add('done'); });
             });
         }
-
-        function setParcours(p) {
-            currentParcours = p;
-            document.querySelectorAll('#parcoursSelection button').forEach(b => b.classList.remove('btn-active'));
-            document.getElementById('pBtn'+p).classList.add('btn-active');
-        }
+        function setParcours(p) { currentParcours = p; document.querySelectorAll('#parcoursSelection button').forEach(b => b.classList.remove('btn-active')); document.getElementById('pBtn'+p).classList.add('btn-active'); }
 
         function valider() {
             const classe = document.getElementById('selectClasse').value;
             const userKey = `${currentColor}_${currentNum}`;
-            const pKey = `C${currentParcours}`;
             const l1 = document.getElementById('l1').value.toUpperCase().trim();
             const l2 = document.getElementById('l2').value.toUpperCase().trim();
-
-            if(!currentParcours || classResults[pKey]) return;
+            if(!currentParcours || classResults[`C${currentParcours}`]) return;
             
             const lastTime = localStorage.getItem(`lastFinish_${userKey}`) || 0;
             const diff = (Date.now() - lastTime) / 1000;
-            if(diff < 90) {
-                document.getElementById('timerWarning').classList.remove('hidden');
-                document.getElementById('timeLeft').innerText = Math.ceil(90 - diff);
-                return;
-            }
+            if(diff < 90) { document.getElementById('timerWarning').classList.remove('hidden'); document.getElementById('timeLeft').innerText = Math.ceil(90 - diff); return; }
 
-            const sol = CORRECTION[currentParcours] ? CORRECTION[currentParcours][currentColor] : null;
-            let pts = 0; let feedbackType = 'fail'; let msg = "";
-            let l1Status = "strike", l2Status = "strike";
+            const sol = CORRECTION[currentParcours]?.[currentColor];
+            let pts = 0; let fType = 'fail'; let msg = ""; let s1 = "strike", s2 = "strike";
 
             if(sol) {
-                // Comparaison ordre exact
-                if(l1 === sol[0] && l2 === sol[1]) {
-                    pts = 5; l1Status = "valid"; l2Status = "valid";
-                } 
-                // Comparaison désordre
-                else if(l1 === sol[1] && l2 === sol[0]) {
-                    pts = 5; l1Status = "valid"; l2Status = "valid";
-                    msg = "OK, mais attention à l'ordre des balises ! C'est important en CO. 🧭";
-                }
-                // Partiel
+                if(l1 === sol[0] && l2 === sol[1]) { pts = 5; s1 = "valid"; s2 = "valid"; }
+                else if(l1 === sol[1] && l2 === sol[0]) { pts = 5; s1 = "valid"; s2 = "valid"; msg = "OK, mais attention à l'ordre des balises ! 🧭"; }
                 else if(l1 === sol[0] || l1 === sol[1] || l2 === sol[0] || l2 === sol[1]) {
-                    pts = 2;
-                    if(l1 === sol[0] || l1 === sol[1]) l1Status = "valid";
-                    if(l2 === sol[0] || l2 === sol[1]) l2Status = "valid";
+                    pts = 2; if(l1 === sol[0] || l1 === sol[1]) s1 = "valid"; if(l2 === sol[0] || l2 === sol[1]) s2 = "valid";
                 }
             }
 
-            // Coaching Message basé sur temps et score
-            if(pts === 5) {
-                feedbackType = 'win';
-                if(!msg) {
-                    if(diff <= 180) msg = "Bravo, tu vites juste et c'est rapide ! ⚡";
-                    else if(diff > 300) msg = "Bravo, tu vises juste mais ACCÉLÈRE ! 🐢";
-                    else msg = "Excellent travail ! Continue comme ça. 🔥";
-                }
-            } else if (pts === 2) {
-                feedbackType = 'mid';
-                msg = "C'est presque ça, une balise est fausse. 🧐";
-            } else {
-                feedbackType = 'fail';
-                msg = (localStorage.getItem(`fail_count_${userKey}`) >= 1) ? "C'est encore faux, demande de l'aide au professeur ! 🆘" : "Tout est faux, prends ton temps. 🛑";
-                localStorage.setItem(`fail_count_${userKey}`, parseInt(localStorage.getItem(`fail_count_${userKey}`) || 0) + 1);
-            }
+            if(pts === 5) { fType = 'win'; if(!msg) msg = (diff <= 180) ? "Bravo, tu vites juste et c'est rapide ! ⚡" : (diff > 300) ? "Bravo, tu vises juste mais ACCÉLÈRE ! 🐢" : "Excellent travail ! 🔥"; }
+            else if (pts === 2) { fType = 'mid'; msg = "C'est presque ça, une balise est fausse. 🧐"; }
+            else { fType = 'fail'; msg = (localStorage.getItem(`fail_count_${userKey}`) >= 1) ? "C'est encore faux, demande de l'aide au professeur ! 🆘" : "Tout est faux, prends ton temps. 🛑"; localStorage.setItem(`fail_count_${userKey}`, parseInt(localStorage.getItem(`fail_count_${userKey}`) || 0) + 1); }
             if(pts > 0) localStorage.setItem(`fail_count_${userKey}`, 0);
 
-            // Envoi Firebase
-            db.ref(`sessions/${classe}/${userKey}/${pKey}`).set({
-                score: pts, time: Math.floor(diff), timestamp: Date.now()
-            }).then(() => {
+            db.ref(`sessions/${classe}/${userKey}/C${currentParcours}`).set({ score: pts, time: Math.floor(diff), timestamp: Date.now() }).then(() => {
                 localStorage.setItem(`lastFinish_${userKey}`, Date.now());
-                showFeedback(pts, feedbackType, msg, l1, l2, l1Status, l2Status);
+                const fb = document.getElementById('feedback'); const bg = (pts === 5) ? 'bg-green-600' : (pts === 2) ? 'bg-orange-500' : 'bg-red-600';
+                fb.className = `fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center ${bg}`;
+                document.getElementById('fbIcon').innerText = (pts === 5) ? "🏆" : (pts === 2) ? "⚖️" : "💣";
+                document.getElementById('fbPoints').innerText = `+${pts} POINTS`;
+                document.getElementById('fbMsg').innerText = msg;
+                document.getElementById('resL1').innerText = l1; document.getElementById('resL1').className = s1;
+                document.getElementById('resL2').innerText = l2; document.getElementById('resL2').className = s2;
+                if(pts === 0) document.getElementById('step2').classList.add('animate-shake');
+                playSound(fType); document.getElementById('step2').classList.add('hidden'); fb.classList.remove('hidden');
             });
-        }
-
-        function showFeedback(p, type, msg, l1, l2, s1, s2) {
-            const fb = document.getElementById('feedback');
-            const bg = (p === 5) ? 'bg-green-600' : (p === 2) ? 'bg-orange-500' : 'bg-red-600';
-            
-            fb.className = `fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center transition-colors duration-500 ${bg}`;
-            document.getElementById('fbIcon').innerText = (p === 5) ? "🏆" : (p === 2) ? "⚖️" : "💣";
-            document.getElementById('fbPoints').innerText = `+${p} POINTS`;
-            document.getElementById('fbMsg').innerText = msg;
-            
-            document.getElementById('resL1').innerText = l1;
-            document.getElementById('resL1').className = s1;
-            document.getElementById('resL2').innerText = l2;
-            document.getElementById('resL2').className = s2;
-
-            if(p === 0) document.getElementById('step2').classList.add('animate-shake');
-            
-            playSound(type);
-            document.getElementById('step2').classList.add('hidden');
-            fb.classList.remove('hidden');
         }
     </script>
 </body>
