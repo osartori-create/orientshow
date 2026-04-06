@@ -1,189 +1,224 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Master PRO | Orient'Show</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Saisie Élève</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <script>if (sessionStorage.getItem("os_access") !== "granted") window.location.href = "index.html";</script>
     <style>
-        body { background-color: #0f172a; color: white; font-family: sans-serif; }
-        .tab-btn { flex: 1; padding: 20px; font-weight: 900; text-transform: uppercase; background: #1e293b; border-bottom: 5px solid transparent; transition: 0.3s; }
-        .tab-active { background: #3b82f6; border-color: white; }
-        .pastille { width: 45px; height: 45px; border-radius: 50%; border: 3px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; color: white; }
-        #m-mountain { position: relative; width: 100%; height: 65vh; background: #1e293b; border-radius: 1.5rem; overflow: hidden; border: 1px solid #334155; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="none"><path d="M0 1000 L300 400 L500 600 L700 200 L1000 1000 Z" fill="%230f172a" opacity="0.5"/></svg>'); background-size: cover; background-position: bottom; }
-        .m-line { position: absolute; left: 0; width: 100%; border-top: 1px dashed rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); font-size: 10px; padding-left: 10px; }
-        .m-pion { position: absolute; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; transition: all 1s; z-index: 10; color: white; }
-        .m-pion-name { position: absolute; top: 110%; font-size: 9px; font-weight: 900; white-space: nowrap; background: rgba(0,0,0,0.8); padding: 2px 5px; border-radius: 4px; color: white !important; }
+        body { background-color: #0f172a; touch-action: manipulation; }
+        .input-box { background: #1e293b; border: 2px solid #334155; text-align: center; font-size: 3rem; font-weight: 900; border-radius: 15px; width: 80px; height: 80px; text-transform: uppercase; outline: none; transition: all 0.2s; }
+        .input-box:focus { border-color: #3b82f6; box-shadow: 0 0 15px rgba(59,130,246,0.5); }
+        .btn-active { background: #3b82f6 !important; border-color: white !important; transform: scale(1.05); }
+        .done { opacity: 0.2; pointer-events: none; background: #020617 !important; border-color: #1e293b !important; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+        .animate-shake { animation: shake 0.3s ease-in-out; }
     </style>
 </head>
-<body class="p-4">
-    <header class="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4 italic font-black uppercase text-sm">
-        <div class="flex items-center gap-4">
-            <h1 class="text-2xl text-blue-500 tracking-tighter">Master PRO</h1>
-            <button id="btnChrono" onclick="startChrono()" class="hidden bg-green-600 px-6 py-2 rounded-full animate-pulse shadow-[0_0_15px_rgba(22,163,74,0.6)]">🚀 TOP DÉPART</button>
-            <div id="chronoDisplay" class="hidden text-2xl font-mono text-yellow-400">00:00</div>
+<body class="text-white p-4 font-sans select-none">
+    <div id="app" class="max-w-md mx-auto">
+        <!-- TRIPLE CLIC CACHÉ SUR LE TITRE -->
+        <h1 onclick="secretTV()" class="text-4xl font-black text-blue-500 italic text-center uppercase py-4 active:scale-95 transition-transform cursor-pointer">Orient'Show</h1>
+        
+        <div id="waitChrono" class="hidden text-center py-20 flex-col items-center justify-center">
+            <div class="text-6xl animate-bounce">⏳</div>
+            <h2 class="text-2xl font-black uppercase mt-6 text-slate-300">En attente du départ...</h2>
         </div>
-        <div class="flex items-center gap-2">
-            <select id="activeClasse" onchange="loadClasse()" class="bg-slate-800 p-2 rounded-lg border border-slate-700 min-w-[150px]"></select>
-            <button onclick="addClasse()" class="bg-blue-600 w-10 h-10 rounded-full text-xl">+</button>
+
+        <div id="main">
+            <select id="selectClasse" onchange="checkChrono()" class="w-full p-4 bg-slate-800 rounded-xl font-bold border border-slate-700 mb-6 text-lg outline-none"></select>
+            
+            <div id="stepDossard" class="space-y-4">
+                <div class="grid grid-cols-5 gap-2" id="gridNums">
+                    <script>for(let i=1;i<=10;i++) document.write(`<button onclick="setNum(${i})" id="btnN${i}" class="bg-slate-900 p-4 rounded-xl font-black border border-slate-700 transition-all">${i}</button>`)</script>
+                </div>
+                <div class="grid grid-cols-2 gap-2 font-black italic">
+                    <button onclick="setColor('NOIR')" class="p-5 bg-black rounded-2xl border border-slate-600 active:scale-95 transition-transform">NOIR</button>
+                    <button onclick="setColor('ROUGE')" class="p-5 bg-red-600 rounded-2xl border border-red-400 active:scale-95 transition-transform">ROUGE</button>
+                    <button onclick="setColor('BLEU')" class="p-5 bg-blue-600 rounded-2xl border border-blue-400 active:scale-95 transition-transform">BLEU</button>
+                    <button onclick="setColor('VERT')" class="p-5 bg-green-600 rounded-2xl border border-green-400 active:scale-95 transition-transform">VERT</button>
+                    <button onclick="setColor('JAUNE')" class="p-5 bg-yellow-500 text-black rounded-2xl col-span-2 active:scale-95 transition-transform">JAUNE</button>
+                </div>
+            </div>
+
+            <div id="stepSaisie" class="hidden space-y-6">
+                <div class="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
+                    <span id="labelDossard" class="font-black text-blue-400 uppercase tracking-widest text-lg"></span>
+                    <button onclick="retourDossard()" class="bg-slate-700 px-3 py-2 rounded-lg font-bold text-xs uppercase">Changer</button>
+                </div>
+                
+                <div class="grid grid-cols-4 gap-2" id="pList">
+                    <script>for(let i=1;i<=12;i++) document.write(`<button onclick="setP(${i})" id="pBtn${i}" class="p-3 bg-slate-900 rounded-lg font-black border border-slate-700 transition-all">P${i}</button>`)</script>
+                </div>
+                
+                <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-xl mt-4">
+                    <div class="flex justify-center gap-4 mb-6">
+                        <input type="text" id="l1" class="input-box" maxlength="1" autocomplete="off" spellcheck="false" oninput="this.value = this.value.toUpperCase(); if(this.value) document.getElementById('l2').focus();">
+                        <input type="text" id="l2" class="input-box" maxlength="1" autocomplete="off" spellcheck="false" oninput="this.value = this.value.toUpperCase();">
+                    </div>
+                    <button onclick="valider()" class="w-full bg-blue-600 p-6 rounded-2xl text-3xl font-black uppercase shadow-lg active:scale-95 transition-transform">Valider</button>
+                </div>
+            </div>
         </div>
-        <div class="flex gap-2">
-            <button onclick="document.getElementById('csv').click()" class="bg-slate-700 px-4 py-2 rounded-lg text-[10px]">Import iDoceo</button>
-            <input type="file" id="csv" class="hidden" accept=".csv" onchange="importCSV(this)">
-            <button onclick="resetData('scores')" class="bg-red-600 px-3 py-2 rounded-lg text-[10px]">Vider Scores</button>
-            <button onclick="resetData('base')" class="bg-red-900 px-3 py-2 rounded-lg text-[10px]">Purger Classes</button>
-        </div>
-    </header>
 
-    <nav class="flex gap-2 mb-6">
-        <button onclick="switchTab('bilan')" id="btnTabBilan" class="tab-btn tab-active">📊 Bilan</button>
-        <button onclick="switchTab('carte')" id="btnTabCarte" class="tab-btn">🏔️ Carte</button>
-        <button onclick="switchTab('groupes')" id="btnTabGroupes" class="tab-btn">👥 Groupes</button>
-        <button onclick="switchTab('codes')" id="btnTabCodes" class="tab-btn !flex-none !w-24 text-[10px]">📝 Codes</button>
-    </nav>
-
-    <div id="viewBilan" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
-    <div id="viewGroupes" class="hidden grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
-    <div id="viewCarte" class="hidden"><div id="m-mountain"><script>for(let s=0; s<=60; s+=10) { const pos = 90 - (s * (75/60)); document.write(`<div class="m-line" style="top: ${pos}%;">${s} PTS</div>`); }</script><div id="m-players-layer"></div></div></div>
-    <div id="viewCodes" class="hidden overflow-auto border border-slate-700 rounded-xl"><table class="w-full text-xs text-center font-bold uppercase" id="matrixTable"></table></div>
-
-    <div id="modalDetails" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4">
-        <div class="bg-slate-800 w-full max-w-xl rounded-3xl p-6 border border-slate-700">
-            <div class="flex justify-between items-start mb-6"><h2 id="mName" class="text-2xl font-black text-blue-400 italic"></h2><button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl">&times;</button></div>
-            <div id="mHistory" class="space-y-2 max-h-[60vh] overflow-auto"></div>
+        <!-- FEEDBACK VISUEL AVEC CORRECTION DES LETTRES -->
+        <div id="feedback" class="hidden fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center transition-colors duration-300">
+            <div id="fbIcon" class="text-8xl mb-4"></div>
+            <div id="fbPoints" class="text-7xl font-black mb-4 italic"></div>
+            
+            <!-- Affichage des lettres validées / barrées -->
+            <div id="fbLetters" class="flex gap-6 text-6xl font-black mb-6 justify-center uppercase bg-black/30 p-6 rounded-3xl w-full max-w-xs"></div>
+            
+            <div id="fbMsg" class="text-2xl font-bold mb-8"></div>
+            <button onclick="fermerFeedback()" class="bg-white text-black px-10 py-4 rounded-full font-black uppercase text-xl shadow-2xl">Continuer</button>
         </div>
     </div>
 
     <script>
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
         firebase.initializeApp(firebaseConfig); const db = firebase.database();
-        const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
-        const colStyles = { NOIR:"bg-black", ROUGE:"bg-red-600", BLEU:"bg-blue-600", VERT:"bg-green-600", JAUNE:"bg-yellow-500 text-black" };
-        
-        // Données Locales (RGPD)
-        let mapping = JSON.parse(localStorage.getItem('os_map_final') || '{}'), curCl = localStorage.getItem('os_last_cl') || "", results = {};
+        let curN, curC, curP, startT, matrix = {}, lastPunchTime = 0;
+        let clickCount = 0, clickTimer;
 
-        // Codes de correction fixes (Sécurité anti-purge)
-        const myCodes = { 
-            1:{NOIR:["D","Q"],ROUGE:["O","U"],BLEU:["Y","A"],VERT:["E","R"],JAUNE:["N","K"]}, 
-            2:{NOIR:["E","X"],ROUGE:["X","Y"],BLEU:["T","L"],VERT:["R","O"],JAUNE:["A","L"]}, 
-            3:{NOIR:["C","L"],ROUGE:["H","U"],BLEU:["I","B"],VERT:["O","I"],JAUNE:["T","E"]}, 
-            4:{NOIR:["R","V"],ROUGE:["E","E"],BLEU:["C","R"],VERT:["T","N"],JAUNE:["O","I"]}, 
-            5:{NOIR:["A","B"],ROUGE:["J","O"],BLEU:["O","U"],VERT:["N","E"],JAUNE:["C","S"]}, 
-            6:{NOIR:["F","M"],ROUGE:["I","E"],BLEU:["C","R"],VERT:["U","O"],JAUNE:["S","U"]}, 
-            7:{NOIR:["G","H"],ROUGE:["U","A"],BLEU:["E","C"],VERT:["U","H"],JAUNE:["X","E"]}, 
-            8:{NOIR:["I","J"],ROUGE:["V","E"],BLEU:["R","A"],VERT:["E","N"],JAUNE:["S","S"]}, 
-            9:{NOIR:["K","N"],ROUGE:["R","Y"],BLEU:["A","L"],VERT:["F","O"],JAUNE:["T","N"]}, 
-            10:{NOIR:["O","S"],ROUGE:["C","E"],BLEU:["E","I"],VERT:["A","Z"],JAUNE:["N","E"]}, 
-            11:{NOIR:["P","T"],ROUGE:["A","U"],BLEU:["L","Y"],VERT:["U","A"],JAUNE:["D","U"]}, 
-            12:{NOIR:["U","W"],ROUGE:["L","I"],BLEU:["T","N"],VERT:["R","C"],JAUNE:["A","H"]} 
-        };
-        
-        db.ref('settings/matrix').once('value', snap => { if(!snap.exists()) db.ref('settings/matrix').set(myCodes); });
+        // FONCTION TRIPLE CLIC TV
+        function secretTV() {
+            clickCount++;
+            clearTimeout(clickTimer);
+            clickTimer = setTimeout(() => { clickCount = 0; }, 500);
+            if (clickCount === 3) window.location.href = "tv.html";
+        }
 
         db.ref('settings/classes').on('value', snap => {
-            const clArr = Object.keys(snap.val() || {}).filter(c => c !== "null");
-            document.getElementById('activeClasse').innerHTML = clArr.map(c => `<option value="${c}" ${c===curCl?'selected':''}>${c}</option>`).join('');
-            if(!curCl && clArr.length > 0) curCl = clArr[0]; loadClasse();
+            const sel = document.getElementById('selectClasse'); sel.innerHTML = '<option value="">-- CHOISIR LA CLASSE --</option>';
+            Object.keys(snap.val() || {}).forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
         });
 
-        function loadClasse() {
-            curCl = document.getElementById('activeClasse').value; if(!curCl) return;
-            localStorage.setItem('os_last_cl', curCl);
-            db.ref(`sessions/${curCl}`).on('value', snap => { results = snap.val() || {}; updateUI(); });
-            db.ref(`settings/startTime/${curCl}`).on('value', snap => {
-                const s = snap.val(); if(!s) { document.getElementById('btnChrono').classList.remove('hidden'); document.getElementById('chronoDisplay').classList.add('hidden'); }
-                else { document.getElementById('btnChrono').classList.add('hidden'); document.getElementById('chronoDisplay').classList.remove('hidden'); startTimer(s); }
-            });
-        }
+        db.ref('settings/matrix').on('value', snap => { matrix = snap.val() || {}; });
 
-        function importCSV(input) {
-            Papa.parse(input.files[0], { header: true, complete: res => {
-                const colNom = res.meta.fields.find(c => c.toLowerCase().includes('lastname'));
-                const colPre = res.meta.fields.find(c => c.toLowerCase().includes('name') && !c.toLowerCase().includes('last'));
-                const data = res.data.filter(r => r[colNom]);
-                const cName = (data[0]['@classe'] || prompt("Nom de la classe ?")).toUpperCase();
-                
-                // Sauvegarde 100% LOCALE
-                mapping[cName] = data.map((r, i) => ({ id: Date.now()+i, last: r[colNom].toUpperCase(), first: r[colPre], code: `${colors[i % 5]}_${Math.floor(i / 5) + 1}`, absent: false }));
-                localStorage.setItem('os_map_final', JSON.stringify(mapping));
-                
-                // Signal Firebase anonyme
-                db.ref(`settings/classes/${cName}`).set(true).then(() => location.reload());
-            }});
-        }
-
-        function updateUI() {
-            const bil = document.getElementById('viewBilan'); const grp = document.getElementById('viewGroupes'); const mtn = document.getElementById('m-players-layer');
-            bil.innerHTML = ""; grp.innerHTML = ""; mtn.innerHTML = "";
-            const list = mapping[curCl] || [];
-            
-            list.forEach((s, i) => {
-                const passages = Object.values(results[s.code] || {}); 
-                
-                // FILTRE ANTI-NAN : On ne compte que les objets ayant une propriété 'score'
-                const pts = passages.reduce((total, passage) => {
-                    if (typeof passage === 'object' && passage !== null && 'score' in passage) { 
-                        return total + passage.score; 
-                    }
-                    return total;
-                }, 0);
-
-                const colorCode = s.code.split('_')[0]; 
-                const numCode = s.code.split('_')[1];
-                let bg = pts > 0 ? "bg-blue-600" : "bg-slate-800";
-                
-                // BILAN
-                bil.innerHTML += `<div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-4 rounded-2xl text-center shadow-lg border border-white/5 cursor-pointer active:scale-95 transition-transform"><div class="flex justify-between font-black"><span class="pastille ${colStyles[colorCode]}">${numCode}</span><span class="text-2xl">${pts}</span></div><p class="text-lg font-black mt-2 truncate">${s.first}</p></div>`;
-                
-                // GROUPES
-                grp.innerHTML += `<div class="bg-slate-800 p-4 rounded-2xl text-center border border-slate-700"><div class="pastille ${colStyles[colorCode]} mx-auto mb-2">${numCode}</div><p class="font-bold text-[10px] truncate uppercase opacity-50">${s.last}</p><p class="font-black text-xs truncate mb-2">${s.first}</p><select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 p-1 rounded text-[10px] w-full border border-slate-700 text-white"><option value="ABS" ${s.absent?'selected':''}>ABSENT</option>${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}</select></div>`;
-                
-                // CARTE
-                if(!s.absent) {
-                    const pion = document.createElement('div'); pion.className = `m-pion ${colStyles[colorCode]}`;
-                    const safePts = isNaN(pts) ? 0 : pts; // Sécurité graphique supplémentaire
-                    pion.style.top = `${90 - (Math.min(60, safePts) * (75/60))}%`; 
-                    pion.style.left = `${5 + (i * (90/list.length))}%`;
-                    pion.innerHTML = `${numCode}<span class="m-pion-name">${s.first}</span>`; mtn.appendChild(pion);
+        function checkChrono() {
+            const cl = document.getElementById('selectClasse').value; if(!cl) return;
+            db.ref(`settings/startTime/${cl}`).on('value', snap => {
+                startT = snap.val();
+                if(!startT) {
+                    document.getElementById('waitChrono').classList.remove('hidden'); document.getElementById('waitChrono').classList.add('flex');
+                    document.getElementById('main').classList.add('hidden');
+                } else {
+                    document.getElementById('waitChrono').classList.add('hidden'); document.getElementById('waitChrono').classList.remove('flex');
+                    document.getElementById('main').classList.remove('hidden');
                 }
             });
         }
 
-        function openModal(n, c) {
-            document.getElementById('mName').innerText = n; document.getElementById('modalDetails').classList.remove('hidden');
-            db.ref(`sessions/${curCl}/${c}`).once('value', snap => {
+        function setNum(n) { 
+            curN = n; 
+            document.querySelectorAll('#gridNums button').forEach(b => b.classList.remove('btn-active')); 
+            document.getElementById('btnN'+n).classList.add('btn-active'); 
+        }
+        
+        function setColor(c) {
+            if(!curN || !startT) return alert("Choisis ton numéro d'abord !");
+            curC = c; 
+            
+            document.getElementById('labelDossard').innerText = `${curC} ${curN}`;
+            document.getElementById('stepDossard').classList.add('hidden');
+            document.getElementById('stepSaisie').classList.remove('hidden');
+            
+            db.ref(`sessions/${document.getElementById('selectClasse').value}/${curC}_${curN}`).on('value', snap => {
                 const res = snap.val() || {};
-                document.getElementById('mHistory').innerHTML = Object.entries(res).map(([k, v]) => {
-                    if (k === 'lastTime') return ''; // On masque l'heure de pointage anti-triche
-                    return `<div class="bg-slate-900 p-3 rounded-xl flex justify-between items-center border border-slate-700 font-bold"><span>P${k.replace('C','')} - ${v.score} pts</span><button onclick="if(confirm('Sûr?')) db.ref('sessions/${curCl}/${c}/${k}').remove().then(()=>document.getElementById('modalDetails').classList.add('hidden'))" class="bg-red-600 px-3 rounded text-[10px] uppercase">Suppr</button></div>`;
-                }).join('') || "<p class='text-center opacity-50'>Aucun passage</p>";
+                lastPunchTime = res.lastTime || 0; 
+                Object.keys(res).forEach(k => {
+                    if(k !== "lastTime") {
+                        const btn = document.getElementById('pBtn'+k.replace('C',''));
+                        if(btn) btn.classList.add('done');
+                    }
+                });
             });
         }
 
-        function changeCode(id, val) { const s = mapping[curCl].find(x => x.id == id); s.absent = (val === "ABS"); if(!s.absent) s.code = val; localStorage.setItem('os_map_final', JSON.stringify(mapping)); updateUI(); }
-        function startTimer(s) { clearInterval(window.it); window.it = setInterval(() => { const sec = Math.floor((Date.now()-s)/1000); document.getElementById('chronoDisplay').innerText = new Date(sec*1000).toISOString().substr(14,5); }, 1000); }
-        function startChrono() { if(confirm("Lancer le chrono pour toute la classe ?")) db.ref(`settings/startTime/${curCl}`).set(Date.now()); }
-        function switchTab(t) { ['viewBilan','viewGroupes','viewCarte','viewCodes'].forEach(v => document.getElementById(v).classList.add('hidden')); document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active')); document.getElementById('btnTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('tab-active'); }
-        function addClasse() { const n = prompt("Nom de la classe :"); if(n) { db.ref(`settings/classes/${n.toUpperCase()}`).set(true); location.reload(); } }
+        function retourDossard() {
+            document.getElementById('stepSaisie').classList.add('hidden');
+            document.getElementById('stepDossard').classList.remove('hidden');
+            curC = null; curP = null;
+            document.getElementById('l1').value = ""; document.getElementById('l2').value = "";
+            document.querySelectorAll('#pList button').forEach(b => { b.classList.remove('btn-active'); b.classList.remove('done'); });
+        }
         
-        function resetData(type) { 
-            if(prompt("RNE (0680013V) :")==="0680013V" && confirm("Certain ?")) { 
-                if(type==='scores') { db.ref(`sessions/${curCl}`).remove(); db.ref(`settings/startTime/${curCl}`).remove(); }
-                else { db.ref('sessions').remove(); db.ref('settings/classes').remove(); db.ref('settings/startTime').remove(); localStorage.clear(); } 
-                location.reload(); 
-            } 
+        function setP(p) { 
+            curP = p; 
+            document.querySelectorAll('#pList button').forEach(b => b.classList.remove('btn-active')); 
+            document.getElementById('pBtn'+p).classList.add('btn-active'); 
+            document.getElementById('l1').focus();
         }
 
-        // Affichage de la Matrice (Onglet Codes)
-        db.ref('settings/matrix').on('value', snap => {
-            let m = snap.val() || {}; let h = `<tr class="bg-slate-900 text-[10px]"><th>#</th><th colspan="2">NOIR</th><th colspan="2">ROUGE</th><th colspan="2">BLEU</th><th colspan="2">VERT</th><th colspan="2">JAUNE</th></tr>`;
-            for(let c=1; c<=12; c++) { h += `<tr class="border-b border-slate-800"><td>P${c}</td>`; colors.forEach(col => { const l = m[c]?.[col] || ["",""]; h += `<td><input class="w-8 bg-transparent text-center font-bold text-blue-400" value="${l[0]}" onchange="db.ref('settings/matrix/${c}/${col}/0').set(this.value.toUpperCase())"></td><td class="border-r border-slate-800"><input class="w-8 bg-transparent text-center font-bold text-blue-400" value="${l[1]}" onchange="db.ref('settings/matrix/${c}/${col}/1').set(this.value.toUpperCase())"></td>`; }); h += `</tr>`; }
-            document.getElementById('matrixTable').innerHTML = h;
-        });
+        function valider() {
+            if(!curP) return alert("Sélectionne d'abord un circuit (P1 à P12) !");
+            
+            const l1 = document.getElementById('l1').value.toUpperCase().trim();
+            const l2 = document.getElementById('l2').value.toUpperCase().trim();
+            if(!l1 && !l2) return alert("Saisis les lettres de la balise !");
+
+            const tempsEcoule = Date.now() - lastPunchTime;
+            if (tempsEcoule < 90000) {
+                const secondesRestantes = Math.ceil((90000 - tempsEcoule) / 1000);
+                return alert(`⏳ TROP RAPIDE !\nIl te reste ${secondesRestantes} secondes d'attente obligatoire avant de pouvoir valider une nouvelle balise.`);
+            }
+
+            const cl = document.getElementById('selectClasse').value;
+            const sol = matrix[curP]?.[curC];
+            let pts = 0; let msg = "Faux !"; let icon = "❌"; let bgClass = "bg-red-600";
+            
+            // Logique de correction lettre par lettre
+            let l1Status = "text-red-400 line-through decoration-4";
+            let l2Status = "text-red-400 line-through decoration-4";
+
+            if(sol) {
+                let solCopy = [...sol]; // Copie pour éviter qu'une même lettre ne valide les deux champs
+                
+                let idx1 = solCopy.indexOf(l1);
+                if(idx1 !== -1 && l1 !== "") { l1Status = "text-green-400"; solCopy.splice(idx1, 1); }
+                
+                let idx2 = solCopy.indexOf(l2);
+                if(idx2 !== -1 && l2 !== "") { l2Status = "text-green-400"; solCopy.splice(idx2, 1); }
+
+                if(l1Status === "text-green-400" && l2Status === "text-green-400") { 
+                    pts = 5; msg = "Parfait !"; icon = "🏆"; bgClass = "bg-green-600"; 
+                } else if(l1Status === "text-green-400" || l2Status === "text-green-400") { 
+                    pts = 2; msg = "1 lettre juste !"; icon = "🆗"; bgClass = "bg-orange-500"; 
+                }
+            }
+
+            const updates = {};
+            updates[`sessions/${cl}/${curC}_${curN}/C${curP}`] = { score: pts, time: Math.floor((Date.now()-startT)/1000) };
+            updates[`sessions/${cl}/${curC}_${curN}/lastTime`] = Date.now();
+
+            db.ref().update(updates).then(() => {
+                document.getElementById('l1').value = ""; document.getElementById('l2').value = "";
+                curP = null; document.querySelectorAll('#pList button').forEach(b => b.classList.remove('btn-active'));
+                
+                const fb = document.getElementById('feedback');
+                fb.className = `fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center ${bgClass}`;
+                if(pts === 0) fb.classList.add('animate-shake');
+                
+                document.getElementById('fbIcon').innerText = icon;
+                document.getElementById('fbPoints').innerText = `+${pts} PTS`;
+                
+                // INJECTION DU RÉSULTAT VISUEL
+                document.getElementById('fbLetters').innerHTML = `
+                    <span class="${l1Status} drop-shadow-md">${l1 || '?'}</span>
+                    <span class="${l2Status} drop-shadow-md">${l2 || '?'}</span>
+                `;
+                
+                document.getElementById('fbMsg').innerText = msg;
+                fb.classList.remove('hidden');
+            });
+        }
+
+        function fermerFeedback() {
+            document.getElementById('feedback').classList.add('hidden');
+            document.getElementById('feedback').classList.remove('animate-shake');
+        }
     </script>
 </body>
 </html>
