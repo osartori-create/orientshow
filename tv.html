@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orient'Show | Mur de Course</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    <style>
+        body { background-color: #0f172a; color: white; overflow: hidden; font-sans; }
+        
+        /* Conteneur principal de la montagne */
+        #mountain-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            /* Image de fond SVG générée en CSS (Montagne stylisée) */
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="none"><path d="M0 1000 L300 400 L500 600 L700 200 L1000 1000 Z" fill="%231e293b"/><path d="M0 1000 L300 400 L400 500 L550 300 L700 500 L850 200 L1000 1000 Z" fill="%230f172a" opacity="0.5"/></svg>');
+            background-size: cover;
+            background-position: bottom;
+        }
+
+        /* Lignes de niveau de score */
+        .score-line {
+            position: absolute;
+            left: 0; width: 100%;
+            border-top: 1px dashed rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.4);
+            font-size: 10px; font-weight: bold;
+            padding-left: 10px;
+        }
+
+        /* La pastille du joueur (Le "pion") */
+        .player-pion {
+            position: absolute;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            border: 3px solid #000;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 900; font-size: 18px; color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: all 1s ease-out; /* Animation fluide du déplacement */
+            z-index: 10;
+        }
+        
+        /* Styles des couleurs de pastilles */
+        .bg-noir { background-color: black; border-color: #334155; }
+        .bg-rouge { background-color: #ef4444; }
+        .bg-bleu { background-color: #3b82f6; }
+        .bg-vert { background-color: #22c55e; }
+        .bg-jaune { background-color: #eab308; color: black; }
+
+        /* Titre et sélecteur */
+        header { position: absolute; top: 0; left: 0; width: 100%; z-index: 100; padding: 10px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(5px); }
+    </style>
+</head>
+<body>
+
+    <header class="flex justify-between items-center border-b border-slate-800">
+        <h1 class="text-xl font-black italic text-blue-500 uppercase tracking-tighter">Orient'Show <span class="text-white">Live</span></h1>
+        <select id="selectClasse" onchange="loadRace()" class="bg-slate-800 p-2 rounded-lg font-bold border border-slate-700 text-white text-sm"></select>
+    </header>
+
+    <div id="mountain-container">
+        <script>
+            for(let s=0; s<=60; s+=10) {
+                // Calcul de la position du bas vers le haut (0pt = 90% du bas, 60pts = 10% du bas)
+                const bottomPos = 90 - (s * (80/60)); 
+                document.write(`<div class="score-line" style="bottom: ${bottomPos}%;">${s} pts ${s===60?'🏆 Sommet':''}</div>`);
+            }
+        </script>
+        
+        <div id="players-layer"></div>
+    </div>
+
+    <script>
+        const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
+
+        // Charger la liste des classes
+        db.ref('settings/classes').on('value', snap => {
+            const sel = document.getElementById('selectClasse');
+            const data = snap.val() || {};
+            sel.innerHTML = '<option value="">-- CLASSE --</option>';
+            Object.keys(data).forEach(c => { if(isNaN(c)) sel.innerHTML += `<option value="${c}">${c}</option>`; });
+            
+            // Tenter de recharger la dernière classe vue si possible
+            const last = localStorage.getItem('os_tv_class');
+            if(last && data[last]) { sel.value = last; loadRace(); }
+        });
+
+        function loadRace() {
+            const classe = document.getElementById('selectClasse').value;
+            if(!classe) return;
+            localStorage.setItem('os_tv_class', classe);
+
+            // Ecouter les scores en temps réel
+            db.ref(`sessions/${classe}`).on('value', snap => {
+                drawRace(snap.val() || {});
+            });
+        }
+
+        function drawRace(results) {
+            const container = document.getElementById('players-layer');
+            container.innerHTML = "";
+            
+            // Générer tous les dossards possibles (NOIR 1-10, ROUGE 1-10, etc.)
+            let allKeys = [];
+            colors.forEach(color => {
+                for(let i=1; i<=10; i++) { allKeys.push(`${color}_${i}`); }
+            });
+
+            allKeys.forEach((userKey, index) => {
+                const res = results[userKey];
+                if(!res) return; // Si aucune donnée pour ce dossard, on n'affiche rien
+
+                const passages = Object.values(res);
+                const pts = passages.reduce((a,b)=>a+b.score, 0);
+                
+                // Calcul des coordonnées
+                // Y : Vertical (0 à 60 pts). On garde 10% de marge en haut/bas.
+                const percentY = Math.min(60, pts) * (80/60); // Ajuste l'amplitude
+                const bottom = 10 + percentY; // Aligne sur les lignes de score
+
+                // X : Horizontal. On répartit les dossards pour qu'ils ne se chevauchent pas trop.
+                // On utilise l'index (0-49) pour répartir sur 90% de la largeur.
+                const left = 5 + (index * (90/50));
+
+                const [col, num] = userKey.split('_');
+                
+                const pion = document.createElement('div');
+                pion.className = `player-pion bg-${col.toLowerCase()}`;
+                pion.style.bottom = `${bottom}%`;
+                pion.style.left = `${left}%`;
+                pion.innerText = num;
+                
+                container.appendChild(pion);
+            });
+        }
+    </script>
+</body>
+</html>
