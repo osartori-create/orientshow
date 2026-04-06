@@ -11,15 +11,14 @@
         .input-box { background: #1e293b; border: 2px solid #334155; text-align: center; font-size: 3rem; font-weight: 900; border-radius: 15px; width: 85px; height: 85px; text-transform: uppercase; outline: none; }
         .btn-active { background: #3b82f6 !important; border-color: #fff !important; }
         .done { opacity: 0.2; pointer-events: none; background: #020617 !important; }
-        .strike { text-decoration: line-through; color: #ef4444; }
-        .valid { color: #22c55e; }
+        .valid { color: #22c55e; } .strike { text-decoration: line-through; color: #ef4444; }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
         .animate-shake { animation: shake 0.2s ease-in-out 2; }
     </style>
 </head>
 <body class="text-white font-sans p-4">
     <div id="app" class="max-w-md mx-auto">
-        <h1 onclick="secretTV()" class="text-4xl font-black text-blue-500 italic text-center uppercase tracking-tighter py-4 cursor-default select-none active:scale-95 transition-transform">Orient'Show</h1>
+        <h1 onclick="secretTV()" class="text-4xl font-black text-blue-500 italic text-center uppercase tracking-tighter py-4 select-none active:scale-95">Orient'Show</h1>
         
         <div id="step1" class="space-y-4">
             <select id="selectClasse" class="w-full p-4 bg-slate-800 rounded-xl font-bold border border-slate-700 text-white text-lg"></select>
@@ -36,24 +35,24 @@
         </div>
 
         <div id="step2" class="hidden space-y-6">
-            <div class="flex justify-between items-center bg-slate-800 p-3 rounded-xl border border-slate-700 font-black text-blue-400 uppercase"><span id="identite"></span><button onclick="location.reload()" class="text-xs bg-slate-700 px-3 py-1 rounded-lg text-white">Changer</button></div>
-            <div id="timerWarning" class="hidden bg-orange-600/20 border border-orange-500 p-4 rounded-xl text-center text-orange-500 font-bold animate-pulse">⏳ Attends encore <span id="timeLeft"></span>s</div>
+            <div class="flex justify-between items-center bg-slate-800 p-3 rounded-xl border border-slate-700 font-black text-blue-400 uppercase"><span id="identite"></span><button onclick="location.reload()" class="text-xs bg-slate-700 px-3 py-1 rounded-lg text-white font-bold">RETOUR</button></div>
+            <div id="timerWarning" class="hidden bg-orange-600/20 border border-orange-500 p-4 rounded-xl text-center text-orange-500 font-bold animate-pulse">⏳ Attendre <span id="timeLeft"></span>s</div>
             <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-2xl">
                 <div class="grid grid-cols-4 gap-2 mb-6" id="parcoursSelection">
                     <script>for(let i=1;i<=12;i++) document.write(`<button onclick="setParcours(${i})" id="pBtn${i}" class="p-3 bg-slate-900 rounded-lg font-black border border-slate-700">P${i}</button>`)</script>
                 </div>
                 <div class="flex justify-center gap-4 mb-6">
-                    <input type="text" id="l1" class="input-box" maxlength="1"><input type="text" id="l2" class="input-box" maxlength="1">
+                    <input type="text" id="l1" class="input-box" maxlength="1" autocomplete="off"><input type="text" id="l2" class="input-box" maxlength="1" autocomplete="off">
                 </div>
                 <button onclick="valider()" class="w-full bg-blue-600 p-6 rounded-2xl text-3xl font-black uppercase shadow-xl active:scale-95 transition-all">Valider</button>
             </div>
         </div>
 
         <div id="feedback" class="hidden fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center transition-colors duration-500">
-            <div id="fbIcon" class="text-9xl mb-4"></div><div id="fbPoints" class="text-7xl font-black mb-2 italic"></div>
+            <div id="fbIcon" class="text-9xl mb-4"></div><div id="fbPoints" class="text-7xl font-black mb-2 italic tracking-tighter"></div>
             <div class="flex gap-4 mb-6 text-5xl font-black" id="fbCorrection"><span id="resL1"></span><span id="resL2"></span></div>
             <div id="fbMsg" class="text-2xl font-bold mb-8 leading-tight"></div>
-            <button onclick="location.reload()" class="bg-white text-black px-12 py-5 rounded-full font-black uppercase text-xl">Continuer</button>
+            <button onclick="location.reload()" class="bg-white text-black px-12 py-5 rounded-full font-black uppercase text-xl shadow-2xl">Continuer</button>
         </div>
     </div>
 
@@ -64,23 +63,16 @@
 
         function secretTV() { clickCount++; clearTimeout(clickTimer); clickTimer = setTimeout(() => { clickCount = 0; }, 500); if (clickCount === 3) window.location.href = "tv.html"; }
 
-        function playSound(p) {
-            const ctx = new AudioContext(); const osc = ctx.createOscillator(); const gain = ctx.createGain();
-            osc.connect(gain); gain.connect(ctx.destination);
-            osc.frequency.setValueAtTime(p===5?880:p===2?440:220, ctx.currentTime);
-            osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5); osc.stop(ctx.currentTime + 0.5);
-        }
-
         db.ref('settings/classes').on('value', snap => {
-            const sel = document.getElementById('selectClasse'); const data = snap.val() || {};
-            sel.innerHTML = '<option value="">-- CLASSE --</option>';
-            Object.keys(data).forEach(c => { if(isNaN(c)) sel.innerHTML += `<option value="${c}">${c}</option>`; });
+            const sel = document.getElementById('selectClasse'); sel.innerHTML = '<option value="">-- CHOISIR CLASSE --</option>';
+            const data = snap.val() || {};
+            Object.keys(data).forEach(c => { if(c && c !== "null") sel.innerHTML += `<option value="${c}">${c}</option>`; });
         });
         db.ref('settings/matrix').on('value', snap => { CORRECTION = snap.val() || {}; });
 
         function setNum(n) { currentNum = n; document.querySelectorAll('#gridNums button').forEach(b => b.classList.remove('btn-active')); document.getElementById('btnN'+n).classList.add('btn-active'); }
         function setColor(c) {
-            const cl = document.getElementById('selectClasse').value; if(!currentNum || !cl) return;
+            const cl = document.getElementById('selectClasse').value; if(!currentNum || !cl) return alert("Classe + Dossard !");
             currentColor = c; document.getElementById('identite').innerText = `${cl} | ${currentColor} ${currentNum}`;
             document.getElementById('step1').classList.add('hidden'); document.getElementById('step2').classList.remove('hidden');
             db.ref(`sessions/${cl}/${currentColor}_${currentNum}`).on('value', snap => {
@@ -92,7 +84,7 @@
 
         function valider() {
             const cl = document.getElementById('selectClasse').value; const uKey = `${currentColor}_${currentNum}`;
-            const l1 = document.getElementById('l1').value.toUpperCase(); const l2 = document.getElementById('l2').value.toUpperCase();
+            const l1 = document.getElementById('l1').value.toUpperCase().trim(); const l2 = document.getElementById('l2').value.toUpperCase().trim();
             if(!currentParcours || classResults[`C${currentParcours}`]) return;
             const diff = (Date.now() - (localStorage.getItem(`lastFinish_${uKey}`) || 0)) / 1000;
             if(diff < 90) { document.getElementById('timerWarning').classList.remove('hidden'); document.getElementById('timeLeft').innerText = Math.ceil(90 - diff); return; }
@@ -110,7 +102,7 @@
                 document.getElementById('fbPoints').innerText = `+${pts} PTS`; document.getElementById('fbMsg').innerText = msg;
                 document.getElementById('resL1').innerText = l1; document.getElementById('resL1').className = s1;
                 document.getElementById('resL2').innerText = l2; document.getElementById('resL2').className = s2;
-                playSound(pts); document.getElementById('step2').classList.add('hidden'); fb.classList.remove('hidden');
+                document.getElementById('step2').classList.add('hidden'); fb.classList.remove('hidden');
             });
         }
     </script>
