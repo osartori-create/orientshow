@@ -19,9 +19,8 @@
 </head>
 <body class="text-white p-4 font-sans select-none">
     <div id="app" class="max-w-md mx-auto">
-        <h1 class="text-4xl font-black text-blue-500 italic text-center uppercase py-4">Orient'Show</h1>
+        <h1 onclick="secretTV()" class="text-4xl font-black text-blue-500 italic text-center uppercase py-4 active:scale-95 transition-transform cursor-pointer">Orient'Show</h1>
         
-        <!-- ÉCRAN 0 : ATTENTE DU CHRONO -->
         <div id="waitChrono" class="hidden text-center py-20 flex-col items-center justify-center">
             <div class="text-6xl animate-bounce">⏳</div>
             <h2 class="text-2xl font-black uppercase mt-6 text-slate-300">En attente du départ...</h2>
@@ -30,7 +29,6 @@
         <div id="main">
             <select id="selectClasse" onchange="checkChrono()" class="w-full p-4 bg-slate-800 rounded-xl font-bold border border-slate-700 mb-6 text-lg outline-none"></select>
             
-            <!-- ÉCRAN 1 : CHOIX DU DOSSARD -->
             <div id="stepDossard" class="space-y-4">
                 <div class="grid grid-cols-5 gap-2" id="gridNums">
                     <script>for(let i=1;i<=10;i++) document.write(`<button onclick="setNum(${i})" id="btnN${i}" class="bg-slate-900 p-4 rounded-xl font-black border border-slate-700 transition-all">${i}</button>`)</script>
@@ -44,7 +42,6 @@
                 </div>
             </div>
 
-            <!-- ÉCRAN 2 : SAISIE DES BALISES -->
             <div id="stepSaisie" class="hidden space-y-6">
                 <div class="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
                     <span id="labelDossard" class="font-black text-blue-400 uppercase tracking-widest text-lg"></span>
@@ -65,7 +62,6 @@
             </div>
         </div>
 
-        <!-- ÉCRAN 3 : FEEDBACK -->
         <div id="feedback" class="hidden fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center transition-colors duration-300">
             <div id="fbIcon" class="text-8xl mb-4"></div>
             <div id="fbPoints" class="text-7xl font-black mb-4 italic"></div>
@@ -78,6 +74,15 @@
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
         firebase.initializeApp(firebaseConfig); const db = firebase.database();
         let curN, curC, curP, startT, matrix = {}, lastPunchTime = 0;
+        let clickCount = 0, clickTimer;
+
+        // ACCÈS SECRET TV
+        function secretTV() {
+            clickCount++;
+            clearTimeout(clickTimer);
+            clickTimer = setTimeout(() => { clickCount = 0; }, 500);
+            if (clickCount === 3) window.location.href = "tv.html";
+        }
 
         // Écoute de la liste des classes
         db.ref('settings/classes').on('value', snap => {
