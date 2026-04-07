@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Master PRO | Orient'Show</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master PRO v2 | Orient'Show</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -10,176 +11,186 @@
     <script>if (sessionStorage.getItem("os_access") !== "granted") window.location.href = "index.html";</script>
     <style>
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
-        .tab-btn { flex: 1; padding: 20px; font-weight: 900; text-transform: uppercase; background: #1e293b; border-bottom: 5px solid transparent; transition: 0.3s; }
+        .tab-btn { flex: 1; padding: 15px; font-weight: 900; text-transform: uppercase; background: #1e293b; transition: 0.3s; border-bottom: 4px solid transparent; }
         .tab-active { background: #3b82f6; border-color: white; }
-        .pastille { width: 45px; height: 45px; border-radius: 50%; border: 3px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; color: white; }
-        #m-mountain { position: relative; width: 100%; height: 65vh; background: #1e293b; border-radius: 1.5rem; overflow: hidden; border: 1px solid #334155; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="none"><path d="M0 1000 L300 400 L500 600 L700 200 L1000 1000 Z" fill="%230f172a" opacity="0.5"/></svg>'); background-size: cover; background-position: bottom; }
-        .m-line { position: absolute; left: 0; width: 100%; border-top: 1px dashed rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); font-size: 10px; padding-left: 10px; }
-        .m-pion { position: absolute; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; transition: all 1s; z-index: 10; color: white; }
-        .m-pion-name { position: absolute; top: 110%; font-size: 9px; font-weight: 900; white-space: nowrap; background: rgba(0,0,0,0.8); padding: 2px 5px; border-radius: 4px; color: white !important; }
     </style>
 </head>
-<body class="p-4">
-    <header class="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4 italic font-black uppercase text-sm">
-        <div class="flex items-center gap-4">
-            <h1 class="text-2xl text-blue-500 tracking-tighter">Master PRO</h1>
-            <button id="btnChrono" onclick="startChrono()" class="hidden bg-green-600 px-6 py-2 rounded-full animate-pulse shadow-[0_0_15px_rgba(22,163,74,0.6)]">🚀 TOP DÉPART</button>
-            <div id="chronoDisplay" class="hidden text-2xl font-mono text-yellow-400">00:00</div>
-        </div>
-        <div class="flex items-center gap-2">
-            <select id="activeClasse" onchange="loadClasse()" class="bg-slate-800 p-2 rounded-lg border border-slate-700 min-w-[150px]"></select>
-            <button onclick="addClasse()" class="bg-blue-600 w-10 h-10 rounded-full text-xl">+</button>
-        </div>
-        <div class="flex gap-2">
-            <button onclick="document.getElementById('csv').click()" class="bg-slate-700 px-4 py-2 rounded-lg text-[10px]">Import iDoceo</button>
-            <input type="file" id="csv" class="hidden" accept=".csv" onchange="importCSV(this)">
-            <button onclick="resetData('scores')" class="bg-red-600 px-3 py-2 rounded-lg text-[10px]">Vider Scores</button>
-            <button onclick="resetData('base')" class="bg-red-900 px-3 py-2 rounded-lg text-[10px]">Purger Classes</button>
-        </div>
-    </header>
+<body class="pb-20">
 
-    <nav class="flex gap-2 mb-6">
-        <button onclick="switchTab('bilan')" id="btnTabBilan" class="tab-btn tab-active">📊 Bilan</button>
-        <button onclick="switchTab('carte')" id="btnTabCarte" class="tab-btn">🏔️ Carte</button>
-        <button onclick="switchTab('groupes')" id="btnTabGroupes" class="tab-btn">👥 Groupes</button>
-        <button onclick="switchTab('codes')" id="btnTabCodes" class="tab-btn !flex-none !w-24 text-[10px]">📝 Codes</button>
-    </nav>
+    <div class="sticky top-0 z-50 bg-[#0f172a] shadow-xl">
+        <div class="p-4 flex justify-between items-center border-b border-slate-800">
+            <h1 class="text-xl font-black italic text-blue-500">ORIENT'SHOW <span class="text-white text-sm">MASTER</span></h1>
+            <div class="flex items-center gap-2">
+                <select id="selectClasse" onchange="switchClasse(this.value)" class="bg-slate-800 border border-slate-700 rounded px-3 py-1 font-bold text-blue-400"></select>
+            </div>
+        </div>
+        <div class="flex">
+            <button onclick="showTab('bilan')" id="btn-bilan" class="tab-btn tab-active">📊 Bilan</button>
+            <button onclick="showTab('codes')" id="btn-codes" class="tab-btn">🔑 Codes</button>
+            <button onclick="showTab('admin')" id="btn-admin" class="tab-btn">⚙️ Admin</button>
+        </div>
+    </div>
 
-    <div id="viewBilan" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
-    <div id="viewGroupes" class="hidden grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
-    <div id="viewCarte" class="hidden"><div id="m-mountain"><script>for(let s=0; s<=60; s+=10) { const pos = 90 - (s * (75/60)); document.write(`<div class="m-line" style="top: ${pos}%;">${s} PTS</div>`); }</script><div id="m-players-layer"></div></div></div>
-    <div id="viewCodes" class="hidden overflow-auto border border-slate-700 rounded-xl"><table class="w-full text-xs text-center font-bold uppercase" id="matrixTable"></table></div>
+    <div id="tab-bilan" class="p-4 space-y-4">
+        <div class="flex justify-between items-center">
+            <button onclick="startSession()" class="bg-green-600 px-6 py-3 rounded-xl font-bold uppercase shadow-lg active:scale-95">▶️ Top Départ</button>
+            <button onclick="exportIdoceo()" class="bg-slate-700 px-4 py-2 rounded-xl font-bold text-sm">📥 iDoceo CSV</button>
+        </div>
+        <div id="bilanList" class="grid grid-cols-1 gap-2"></div>
+    </div>
 
-    <div id="modalDetails" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4">
-        <div class="bg-slate-800 w-full max-w-xl rounded-3xl p-6 border border-slate-700">
-            <div class="flex justify-between items-start mb-6"><h2 id="mName" class="text-2xl font-black text-blue-400 italic"></h2><button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl">&times;</button></div>
-            <div id="mHistory" class="space-y-2 max-h-[60vh] overflow-auto"></div>
+    <div id="tab-codes" class="hidden p-4">
+        <div class="bg-slate-800 rounded-2xl p-4 overflow-x-auto">
+            <table class="w-full text-center border-collapse">
+                <thead>
+                    <tr class="text-[10px] uppercase text-slate-400 border-b border-slate-700">
+                        <th class="py-2">P#</th><th class="text-white">Noir</th><th class="text-red-500">Rouge</th><th class="text-blue-500">Bleu</th><th class="text-green-500">Vert</th><th class="text-yellow-400">Jaune</th>
+                    </tr>
+                </thead>
+                <tbody id="matrixBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="tab-admin" class="hidden p-4 space-y-6">
+        <div class="bg-slate-800 p-4 rounded-2xl">
+            <h3 class="font-bold mb-4 uppercase text-blue-400">Importation Classe</h3>
+            <input type="file" id="csvFile" accept=".csv" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700">
+        </div>
+        <div class="flex flex-col gap-2">
+            <button onclick="resetData('current')" class="bg-orange-900/40 text-orange-200 p-4 rounded-xl font-bold border border-orange-900">Vider scores de la classe</button>
+            <button onclick="resetData('all')" class="bg-red-900 text-white p-4 rounded-xl font-bold">⚠️ RESET TOTAL (Firebase + iPad)</button>
         </div>
     </div>
 
     <script>
-        const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
-        firebase.initializeApp(firebaseConfig); const db = firebase.database();
-        const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
-        const colStyles = { NOIR:"bg-black", ROUGE:"bg-red-600", BLEU:"bg-blue-600", VERT:"bg-green-600", JAUNE:"bg-yellow-500 text-black" };
-        
-        // Données Locales (RGPD)
-        let mapping = JSON.parse(localStorage.getItem('os_map_final') || '{}'), curCl = localStorage.getItem('os_last_cl') || "", results = {};
-
-        // Codes de correction fixes (Sécurité anti-purge)
-        const myCodes = { 
-            1:{NOIR:["D","Q"],ROUGE:["O","U"],BLEU:["Y","A"],VERT:["E","R"],JAUNE:["N","K"]}, 
-            2:{NOIR:["E","X"],ROUGE:["X","Y"],BLEU:["T","L"],VERT:["R","O"],JAUNE:["A","L"]}, 
-            3:{NOIR:["C","L"],ROUGE:["H","U"],BLEU:["I","B"],VERT:["O","I"],JAUNE:["T","E"]}, 
-            4:{NOIR:["R","V"],ROUGE:["E","E"],BLEU:["C","R"],VERT:["T","N"],JAUNE:["O","I"]}, 
-            5:{NOIR:["A","B"],ROUGE:["J","O"],BLEU:["O","U"],VERT:["N","E"],JAUNE:["C","S"]}, 
-            6:{NOIR:["F","M"],ROUGE:["I","E"],BLEU:["C","R"],VERT:["U","O"],JAUNE:["S","U"]}, 
-            7:{NOIR:["G","H"],ROUGE:["U","A"],BLEU:["E","C"],VERT:["U","H"],JAUNE:["X","E"]}, 
-            8:{NOIR:["I","J"],ROUGE:["V","E"],BLEU:["R","A"],VERT:["E","N"],JAUNE:["S","S"]}, 
-            9:{NOIR:["K","N"],ROUGE:["R","Y"],BLEU:["A","L"],VERT:["F","O"],JAUNE:["T","N"]}, 
-            10:{NOIR:["O","S"],ROUGE:["C","E"],BLEU:["E","I"],VERT:["A","Z"],JAUNE:["N","E"]}, 
-            11:{NOIR:["P","T"],ROUGE:["A","U"],BLEU:["L","Y"],VERT:["U","A"],JAUNE:["D","U"]}, 
-            12:{NOIR:["U","W"],ROUGE:["L","I"],BLEU:["T","N"],VERT:["R","C"],JAUNE:["A","H"]} 
+        // --- TA MATRICE PHYSIQUE EXTRAITE DE L'IMAGE ---
+        const MA_MATRICE_PHYSIQUE = {
+            1:  { NOIR: "AL", ROUGE: "KC", BLEU: "NT", VERT: "PV", JAUNE: "XF" },
+            2:  { NOIR: "BM", ROUGE: "LD", BLEU: "OU", VERT: "QW", JAUNE: "YG" },
+            3:  { NOIR: "CN", ROUGE: "ME", BLEU: "PV", VERT: "RX", JAUNE: "ZH" },
+            4:  { NOIR: "DO", ROUGE: "NF", BLEU: "QW", VERT: "SY", JAUNE: "AI" },
+            5:  { NOIR: "EP", ROUGE: "OG", BLEU: "RX", VERT: "TZ", JAUNE: "BJ" },
+            6:  { NOIR: "FQ", ROUGE: "PH", BLEU: "SY", VERT: "UA", JAUNE: "CK" },
+            7:  { NOIR: "GR", ROUGE: "QI", BLEU: "TZ", VERT: "VB", JAUNE: "DL" },
+            8:  { NOIR: "HS", ROUGE: "RJ", BLEU: "UA", VERT: "WC", JAUNE: "EM" },
+            9:  { NOIR: "IT", ROUGE: "SK", BLEU: "VB", VERT: "XD", JAUNE: "FN" },
+            10: { NOIR: "JU", ROUGE: "TL", BLEU: "WC", VERT: "YE", JAUNE: "GO" },
+            11: { NOIR: "KV", ROUGE: "UM", BLEU: "XD", VERT: "ZF", JAUNE: "HP" },
+            12: { NOIR: "LW", ROUGE: "VN", BLEU: "YE", VERT: "AG", JAUNE: "IQ" }
         };
-        
-        db.ref('settings/matrix').once('value', snap => { if(!snap.exists()) db.ref('settings/matrix').set(myCodes); });
 
-        db.ref('settings/classes').on('value', snap => {
-            const clArr = Object.keys(snap.val() || {}).filter(c => c !== "null");
-            document.getElementById('activeClasse').innerHTML = clArr.map(c => `<option value="${c}" ${c===curCl?'selected':''}>${c}</option>`).join('');
-            if(!curCl && clArr.length > 0) curCl = clArr[0]; loadClasse();
-        });
+        const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        function loadClasse() {
-            curCl = document.getElementById('activeClasse').value; if(!curCl) return;
-            localStorage.setItem('os_last_cl', curCl);
-            db.ref(`sessions/${curCl}`).on('value', snap => { results = snap.val() || {}; updateUI(); });
-            db.ref(`settings/startTime/${curCl}`).on('value', snap => {
-                const s = snap.val(); if(!s) { document.getElementById('btnChrono').classList.remove('hidden'); document.getElementById('chronoDisplay').classList.add('hidden'); }
-                else { document.getElementById('btnChrono').classList.add('hidden'); document.getElementById('chronoDisplay').classList.remove('hidden'); startTimer(s); }
+        let curCl = localStorage.getItem('curCl') || "";
+        const colors = ['NOIR', 'ROUGE', 'BLEU', 'VERT', 'JAUNE'];
+
+        function init() {
+            db.ref('settings/classes').on('value', snap => {
+                const list = snap.val() || [];
+                const select = document.getElementById('selectClasse');
+                select.innerHTML = list.map(c => `<option value="${c}" ${c===curCl?'selected':''}>${c}</option>`).join('');
+                if(!curCl && list.length > 0) switchClasse(list[0]);
+                else setupListeners();
             });
         }
 
-        function importCSV(input) {
-            Papa.parse(input.files[0], { header: true, complete: res => {
-                const colNom = res.meta.fields.find(c => c.toLowerCase().includes('lastname'));
-                const colPre = res.meta.fields.find(c => c.toLowerCase().includes('name') && !c.toLowerCase().includes('last'));
-                const data = res.data.filter(r => r[colNom]);
-                const cName = (data[0]['@classe'] || prompt("Nom de la classe ?")).toUpperCase();
-                
-                mapping[cName] = data.map((r, i) => ({ id: Date.now()+i, last: r[colNom].toUpperCase(), first: r[colPre], code: `${colors[i % 5]}_${Math.floor(i / 5) + 1}`, absent: false }));
-                localStorage.setItem('os_map_final', JSON.stringify(mapping));
-                db.ref(`settings/classes/${cName}`).set(true).then(() => location.reload());
-            }});
+        function switchClasse(val) {
+            curCl = val;
+            localStorage.setItem('curCl', val);
+            setupListeners();
         }
 
-        function updateUI() {
-            const bil = document.getElementById('viewBilan'); const grp = document.getElementById('viewGroupes'); const mtn = document.getElementById('m-players-layer');
-            bil.innerHTML = ""; grp.innerHTML = ""; mtn.innerHTML = "";
-            const list = mapping[curCl] || [];
-            
-            list.forEach((s, i) => {
-                const sessionData = results[s.code] || {}; 
-                
-                // NOUVEAU FILTRE INCASSABLE : On ne regarde QUE les clés C1, C2, C3...
-                let pts = 0;
-                Object.keys(sessionData).forEach(key => {
-                    if (key.startsWith('C') && sessionData[key].score !== undefined) {
-                        pts += Number(sessionData[key].score) || 0;
-                    }
+        function setupListeners() {
+            if(!curCl) return;
+            const mRef = db.ref(`classes/${curCl}/matrix`);
+            mRef.once('value', s => { if(!s.exists()) mRef.set(MA_MATRICE_PHYSIQUE); });
+            mRef.on('value', snap => renderMatrix(snap.val()));
+            db.ref(`classes/${curCl}/results`).on('value', snap => renderBilan(snap.val()));
+            db.ref(`classes/${curCl}/absents`).on('value', snap => { window.absents = snap.val() || {}; renderBilan(); });
+        }
+
+        function renderBilan(data = {}) {
+            const mapping = JSON.parse(localStorage.getItem(`map_${curCl}`) || "[]");
+            let html = "";
+            mapping.forEach((name, i) => {
+                const col = colors[i % 5], num = Math.floor(i / 5) + 1, uKey = `${col}_${num}`;
+                const res = data[uKey] || {}, pts = Object.values(res).reduce((a, b) => a + (b.score || 0), 0);
+                const nbVal = Object.keys(res).length, isAbs = window.absents && window.absents[uKey];
+                html += `<div class="bg-slate-800 p-3 rounded-xl flex items-center gap-3 ${isAbs?'opacity-30':''}">
+                    <div class="w-10 h-10 rounded-full bg-${col.toLowerCase()==='noir'?'black':col.toLowerCase()+'-600'} border-2 border-white/20 flex items-center justify-center font-black text-[10px]">${num}</div>
+                    <div class="flex-1 min-w-0"><div class="font-bold text-xs uppercase truncate">${name}</div><div class="text-[10px] text-blue-400">${nbVal} balises | ${pts} pts</div></div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" ${isAbs?'checked':''} onchange="toggleAbsent('${uKey}', this.checked)" class="w-5 h-5">
+                        <button onclick="undoLast('${uKey}')" class="bg-slate-700 w-8 h-8 rounded text-sm">↩️</button>
+                    </div></div>`;
+            });
+            document.getElementById('bilanList').innerHTML = html || "<p class='text-center opacity-50'>Importez un CSV iDoceo.</p>";
+        }
+
+        function renderMatrix(m = {}) {
+            let h = "";
+            for(let p=1; p<=12; p++) {
+                h += `<tr class="border-b border-slate-700/50"><td class="bg-slate-900 font-bold text-xs py-2">P${p}</td>`;
+                colors.forEach(c => {
+                    const val = (m[p] && m[p][c]) ? m[p][c] : "";
+                    h += `<td><input maxlength="2" class="w-8 bg-transparent text-center font-bold text-blue-400 uppercase text-xs" value="${val}" onchange="updateMatrix(${p},'${c}',this.value)"></td>`;
                 });
+                h += `</tr>`;
+            }
+            document.getElementById('matrixBody').innerHTML = h;
+        }
 
-                const colorCode = s.code.split('_')[0]; 
-                const numCode = s.code.split('_')[1];
-                let bg = pts > 0 ? "bg-blue-600" : "bg-slate-800";
-                
-                // BILAN
-                bil.innerHTML += `<div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-4 rounded-2xl text-center shadow-lg border border-white/5 cursor-pointer active:scale-95 transition-transform"><div class="flex justify-between font-black"><span class="pastille ${colStyles[colorCode]}">${numCode}</span><span class="text-2xl">${pts}</span></div><p class="text-lg font-black mt-2 truncate">${s.first}</p></div>`;
-                
-                // GROUPES
-                grp.innerHTML += `<div class="bg-slate-800 p-4 rounded-2xl text-center border border-slate-700"><div class="pastille ${colStyles[colorCode]} mx-auto mb-2">${numCode}</div><p class="font-bold text-[10px] truncate uppercase opacity-50">${s.last}</p><p class="font-black text-xs truncate mb-2">${s.first}</p><select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 p-1 rounded text-[10px] w-full border border-slate-700 text-white"><option value="ABS" ${s.absent?'selected':''}>ABSENT</option>${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}</select></div>`;
-                
-                // CARTE (Avec sécurité NaN)
-                if(!s.absent) {
-                    const pion = document.createElement('div'); pion.className = `m-pion ${colStyles[colorCode]}`;
-                    const safePts = isNaN(pts) ? 0 : pts; 
-                    pion.style.top = `${90 - (Math.min(60, safePts) * (75/60))}%`; 
-                    pion.style.left = `${5 + (i * (90/list.length))}%`;
-                    pion.innerHTML = `${numCode}<span class="m-pion-name">${s.first}</span>`; mtn.appendChild(pion);
-                }
+        function updateMatrix(p, c, v) { db.ref(`classes/${curCl}/matrix/${p}/${c}`).set(v.toUpperCase()); }
+        function toggleAbsent(k, s) { db.ref(`classes/${curCl}/absents/${k}`).set(s ? true : null); }
+        function undoLast(k) { if(confirm("Supprimer la dernière validation ?")) db.ref(`classes/${curCl}/results/${k}`).limitToLast(1).once('value', s => s.forEach(c => c.ref.remove())); }
+        function startSession() { db.ref(`classes/${curCl}/settings/startTime`).set(Date.now()); alert("Course lancée !"); }
+
+        function exportIdoceo() {
+            const mapping = JSON.parse(localStorage.getItem(`map_${curCl}`) || "[]");
+            db.ref(`classes/${curCl}/results`).once('value', snap => {
+                const data = snap.val() || {};
+                let csv = "Nom,Prenom,Points,Balises\n";
+                mapping.forEach((name, i) => {
+                    const uKey = `${colors[i%5]}_${Math.floor(i/5)+1}`, res = data[uKey] || {};
+                    const pts = Object.values(res).reduce((a, b) => a + (b.score || 0), 0);
+                    csv += `${name.replace(' ',',')},${pts},${Object.keys(res).length}\n`;
+                });
+                const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv); a.download = `Export_${curCl}.csv`; a.click();
             });
         }
 
-        function openModal(n, c) {
-            document.getElementById('mName').innerText = n; document.getElementById('modalDetails').classList.remove('hidden');
-            db.ref(`sessions/${curCl}/${c}`).once('value', snap => {
-                const res = snap.val() || {};
-                document.getElementById('mHistory').innerHTML = Object.entries(res).map(([k, v]) => {
-                    if (!k.startsWith('C')) return ''; // Filtre d'affichage
-                    return `<div class="bg-slate-900 p-3 rounded-xl flex justify-between items-center border border-slate-700 font-bold"><span>P${k.replace('C','')} - ${v.score} pts</span><button onclick="if(confirm('Sûr?')) db.ref('sessions/${curCl}/${c}/${k}').remove().then(()=>document.getElementById('modalDetails').classList.add('hidden'))" class="bg-red-600 px-3 rounded text-[10px] uppercase">Suppr</button></div>`;
-                }).join('') || "<p class='text-center opacity-50'>Aucun passage</p>";
-            });
-        }
-
-        function changeCode(id, val) { const s = mapping[curCl].find(x => x.id == id); s.absent = (val === "ABS"); if(!s.absent) s.code = val; localStorage.setItem('os_map_final', JSON.stringify(mapping)); updateUI(); }
-        function startTimer(s) { clearInterval(window.it); window.it = setInterval(() => { const sec = Math.floor((Date.now()-s)/1000); document.getElementById('chronoDisplay').innerText = new Date(sec*1000).toISOString().substr(14,5); }, 1000); }
-        function startChrono() { if(confirm("Lancer le chrono pour toute la classe ?")) db.ref(`settings/startTime/${curCl}`).set(Date.now()); }
-        function switchTab(t) { ['viewBilan','viewGroupes','viewCarte','viewCodes'].forEach(v => document.getElementById(v).classList.add('hidden')); document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active')); document.getElementById('btnTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('tab-active'); }
-        function addClasse() { const n = prompt("Nom de la classe :"); if(n) { db.ref(`settings/classes/${n.toUpperCase()}`).set(true); location.reload(); } }
-        
-        function resetData(type) { 
-            if(prompt("RNE (0680013V) :")==="0680013V" && confirm("Certain ?")) { 
-                if(type==='scores') { db.ref(`sessions/${curCl}`).remove(); db.ref(`settings/startTime/${curCl}`).remove(); }
-                else { db.ref('sessions').remove(); db.ref('settings/classes').remove(); db.ref('settings/startTime').remove(); localStorage.clear(); } 
-                location.reload(); 
-            } 
-        }
-
-        db.ref('settings/matrix').on('value', snap => {
-            let m = snap.val() || {}; let h = `<tr class="bg-slate-900 text-[10px]"><th>#</th><th colspan="2">NOIR</th><th colspan="2">ROUGE</th><th colspan="2">BLEU</th><th colspan="2">VERT</th><th colspan="2">JAUNE</th></tr>`;
-            for(let c=1; c<=12; c++) { h += `<tr class="border-b border-slate-800"><td>P${c}</td>`; colors.forEach(col => { const l = m[c]?.[col] || ["",""]; h += `<td><input class="w-8 bg-transparent text-center font-bold text-blue-400" value="${l[0]}" onchange="db.ref('settings/matrix/${c}/${col}/0').set(this.value.toUpperCase())"></td><td class="border-r border-slate-800"><input class="w-8 bg-transparent text-center font-bold text-blue-400" value="${l[1]}" onchange="db.ref('settings/matrix/${c}/${col}/1').set(this.value.toUpperCase())"></td>`; }); h += `</tr>`; }
-            document.getElementById('matrixTable').innerHTML = h;
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0], className = prompt("Nom de la classe :");
+            if(!className) return;
+            Papa.parse(file, { header: true, complete: function(res) {
+                const names = res.data.filter(r => r.Nom).map(r => `${r.Nom} ${r.Prenom || ''}`);
+                localStorage.setItem(`map_${className}`, JSON.stringify(names));
+                db.ref('settings/classes').once('value', s => {
+                    let l = s.val() || []; if(!l.includes(className)) l.push(className);
+                    db.ref('settings/classes').set(l).then(() => switchClasse(className));
+                });
+            }});
         });
+
+        function showTab(id) {
+            ['bilan', 'codes', 'admin'].forEach(t => { 
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`btn-${t}`).classList.remove('tab-active');
+            });
+            document.getElementById(`tab-${id}`).classList.remove('hidden');
+            document.getElementById(`btn-${id}`).classList.add('tab-active');
+        }
+
+        function resetData(type) {
+            if(prompt("Code RNE :") !== "0680013V") return;
+            if(type === 'current') db.ref(`classes/${curCl}`).remove();
+            else { db.ref().remove(); localStorage.clear(); }
+            location.reload();
+        }
+        init();
     </script>
 </body>
 </html>
