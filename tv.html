@@ -1,59 +1,146 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orient'Show | Mur de Course</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orient'Show | Live Leaderboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
-        body { background-color: #0f172a; color: white; overflow: hidden; }
-        #mountain-container {
-            position: relative; width: 100vw; height: 100vh;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="none"><path d="M0 1000 L300 400 L500 100 L700 500 L1000 1000 Z" fill="%231e293b"/><path d="M0 1000 L200 800 L400 900 L600 200 L800 700 L1000 1000 Z" fill="%230f172a" opacity="0.5"/></svg>');
-            background-size: cover; background-position: bottom;
-        }
-        .score-line { position: absolute; left: 0; width: 100%; border-top: 1px dashed rgba(255,255,255,0.1); color: rgba(255,255,255,0.4); font-size: 14px; font-weight: 900; padding-left: 20px; transform: translateY(-50%); }
-        .player-pion { position: absolute; width: 45px; height: 45px; border-radius: 50%; border: 3px solid #000; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; color: white; box-shadow: 0 10px 20px rgba(0,0,0,0.5); transition: all 2s cubic-bezier(0.4, 0, 0.2, 1); z-index: 10; }
-        .bg-noir { background-color: black; border-color: #475569; }
-        .bg-rouge { background-color: #ef4444; }
-        .bg-bleu { background-color: #3b82f6; }
-        .bg-vert { background-color: #22c55e; }
-        .bg-jaune { background-color: #eab308; color: black; }
+        body { background-color: #020617; color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .podium-1 { order: 2; height: 200px; background: linear-gradient(to top, #ca8a04, #f59e0b); }
+        .podium-2 { order: 1; height: 160px; background: linear-gradient(to top, #475569, #94a3b8); }
+        .podium-3 { order: 3; height: 130px; background: linear-gradient(to top, #7c2d12, #92400e); }
+        .row-move { transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+        .list-enter-active, .list-leave-active { transition: all 0.5s; }
+        .gold-glow { box-shadow: 0 0 20px rgba(234, 179, 8, 0.3); border: 2px solid #eab308; }
     </style>
 </head>
-<body>
-    <header class="absolute top-0 left-0 w-full z-100 p-6 flex justify-between items-center bg-gradient-to-b from-slate-950 to-transparent">
-        <div><h1 class="text-3xl font-black italic text-blue-500 uppercase tracking-tighter">L'ASCENSION <span class="text-white">ORIENT'SHOW</span></h1><p id="classeDisplay" class="text-blue-400 font-bold uppercase tracking-widest"></p></div>
-        <div class="text-right text-xl font-black text-yellow-500 italic">OBJECTIF 60 PTS 🏆</div>
-    </header>
+<body class="p-4 md:p-8">
 
-    <div id="mountain-container">
-        <script>for(let s=0; s<=60; s+=10) { const pos = 90 - (s * (75/60)); document.write(`<div class="score-line" style="top: ${pos}%;">${s} PTS</div>`); }</script>
-        <div id="players-layer"></div>
+    <div class="flex justify-between items-end mb-8 border-b border-slate-800 pb-4">
+        <div>
+            <h1 class="text-4xl font-black italic text-blue-500 uppercase tracking-tighter">Orient'Show <span class="text-white">Live</span></h1>
+            <p id="classeDisplay" class="text-slate-400 font-bold uppercase tracking-widest text-sm">Chargement...</p>
+        </div>
+        <div class="flex gap-2">
+            <select id="selectClasse" onchange="switchClasse(this.value)" class="bg-slate-900 border border-slate-700 rounded px-4 py-2 font-bold text-blue-400 outline-none"></select>
+            <button onclick="importNames()" class="bg-slate-800 p-2 rounded text-xs opacity-50 hover:opacity-100">👤 Noms</button>
+        </div>
+    </div>
+
+    <div id="podiumContainer" class="flex items-end justify-center gap-2 mb-12 max-w-2xl mx-auto h-64">
+        </div>
+
+    <div class="max-w-3xl mx-auto">
+        <div class="grid grid-cols-12 px-4 py-2 text-[10px] uppercase font-bold text-slate-500 tracking-widest">
+            <div class="col-span-1">Pos</div>
+            <div class="col-span-7">Dossard / Élève</div>
+            <div class="col-span-2 text-center">Balises</div>
+            <div class="col-span-2 text-right">Points</div>
+        </div>
+        <div id="leaderboardList" class="space-y-2">
+            </div>
     </div>
 
     <script>
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
-        firebase.initializeApp(firebaseConfig); const db = firebase.database();
-        
-        db.ref('settings/activeClassName').on('value', snap => {
-            const cl = snap.val(); if(!cl) return;
-            document.getElementById('classeDisplay').innerText = "Classe : " + cl;
-            db.ref(`sessions/${cl}`).on('value', snap => {
-                const results = snap.val() || {}; const container = document.getElementById('players-layer');
-                container.innerHTML = "";
-                Object.keys(results).forEach((uKey, i) => {
-                    const pts = Object.values(results[uKey]).reduce((a,b) => a + b.score, 0);
-                    const [col, num] = uKey.split('_');
-                    const pion = document.createElement('div');
-                    pion.className = `player-pion bg-${col.toLowerCase()}`;
-                    pion.style.top = `${90 - (Math.min(60, pts) * (75/60))}%`;
-                    pion.style.left = `${5 + (i * (90 / Math.max(1, Object.keys(results).length)))}%`;
-                    pion.innerText = num; container.appendChild(pion);
-                });
-            });
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let curCl = "";
+        let namesMap = JSON.parse(sessionStorage.getItem('tv_names') || "{}");
+
+        // Initialisation
+        db.ref('settings/classes').on('value', snap => {
+            const list = snap.val() || [];
+            const select = document.getElementById('selectClasse');
+            select.innerHTML = list.map(c => `<option value="${c}">${c}</option>`).join('');
+            if(!curCl && list.length > 0) switchClasse(list[0]);
         });
+
+        function switchClasse(val) {
+            if(curCl) db.ref(`classes/${curCl}/results`).off();
+            curCl = val;
+            document.getElementById('classeDisplay').innerText = "Classe : " + curCl;
+            db.ref(`classes/${curCl}/results`).on('value', snap => {
+                renderAll(snap.val() || {});
+            });
+        }
+
+        function renderAll(results) {
+            // 1. Transformer l'objet en tableau et calculer les scores
+            let players = Object.keys(results).map(uKey => {
+                const data = results[uKey];
+                const pts = Object.values(data).reduce((a, b) => a + (b.score || 0), 0);
+                const nb = Object.keys(data).length;
+                const [col, num] = uKey.split('_');
+                return { uKey, col, num, pts, nb, name: namesMap[uKey] || `${col} ${num}` };
+            });
+
+            // 2. Trier : Points desc, puis Nb Balises desc
+            players.sort((a, b) => b.pts - a.pts || b.nb - a.nb);
+
+            renderPodium(players.slice(0, 3));
+            renderList(players);
+        }
+
+        function renderPodium(top3) {
+            const container = document.getElementById('podiumContainer');
+            if(top3.length === 0) { container.innerHTML = ""; return; }
+
+            const getCard = (p, pos) => `
+                <div class="podium-${pos} flex-1 rounded-t-2xl flex flex-col items-center justify-end pb-4 relative group transition-all">
+                    <div class="absolute -top-12 flex flex-col items-center">
+                        <div class="w-16 h-16 rounded-full bg-slate-900 border-4 border-white/20 flex items-center justify-center font-black text-xl shadow-2xl">
+                            ${p.num}
+                        </div>
+                        <div class="bg-white text-black text-[10px] font-black px-2 py-0.5 rounded-full -mt-2 shadow-xl">${p.pts} PTS</div>
+                    </div>
+                    <span class="font-black italic text-white/30 text-4xl mb-2">${pos}</span>
+                    <span class="font-bold text-[10px] uppercase text-center px-1 truncate w-full">${p.name}</span>
+                </div>
+            `;
+
+            let html = "";
+            if(top3[1]) html += getCard(top3[1], 2);
+            if(top3[0]) html += getCard(top3[0], 1);
+            if(top3[2]) html += getCard(top3[2], 3);
+            container.innerHTML = html;
+        }
+
+        function renderList(players) {
+            const list = document.getElementById('leaderboardList');
+            list.innerHTML = players.map((p, i) => `
+                <div class="grid grid-cols-12 items-center bg-slate-900/50 p-3 rounded-xl border border-slate-800 row-move ${i < 3 ? 'gold-glow' : ''}">
+                    <div class="col-span-1 font-black text-slate-500">${i + 1}</div>
+                    <div class="col-span-7 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-${p.col.toLowerCase()==='noir'?'black':p.col.toLowerCase()+'-600'} border border-white/10 flex items-center justify-center font-bold text-[10px]">${p.num}</div>
+                        <div class="font-bold uppercase truncate text-sm">${p.name}</div>
+                    </div>
+                    <div class="col-span-2 text-center font-mono text-blue-400 font-bold">${p.nb}</div>
+                    <div class="col-span-2 text-right font-black text-xl italic">${p.pts}<span class="text-[8px] ml-1 not-italic text-slate-500">PTS</span></div>
+                </div>
+            `).join('');
+        }
+
+        // Fonction pour synchroniser les noms si besoin
+        function importNames() {
+            const raw = prompt("Colle ici la liste des noms (séparés par des virgules ou un par ligne) :");
+            if(!raw) return;
+            
+            const names = raw.split(/[\n,]/).map(n => n.trim()).filter(n => n);
+            const colors = ['NOIR', 'ROUGE', 'BLEU', 'VERT', 'JAUNE'];
+            
+            names.forEach((name, i) => {
+                const uKey = `${colors[i % 5]}_${Math.floor(i / 5) + 1}`;
+                namesMap[uKey] = name;
+            });
+            
+            sessionStorage.setItem('tv_names', JSON.stringify(namesMap));
+            location.reload();
+        }
     </script>
 </body>
 </html>
