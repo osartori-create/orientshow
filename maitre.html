@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Master PRO | Orient'Show</title>
+    <title>Master PRO v2 | Orient'Show</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -12,29 +12,31 @@
     <style>
         body { background-color: #020617; color: white; font-family: 'Inter', sans-serif; }
         .os-title { font-style: italic; font-weight: 900; letter-spacing: -0.05em; }
-        .tab-btn { flex: 1; padding: 18px 5px; font-weight: 900; text-transform: uppercase; font-style: italic; font-size: 0.7rem; background: #1e293b; border-bottom: 4px solid transparent; }
+        .tab-btn { flex: 1; padding: 18px 5px; font-weight: 900; text-transform: uppercase; font-style: italic; font-size: 0.7rem; background: #1e293b; border-bottom: 4px solid transparent; transition: 0.3s; }
         .tab-active { background: #3b82f6; border-color: white; }
         
-        /* Styles pour les pastilles de couleur */
-        .bg-noir { background-color: #000; border: 1px solid #444; }
-        .bg-rouge { background-color: #dc2626; }
-        .bg-bleu { background-color: #2563eb; }
-        .bg-vert { background-color: #16a34a; }
-        .bg-jaune { background-color: #facc15; color: black; }
+        /* Couleurs badges */
+        .badge-noir { background-color: #000; border: 1px solid #444; color: white; }
+        .badge-rouge { background-color: #dc2626; color: white; }
+        .badge-bleu { background-color: #2563eb; color: white; }
+        .badge-vert { background-color: #16a34a; color: white; }
+        .badge-jaune { background-color: #facc15; color: black; }
 
-        .bib-badge { width: 24px; height: 24px; border-radius: 50%; display: flex; items-center; justify-center; font-size: 10px; font-weight: 900; }
-        .bilan-card { background: #1e293b; border-radius: 12px; padding: 10px; border: 1px solid #334155; position: relative; min-height: 80px;}
+        .bilan-card { background: #1e293b; border-radius: 12px; padding: 10px; border: 1px solid #334155; position: relative; min-height: 100px; display: flex; flex-direction: column; justify-content: space-between; }
+        .input-mapping { background: transparent; border-bottom: 1px solid #475569; width: 100%; text-transform: uppercase; font-weight: bold; font-size: 0.7rem; outline: none; color: #3b82f6; }
     </style>
 </head>
 <body class="pb-24">
 
-    <div class="sticky top-0 z-50 bg-[#020617]/95 backdrop-blur border-b border-slate-800">
+    <div class="sticky top-0 z-50 bg-[#020617]/95 backdrop-blur border-b border-slate-800 shadow-2xl">
         <div class="p-4 flex justify-between items-center">
             <div>
                 <h1 class="text-2xl os-title text-blue-500 uppercase leading-none">Orient'Show <span class="text-white text-[10px] block">Master Edition</span></h1>
                 <select id="selectClasse" onchange="switchClasse(this.value)" class="bg-transparent font-black text-sm text-slate-300 outline-none uppercase mt-2"></select>
             </div>
-            <a href="tv.html" target="_blank" class="bg-white/10 p-3 rounded-xl border border-white/10 text-xl">📺</a>
+            <div class="flex gap-2">
+                <a href="tv.html" target="_blank" class="bg-white/10 p-3 rounded-xl border border-white/10 text-xl" title="Affichage TV">📺</a>
+            </div>
         </div>
         
         <div class="flex">
@@ -46,50 +48,56 @@
     </div>
 
     <main class="p-2 max-w-7xl mx-auto">
-        <div id="tab-bilan">
-            <div class="flex justify-between items-center bg-blue-600 p-4 rounded-2xl mb-4 shadow-lg">
-                <button onclick="startSession()" class="bg-white text-blue-600 px-6 py-2 rounded-xl font-black italic uppercase text-xs">Top Départ</button>
-                <p id="startTimeDisplay" class="font-mono font-bold text-white text-xl">--:--</p>
-            </div>
-            <div id="bilanGrid" class="grid grid-cols-5 gap-2">
+        <div id="tab-bilan" class="space-y-4">
+            <div class="flex justify-between items-center bg-blue-600 p-4 rounded-2xl shadow-xl">
+                <button onclick="startSession()" class="bg-white text-blue-600 px-6 py-2 rounded-xl font-black italic uppercase text-xs active:scale-95">Top Départ</button>
+                <div class="text-right">
+                    <p class="text-[8px] uppercase text-blue-200 font-bold">Chrono lancé à</p>
+                    <p id="startTimeDisplay" class="font-mono font-bold text-white text-xl">--:--</p>
                 </div>
+            </div>
+            <div id="bilanGrid" class="grid grid-cols-5 gap-2"></div>
         </div>
 
         <div id="tab-mapping" class="hidden">
-            <div class="overflow-x-auto">
+            <div class="bg-slate-900 p-2 rounded-2xl border border-slate-800">
                 <table class="w-full text-[10px] border-separate border-spacing-1">
                     <thead>
-                        <tr class="text-slate-500 uppercase">
-                            <th class="w-1/5">Noir (1)</th><th class="w-1/5">Rouge (2)</th><th class="w-1/5">Bleu (3)</th><th class="w-1/5">Vert (4)</th><th class="w-1/5">Jaune (5)</th>
+                        <tr class="text-slate-500 uppercase text-center font-black">
+                            <th class="w-1/5 pb-2">Noir</th><th class="w-1/5 pb-2">Rouge</th><th class="w-1/5 pb-2">Bleu</th><th class="w-1/5 pb-2">Vert</th><th class="w-1/5 pb-2">Jaune</th>
                         </tr>
                     </thead>
-                    <tbody id="mappingTableBody">
-                        </tbody>
+                    <tbody id="mappingTableBody"></tbody>
                 </table>
             </div>
         </div>
 
         <div id="tab-codes" class="hidden">
-            <div class="bg-slate-900 rounded-2xl p-4 overflow-x-auto border border-slate-800">
+            <div class="bg-slate-900 rounded-3xl p-4 overflow-x-auto border border-slate-800 shadow-2xl">
                 <table class="w-full text-center text-xs">
                     <thead>
-                        <tr class="text-slate-500 uppercase border-b border-slate-800"><th class="pb-2">P#</th><th>Noir</th><th>Rouge</th><th>Bleu</th><th>Vert</th><th>Jaune</th></tr>
+                        <tr class="text-slate-500 uppercase border-b border-slate-800"><th class="pb-3">P#</th><th>Noir</th><th>Rouge</th><th>Bleu</th><th>Vert</th><th>Jaune</th></tr>
                     </thead>
                     <tbody id="matrixBody"></tbody>
                 </table>
             </div>
         </div>
 
-        <div id="tab-admin" class="hidden space-y-4">
+        <div id="tab-admin" class="hidden space-y-6">
             <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700">
-                <h3 class="font-black italic uppercase text-blue-500 mb-4">Import iDoceo</h3>
-                <input type="file" id="csvFile" accept=".csv" class="text-xs">
+                <h3 class="font-black italic uppercase text-blue-500 mb-4">Import iDoceo CSV (@lastname / @name)</h3>
+                <input type="file" id="csvFile" accept=".csv" class="block w-full text-sm text-slate-400 file:mr-4 file:py-3 file:px-6 file:rounded-full file:border-0 file:text-sm file:font-black file:bg-blue-600 file:text-white hover:file:bg-blue-700">
             </div>
-            <button onclick="resetData('current')" class="w-full bg-orange-900/30 text-orange-400 p-4 rounded-xl font-bold text-xs uppercase border border-orange-900/50">Vider Scores de la classe</button>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="exportIdoceo()" class="bg-slate-700 p-4 rounded-xl font-bold text-xs uppercase italic">📥 Export CSV</button>
+                <button onclick="resetData('current')" class="bg-orange-900/30 text-orange-400 p-4 rounded-xl font-bold text-xs uppercase italic border border-orange-900/50">Vider Scores</button>
+            </div>
+            <button onclick="resetData('all')" class="w-full bg-red-900 p-4 rounded-xl font-black uppercase italic shadow-2xl mt-10">⚠️ Reset Total (RNE requis)</button>
         </div>
     </main>
 
     <script>
+        // MATRICE PHYSIQUE ISSUE DE L'IMAGE
         const MA_MATRICE_PHYSIQUE = {
             1: { NOIR: "AL", ROUGE: "KC", BLEU: "NT", VERT: "PV", JAUNE: "XF" },
             2: { NOIR: "BM", ROUGE: "LD", BLEU: "OU", VERT: "QW", JAUNE: "YG" },
@@ -134,36 +142,33 @@
             });
             db.ref(`classes/${curCl}/results`).on('value', s => renderBilan(s.val() || {}));
             db.ref(`classes/${curCl}/absents`).on('value', s => { window.absents = s.val() || {}; renderBilan(); renderMapping(); });
+            db.ref(`classes/${curCl}/settings/startTime`).on('value', s => {
+                document.getElementById('startTimeDisplay').innerText = s.val() ? new Date(s.val()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--:--";
+            });
         }
 
-        // LOGIQUE DOSSARD : Tableau de 5 colonnes avec config individuelle
+        // --- GESTION DOSSARDS (MAPPING FIXE 5 COLONNES) ---
         function renderMapping() {
             const container = document.getElementById('mappingTableBody');
             const data = JSON.parse(localStorage.getItem(`map_${curCl}`) || "[]");
             let html = "";
-            
-            for (let i = 0; i < 35; i += 5) { // Jusqu'à 35 élèves
+            for (let i = 0; i < 40; i += 5) { 
                 html += "<tr>";
                 for (let j = 0; j < 5; j++) {
                     const idx = i + j;
-                    const student = data[idx];
-                    if (!student) { html += "<td></td>"; continue; }
-                    
-                    // Récupération des réglages personnalisés ou défaut
-                    const config = student.config || { col: colors[j], num: Math.floor(i/5) + 1 };
-                    const isAbs = window.absents && window.absents[`${config.col}_${config.num}`];
-
+                    const student = data[idx] || { name: "", config: { col: colors[j], num: Math.floor(i/5) + 1 } };
+                    const isAbs = window.absents && window.absents[`${student.config.col}_${student.config.num}`];
                     html += `
                         <td class="bg-slate-800 p-2 rounded-lg border border-slate-700 ${isAbs?'opacity-20':''}">
-                            <input type="text" value="${student.name}" onchange="updateName(${idx}, this.value)" class="w-full bg-transparent border-b border-slate-600 mb-2 font-bold uppercase outline-none text-[9px]">
-                            <div class="flex justify-between items-center">
-                                <select onchange="updateConfig(${idx}, 'col', this.value)" class="bg-slate-900 text-[8px] rounded p-1">
-                                    ${colors.map(c => `<option value="${c}" ${c===config.col?'selected':''}>${c[0]}</option>`).join('')}
+                            <input type="text" value="${student.name}" onchange="updateName(${idx}, this.value)" class="input-mapping mb-2" placeholder="NOM...">
+                            <div class="flex justify-between items-center gap-1">
+                                <select onchange="updateConfig(${idx}, 'col', this.value)" class="bg-slate-900 text-[7px] p-1 rounded">
+                                    ${colors.map(c => `<option value="${c}" ${c===student.config.col?'selected':''}>${c[0]}</option>`).join('')}
                                 </select>
-                                <select onchange="updateConfig(${idx}, 'num', this.value)" class="bg-slate-900 text-[8px] rounded p-1">
-                                    ${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${n==config.num?'selected':''}>${n}</option>`).join('')}
+                                <select onchange="updateConfig(${idx}, 'num', this.value)" class="bg-slate-900 text-[7px] p-1 rounded">
+                                    ${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${n==student.config.num?'selected':''}>${n}</option>`).join('')}
                                 </select>
-                                <input type="checkbox" ${isAbs?'checked':''} onchange="toggleAbs('${config.col}_${config.num}', this.checked)">
+                                <input type="checkbox" ${isAbs?'checked':''} onchange="toggleAbs('${student.config.col}_${student.config.num}', this.checked)">
                             </div>
                         </td>`;
                 }
@@ -174,6 +179,7 @@
 
         function updateName(idx, val) {
             let m = JSON.parse(localStorage.getItem(`map_${curCl}`) || "[]");
+            if(!m[idx]) m[idx] = { name: "", config: { col: colors[idx%5], num: Math.floor(idx/5)+1 } };
             m[idx].name = val.toUpperCase();
             localStorage.setItem(`map_${curCl}`, JSON.stringify(m));
             renderBilan();
@@ -181,64 +187,63 @@
 
         function updateConfig(idx, key, val) {
             let m = JSON.parse(localStorage.getItem(`map_${curCl}`) || "[]");
-            if(!m[idx].config) m[idx].config = { col: colors[idx%5], num: Math.floor(idx/5)+1 };
+            if(!m[idx]) m[idx] = { name: "", config: { col: colors[idx%5], num: Math.floor(idx/5)+1 } };
             m[idx].config[key] = val;
             localStorage.setItem(`map_${curCl}`, JSON.stringify(m));
             renderMapping(); renderBilan();
         }
 
-        function toggleAbs(k, s) { db.ref(`classes/${curCl}/absents/${k}`).set(s ? true : null); }
-
-        // BILAN : Lecture par colonnes de 5 avec visuels forts
+        // --- BILAN (GRILLE DE 5 COLONNES) ---
         function renderBilan(results = {}) {
             const data = JSON.parse(localStorage.getItem(`map_${curCl}`) || "[]");
             const container = document.getElementById('bilanGrid');
             let html = "";
-
             data.forEach((student, idx) => {
                 if(!student.name) return;
-                const config = student.config || { col: colors[idx%5], num: Math.floor(idx/5)+1 };
-                const uKey = `${config.col}_${config.num}`;
+                const uKey = `${student.config.col}_${student.config.num}`;
                 const res = results[uKey] || {};
                 const pts = Object.values(res).reduce((a, b) => a + (b.score || 0), 0);
                 const isAbs = window.absents && window.absents[uKey];
+                if(isAbs) return;
 
                 html += `
-                    <div class="bilan-card ${isAbs?'hidden':''}">
-                        <div class="flex items-center gap-2 mb-2">
-                            <div class="bib-badge bg-${config.col.toLowerCase()}">${config.num}</div>
-                            <span class="text-[9px] font-black uppercase truncate flex-1">${student.name.split(' ')[0]}</span>
+                    <div class="bilan-card">
+                        <div class="flex items-center gap-1.5 mb-2">
+                            <div class="w-6 h-6 rounded-full flex items-center justify-center font-black text-[10px] badge-${student.config.col.toLowerCase()}">${student.config.num}</div>
+                            <span class="text-[8px] font-black uppercase truncate flex-1">${student.name.split(' ')[0]}</span>
                         </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-black italic text-blue-400">${pts}</div>
-                            <div class="text-[8px] text-slate-500 uppercase font-bold">${Object.keys(res).length} balises</div>
+                        <div class="text-center flex-1 flex flex-col justify-center">
+                            <div class="text-3xl font-black italic text-blue-400 leading-none">${pts}</div>
+                            <div class="text-[7px] text-slate-500 uppercase font-bold mt-1">${Object.keys(res).length} BALISES</div>
+                        </div>
+                        <div class="flex justify-end mt-1">
+                            <button onclick="undoLast('${uKey}')" class="bg-slate-700/50 hover:bg-red-600 w-6 h-6 rounded text-[10px] transition-colors">↩️</button>
                         </div>
                     </div>`;
             });
-            container.innerHTML = html;
+            container.innerHTML = html || "<p class='col-span-5 text-center opacity-30 py-20 font-black uppercase text-xs'>En attente d'importation...</p>";
         }
 
+        // --- ACTIONS & UTILS ---
         function renderMatrix(m) {
             let h = "";
             for(let p=1; p<=12; p++) {
-                h += `<tr class="border-b border-slate-800"><td>P${p}</td>`;
-                colors.forEach(c => h += `<td><input class="w-full bg-transparent text-center font-bold text-blue-400" value="${m[p][c]}" onchange="db.ref('classes/${curCl}/matrix/${p}/${c}').set(this.value.toUpperCase())"></td>`);
+                h += `<tr class="border-b border-slate-800">
+                    <td class="bg-slate-950 py-3 text-slate-500 font-bold italic">P${p}</td>`;
+                colors.forEach(c => h += `<td><input class="w-full bg-transparent text-center font-bold text-blue-400 outline-none focus:text-white" value="${m[p][c]}" onchange="db.ref('classes/${curCl}/matrix/${p}/${c}').set(this.value.toUpperCase())"></td>`);
                 h += `</tr>`;
             }
             document.getElementById('matrixBody').innerHTML = h;
         }
 
-        // IMPORT IDOCEO CORRIGÉ POUR LA NOUVELLE STRUCTURE
         document.getElementById('csvFile').addEventListener('change', function(e) {
             const file = e.target.files[0], cName = prompt("Nom de la classe :");
             if(!cName) return;
             Papa.parse(file, { header: true, complete: function(res) {
-                const names = res.data
-                    .filter(r => r['@lastname'])
-                    .map((r, i) => ({
-                        name: `${r['@lastname']} ${r['@name'] || ''}`.trim(),
-                        config: { col: colors[i % 5], num: Math.floor(i / 5) + 1 }
-                    }));
+                const names = res.data.filter(r => r['@lastname']).map((r, i) => ({
+                    name: `${r['@lastname']} ${r['@name'] || ''}`.trim(),
+                    config: { col: colors[i % 5], num: Math.floor(i / 5) + 1 }
+                }));
                 localStorage.setItem(`map_${cName}`, JSON.stringify(names));
                 db.ref('settings/classes').once('value', s => {
                     let l = s.val() || []; if(!l.includes(cName)) l.push(cName);
@@ -247,6 +252,9 @@
             }});
         });
 
+        function toggleAbs(k, s) { db.ref(`classes/${curCl}/absents/${k}`).set(s ? true : null); }
+        function undoLast(k) { if(confirm("Supprimer la dernière balise ?")) db.ref(`classes/${curCl}/results/${k}`).limitToLast(1).once('value', s => s.forEach(c => c.ref.remove())); }
+        function startSession() { db.ref(`classes/${curCl}/settings/startTime`).set(Date.now()); }
         function showTab(id) {
             ['bilan', 'mapping', 'codes', 'admin'].forEach(t => { 
                 document.getElementById(`tab-${t}`).classList.add('hidden');
@@ -255,9 +263,28 @@
             document.getElementById(`tab-${id}`).classList.remove('hidden');
             document.getElementById(`btn-${id}`).classList.add('tab-active');
         }
-        function startSession() { db.ref(`classes/${curCl}/settings/startTime`).set(Date.now()); }
-        function resetData(t) { if(confirm("Vider les scores ?")) db.ref(`classes/${curCl}/results`).remove(); }
-
+        function resetData(type) {
+            if(prompt("Code RNE :") !== "0680013V") return;
+            if(type === 'current') { db.ref(`classes/${curCl}/results`).remove(); db.ref(`classes/${curCl}/settings/startTime`).remove(); }
+            else { db.ref().remove(); localStorage.clear(); }
+            location.reload();
+        }
+        function exportIdoceo() {
+            const data = JSON.parse(localStorage.getItem(`map_${curCl}`) || "[]");
+            db.ref(`classes/${curCl}/results`).once('value', snap => {
+                const results = snap.val() || {};
+                let csv = "Nom,Prenom,Points,Balises\n";
+                data.forEach(s => {
+                    if(!s.name) return;
+                    const res = results[`${s.config.col}_${s.config.num}`] || {};
+                    const pts = Object.values(res).reduce((a, b) => a + (b.score || 0), 0);
+                    csv += `${s.name.replace(' ',',')},${pts},${Object.keys(res).length}\n`;
+                });
+                const blob = new Blob([csv], {type: 'text/csv'});
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `Export_${curCl}.csv`; a.click();
+            });
+        }
         init();
     </script>
 </body>
