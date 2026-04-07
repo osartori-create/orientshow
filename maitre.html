@@ -3,78 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Master PRO v2 | Orient'Show</title>
+    <title>Master PRO | Orient'Show</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script>if (sessionStorage.getItem("os_access") !== "granted") window.location.href = "index.html";</script>
     <style>
-        body { background-color: #0f172a; color: white; font-family: sans-serif; }
-        .tab-btn { flex: 1; padding: 15px; font-weight: 900; text-transform: uppercase; background: #1e293b; transition: 0.3s; border-bottom: 4px solid transparent; }
+        body { background-color: #0f172a; color: white; font-family: 'Inter', sans-serif; }
+        .os-title { font-style: italic; font-weight: 900; letter-spacing: -0.05em; }
+        .tab-btn { flex: 1; padding: 18px 10px; font-weight: 900; text-transform: uppercase; font-style: italic; font-size: 0.8rem; background: #1e293b; border-bottom: 4px solid transparent; transition: 0.3s; }
         .tab-active { background: #3b82f6; border-color: white; }
+        .bib-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 8px; transition: 0.2s; }
+        .bib-card:active { transform: scale(0.95); }
+        .input-mapping { background: transparent; border-bottom: 1px solid #475569; width: 100%; text-transform: uppercase; font-weight: bold; font-size: 0.75rem; outline: none; }
+        .input-mapping:focus { border-color: #3b82f6; }
     </style>
 </head>
-<body class="pb-20">
+<body class="pb-24">
 
-    <div class="sticky top-0 z-50 bg-[#0f172a] shadow-xl">
-        <div class="p-4 flex justify-between items-center border-b border-slate-800">
-            <h1 class="text-xl font-black italic text-blue-500">ORIENT'SHOW <span class="text-white text-sm">MASTER</span></h1>
-            <div class="flex items-center gap-2">
-                <select id="selectClasse" onchange="switchClasse(this.value)" class="bg-slate-800 border border-slate-700 rounded px-3 py-1 font-bold text-blue-400"></select>
+    <div class="sticky top-0 z-50 bg-[#0f172a]/95 backdrop-blur shadow-2xl border-b border-slate-800">
+        <div class="p-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl os-title text-blue-500 uppercase">Orient'Show <span class="text-white text-xs">Master</span></h1>
+                <div class="flex items-center gap-2 mt-1">
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <select id="selectClasse" onchange="switchClasse(this.value)" class="bg-transparent font-black text-sm text-slate-300 outline-none uppercase"></select>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <a href="tv.html" target="_blank" class="bg-white/10 p-3 rounded-xl border border-white/10 hover:bg-blue-600 transition-colors">
+                    <span class="text-xl">📺</span>
+                </a>
             </div>
         </div>
+        
         <div class="flex">
             <button onclick="showTab('bilan')" id="btn-bilan" class="tab-btn tab-active">📊 Bilan</button>
+            <button onclick="showTab('mapping')" id="btn-mapping" class="tab-btn">🏃 Dossards</button>
             <button onclick="showTab('codes')" id="btn-codes" class="tab-btn">🔑 Codes</button>
-            <button onclick="showTab('admin')" id="btn-admin" class="tab-btn">⚙️ Admin</button>
+            <button onclick="showTab('admin')" id="btn-admin" class="tab-btn">⚙️ Config</button>
         </div>
     </div>
 
-    <div id="tab-bilan" class="p-4 space-y-4">
-        <div class="flex justify-between items-center">
-            <button onclick="startSession()" class="bg-green-600 px-6 py-3 rounded-xl font-bold uppercase shadow-lg active:scale-95">▶️ Top Départ</button>
-            <button onclick="exportIdoceo()" class="bg-slate-700 px-4 py-2 rounded-xl font-bold text-sm">📥 iDoceo CSV</button>
+    <main class="p-4 max-w-5xl mx-auto">
+        
+        <div id="tab-bilan" class="space-y-3">
+            <div class="flex justify-between items-center bg-blue-600/10 p-4 rounded-2xl border border-blue-500/20 mb-6">
+                <button onclick="startSession()" class="bg-green-600 px-6 py-3 rounded-xl font-black italic uppercase shadow-lg active:scale-95">Lancer la séance</button>
+                <div class="text-right">
+                    <p class="text-[10px] uppercase text-slate-500 font-bold">Chrono départ</p>
+                    <p id="startTimeDisplay" class="font-mono font-bold text-blue-400">--:--</p>
+                </div>
+            </div>
+            <div id="bilanList" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
         </div>
-        <div id="bilanList" class="grid grid-cols-1 gap-2"></div>
-    </div>
 
-    <div id="tab-codes" class="hidden p-4">
-        <div class="bg-slate-800 rounded-2xl p-4 overflow-x-auto">
-            <table class="w-full text-center border-collapse">
-                <thead>
-                    <tr class="text-[10px] uppercase text-slate-400 border-b border-slate-700">
-                        <th class="py-2">P#</th><th class="text-white">Noir</th><th class="text-red-500">Rouge</th><th class="text-blue-500">Bleu</th><th class="text-green-500">Vert</th><th class="text-yellow-400">Jaune</th>
-                    </tr>
-                </thead>
-                <tbody id="matrixBody"></tbody>
-            </table>
+        <div id="tab-mapping" class="hidden space-y-8">
+            <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
+                <h2 class="font-black italic uppercase text-sm mb-4 text-blue-400">Attribution des Noms (Dossards 1 à 10)</h2>
+                <div id="mappingGrid" class="space-y-6">
+                    </div>
+            </div>
         </div>
-    </div>
 
-    <div id="tab-admin" class="hidden p-4 space-y-6">
-        <div class="bg-slate-800 p-4 rounded-2xl">
-            <h3 class="font-bold mb-4 uppercase text-blue-400">Importation Classe</h3>
-            <input type="file" id="csvFile" accept=".csv" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700">
+        <div id="tab-codes" class="hidden">
+            <div class="bg-slate-800 rounded-3xl p-4 overflow-x-auto border border-slate-700 shadow-2xl">
+                <table class="w-full text-center border-collapse">
+                    <thead>
+                        <tr class="text-[10px] uppercase text-slate-500 border-b border-slate-700">
+                            <th class="py-3">P#</th><th class="text-white">Noir</th><th class="text-red-500">Rouge</th><th class="text-blue-500">Bleu</th><th class="text-green-500">Vert</th><th class="text-yellow-400">Jaune</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matrixBody"></tbody>
+                </table>
+            </div>
         </div>
-        <div class="flex flex-col gap-2">
-            <button onclick="resetData('current')" class="bg-orange-900/40 text-orange-200 p-4 rounded-xl font-bold border border-orange-900">Vider scores de la classe</button>
-            <button onclick="resetData('all')" class="bg-red-900 text-white p-4 rounded-xl font-bold">⚠️ RESET TOTAL (Firebase + iPad)</button>
+
+        <div id="tab-admin" class="hidden space-y-6">
+            <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700">
+                <h3 class="font-black italic uppercase text-blue-500 mb-4">Import iDoceo (CSV)</h3>
+                <input type="file" id="csvFile" accept=".csv" class="block w-full text-sm text-slate-400 file:mr-4 file:py-3 file:px-6 file:rounded-full file:border-0 file:text-sm file:font-black file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+                <p class="text-[10px] text-slate-500 mt-4 leading-relaxed">L'importation remplit automatiquement l'onglet <b>Dossards</b>. Vous pouvez ensuite modifier manuellement chaque nom.</p>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="exportIdoceo()" class="bg-slate-700 p-4 rounded-2xl font-bold text-sm uppercase italic">📥 Export Résultats</button>
+                <button onclick="resetData('current')" class="bg-orange-900/30 text-orange-400 p-4 rounded-2xl font-bold text-sm uppercase italic border border-orange-900/50">Vider Scores</button>
+            </div>
+            <button onclick="resetData('all')" class="w-full bg-red-900 p-4 rounded-2xl font-black uppercase italic shadow-2xl">⚠️ Reset Total (Base + iPad)</button>
         </div>
-    </div>
+
+    </main>
 
     <script>
-        // --- TA MATRICE PHYSIQUE EXTRAITE DE L'IMAGE ---
+        // TA MATRICE (Tes vrais codes)
         const MA_MATRICE_PHYSIQUE = {
-            1:  { NOIR: "AL", ROUGE: "KC", BLEU: "NT", VERT: "PV", JAUNE: "XF" },
-            2:  { NOIR: "BM", ROUGE: "LD", BLEU: "OU", VERT: "QW", JAUNE: "YG" },
-            3:  { NOIR: "CN", ROUGE: "ME", BLEU: "PV", VERT: "RX", JAUNE: "ZH" },
-            4:  { NOIR: "DO", ROUGE: "NF", BLEU: "QW", VERT: "SY", JAUNE: "AI" },
-            5:  { NOIR: "EP", ROUGE: "OG", BLEU: "RX", VERT: "TZ", JAUNE: "BJ" },
-            6:  { NOIR: "FQ", ROUGE: "PH", BLEU: "SY", VERT: "UA", JAUNE: "CK" },
-            7:  { NOIR: "GR", ROUGE: "QI", BLEU: "TZ", VERT: "VB", JAUNE: "DL" },
-            8:  { NOIR: "HS", ROUGE: "RJ", BLEU: "UA", VERT: "WC", JAUNE: "EM" },
-            9:  { NOIR: "IT", ROUGE: "SK", BLEU: "VB", VERT: "XD", JAUNE: "FN" },
+            1: { NOIR: "AL", ROUGE: "KC", BLEU: "NT", VERT: "PV", JAUNE: "XF" },
+            2: { NOIR: "BM", ROUGE: "LD", BLEU: "OU", VERT: "QW", JAUNE: "YG" },
+            3: { NOIR: "CN", ROUGE: "ME", BLEU: "PV", VERT: "RX", JAUNE: "ZH" },
+            4: { NOIR: "DO", ROUGE: "NF", BLEU: "QW", VERT: "SY", JAUNE: "AI" },
+            5: { NOIR: "EP", ROUGE: "OG", BLEU: "RX", VERT: "TZ", JAUNE: "BJ" },
+            6: { NOIR: "FQ", ROUGE: "PH", BLEU: "SY", VERT: "UA", JAUNE: "CK" },
+            7: { NOIR: "GR", ROUGE: "QI", BLEU: "TZ", VERT: "VB", JAUNE: "DL" },
+            8: { NOIR: "HS", ROUGE: "RJ", BLEU: "UA", VERT: "WC", JAUNE: "EM" },
+            9: { NOIR: "IT", ROUGE: "SK", BLEU: "VB", VERT: "XD", JAUNE: "FN" },
             10: { NOIR: "JU", ROUGE: "TL", BLEU: "WC", VERT: "YE", JAUNE: "GO" },
             11: { NOIR: "KV", ROUGE: "UM", BLEU: "XD", VERT: "ZF", JAUNE: "HP" },
             12: { NOIR: "LW", ROUGE: "VN", BLEU: "YE", VERT: "AG", JAUNE: "IQ" }
@@ -98,9 +130,9 @@
         }
 
         function switchClasse(val) {
-            curCl = val;
-            localStorage.setItem('curCl', val);
+            curCl = val; localStorage.setItem('curCl', val);
             setupListeners();
+            renderMappingGrid(); // On rafraîchit la grille de saisie
         }
 
         function setupListeners() {
@@ -109,34 +141,90 @@
             mRef.once('value', s => { if(!s.exists()) mRef.set(MA_MATRICE_PHYSIQUE); });
             mRef.on('value', snap => renderMatrix(snap.val()));
             db.ref(`classes/${curCl}/results`).on('value', snap => renderBilan(snap.val()));
-            db.ref(`classes/${curCl}/absents`).on('value', snap => { window.absents = snap.val() || {}; renderBilan(); });
+            db.ref(`classes/${curCl}/absents`).on('value', snap => { window.absents = snap.val() || {}; renderBilan(); renderMappingGrid(); });
+            db.ref(`classes/${curCl}/settings/startTime`).on('value', snap => {
+                const time = snap.val();
+                document.getElementById('startTimeDisplay').innerText = time ? new Date(time).toLocaleTimeString() : "--:--";
+            });
         }
 
-        function renderBilan(data = {}) {
+        // GRILLE DOSSARDS (MAPPING)
+        function renderMappingGrid() {
+            const container = document.getElementById('mappingGrid');
             const mapping = JSON.parse(localStorage.getItem(`map_${curCl}`) || "[]");
             let html = "";
+
+            colors.forEach(col => {
+                html += `<div class="mb-4"><h3 class="text-[10px] font-black uppercase mb-2 ${getColorClass(col)}">${col}</h3><div class="grid grid-cols-2 md:grid-cols-5 gap-2">`;
+                for(let n=1; n<=10; n++) {
+                    const idx = getIndex(col, n);
+                    const currentName = mapping[idx] || "";
+                    const uKey = `${col}_${n}`;
+                    const isAbs = window.absents && window.absents[uKey];
+                    
+                    html += `
+                        <div class="bib-card ${isAbs ? 'opacity-40' : ''}">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-[9px] font-black opacity-50">#${n}</span>
+                                <input type="checkbox" ${isAbs?'checked':''} onchange="toggleAbsent('${uKey}', this.checked)" title="Absent ?">
+                            </div>
+                            <input type="text" class="input-mapping" placeholder="NOM..." value="${currentName}" 
+                                   onchange="updateSingleName(${idx}, this.value)">
+                        </div>`;
+                }
+                html += `</div></div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function getIndex(col, num) {
+            return (num - 1) * 5 + colors.indexOf(col);
+        }
+
+        function updateSingleName(idx, val) {
+            let mapping = JSON.parse(localStorage.getItem(`map_${curCl}`) || "[]");
+            mapping[idx] = val.toUpperCase();
+            localStorage.setItem(`map_${curCl}`, JSON.stringify(mapping));
+            renderBilan(); // Met à jour le bilan
+        }
+
+        function getColorClass(col) {
+            if(col === 'NOIR') return 'text-white';
+            if(col === 'ROUGE') return 'text-red-500';
+            if(col === 'BLEU') return 'text-blue-500';
+            if(col === 'VERT') return 'text-green-500';
+            return 'text-yellow-400';
+        }
+
+        // BILAN
+        function renderBilan(data = {}) {
+            const mapping = JSON.parse(localStorage.getItem(`map_${curCl}`) || "[]");
+            const container = document.getElementById('bilanList');
+            let html = "";
+            
             mapping.forEach((name, i) => {
+                if(!name) return; // N'affiche que ceux qui ont un nom
                 const col = colors[i % 5], num = Math.floor(i / 5) + 1, uKey = `${col}_${num}`;
                 const res = data[uKey] || {}, pts = Object.values(res).reduce((a, b) => a + (b.score || 0), 0);
                 const nbVal = Object.keys(res).length, isAbs = window.absents && window.absents[uKey];
-                html += `<div class="bg-slate-800 p-3 rounded-xl flex items-center gap-3 ${isAbs?'opacity-30':''}">
-                    <div class="w-10 h-10 rounded-full bg-${col.toLowerCase()==='noir'?'black':col.toLowerCase()+'-600'} border-2 border-white/20 flex items-center justify-center font-black text-[10px]">${num}</div>
-                    <div class="flex-1 min-w-0"><div class="font-bold text-xs uppercase truncate">${name}</div><div class="text-[10px] text-blue-400">${nbVal} balises | ${pts} pts</div></div>
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" ${isAbs?'checked':''} onchange="toggleAbsent('${uKey}', this.checked)" class="w-5 h-5">
-                        <button onclick="undoLast('${uKey}')" class="bg-slate-700 w-8 h-8 rounded text-sm">↩️</button>
-                    </div></div>`;
+                
+                html += `<div class="bg-slate-800 p-3 rounded-xl flex items-center gap-3 border border-slate-700 ${isAbs?'hidden':''}">
+                    <div class="w-10 h-10 rounded-full bg-${col.toLowerCase()==='noir'?'black':col.toLowerCase()+'-600'} border-2 border-white/10 flex items-center justify-center font-black text-[10px]">${num}</div>
+                    <div class="flex-1 min-w-0"><div class="font-bold text-xs uppercase truncate">${name}</div><div class="text-[10px] text-blue-400 font-mono">${nbVal} balises | <span class="text-white">${pts} pts</span></div></div>
+                    <button onclick="undoLast('${uKey}')" class="bg-slate-700 w-8 h-8 rounded text-sm active:bg-red-500">↩️</button>
+                </div>`;
             });
-            document.getElementById('bilanList').innerHTML = html || "<p class='text-center opacity-50'>Importez un CSV iDoceo.</p>";
+            container.innerHTML = html || "<p class='text-center opacity-30 py-10 uppercase font-black text-xs'>Aucun élève actif</p>";
         }
 
+        // CODES ET ACTIONS (Inchangés mais intégrés)
         function renderMatrix(m = {}) {
             let h = "";
             for(let p=1; p<=12; p++) {
-                h += `<tr class="border-b border-slate-700/50"><td class="bg-slate-900 font-bold text-xs py-2">P${p}</td>`;
+                h += `<tr class="border-b border-slate-700/50"><td class="bg-slate-900 font-bold text-xs py-3 text-slate-500 italic">P${p}</td>`;
                 colors.forEach(c => {
                     const val = (m[p] && m[p][c]) ? m[p][c] : "";
-                    h += `<td><input maxlength="2" class="w-8 bg-transparent text-center font-bold text-blue-400 uppercase text-xs" value="${val}" onchange="updateMatrix(${p},'${c}',this.value)"></td>`;
+                    h += `<td><input maxlength="2" class="w-full bg-transparent text-center font-black text-blue-400 uppercase text-xs outline-none focus:text-white" value="${val}" onchange="updateMatrix(${p},'${c}',this.value)"></td>`;
                 });
                 h += `</tr>`;
             }
@@ -146,22 +234,9 @@
         function updateMatrix(p, c, v) { db.ref(`classes/${curCl}/matrix/${p}/${c}`).set(v.toUpperCase()); }
         function toggleAbsent(k, s) { db.ref(`classes/${curCl}/absents/${k}`).set(s ? true : null); }
         function undoLast(k) { if(confirm("Supprimer la dernière validation ?")) db.ref(`classes/${curCl}/results/${k}`).limitToLast(1).once('value', s => s.forEach(c => c.ref.remove())); }
-        function startSession() { db.ref(`classes/${curCl}/settings/startTime`).set(Date.now()); alert("Course lancée !"); }
+        function startSession() { db.ref(`classes/${curCl}/settings/startTime`).set(Date.now()); }
 
-        function exportIdoceo() {
-            const mapping = JSON.parse(localStorage.getItem(`map_${curCl}`) || "[]");
-            db.ref(`classes/${curCl}/results`).once('value', snap => {
-                const data = snap.val() || {};
-                let csv = "Nom,Prenom,Points,Balises\n";
-                mapping.forEach((name, i) => {
-                    const uKey = `${colors[i%5]}_${Math.floor(i/5)+1}`, res = data[uKey] || {};
-                    const pts = Object.values(res).reduce((a, b) => a + (b.score || 0), 0);
-                    csv += `${name.replace(' ',',')},${pts},${Object.keys(res).length}\n`;
-                });
-                const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv); a.download = `Export_${curCl}.csv`; a.click();
-            });
-        }
-
+        // CSV IDOCEO IMPORT
         document.getElementById('csvFile').addEventListener('change', function(e) {
             const file = e.target.files[0], className = prompt("Nom de la classe :");
             if(!className) return;
@@ -176,7 +251,7 @@
         });
 
         function showTab(id) {
-            ['bilan', 'codes', 'admin'].forEach(t => { 
+            ['bilan', 'mapping', 'codes', 'admin'].forEach(t => { 
                 document.getElementById(`tab-${t}`).classList.add('hidden');
                 document.getElementById(`btn-${t}`).classList.remove('tab-active');
             });
@@ -190,6 +265,7 @@
             else { db.ref().remove(); localStorage.clear(); }
             location.reload();
         }
+
         init();
     </script>
 </body>
