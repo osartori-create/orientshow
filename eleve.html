@@ -11,72 +11,87 @@
         body { background-color: #0f172a; touch-action: manipulation; color: white; user-select: none; }
         .input-box { background: #1e293b; border: 2px solid #334155; text-align: center; font-size: 3rem; font-weight: 900; border-radius: 15px; width: 80px; height: 80px; text-transform: uppercase; outline: none; transition: 0.2s; }
         .input-box:focus { border-color: #3b82f6; box-shadow: 0 0 15px rgba(59,130,246,0.5); }
-        .btn-active { background: #3b82f6 !important; border-color: white !important; transform: scale(1.05); }
-        .btn-color { transition: 0.2s; }
         
+        /* Boutons actifs */
+        .btn-active { background-color: #3b82f6 !important; border-color: white !important; transform: scale(1.05); color: white !important;}
+        
+        /* Couleurs d'équipes */
         .col-NOIR { background-color: #334155; }
         .col-ROUGE { background-color: #b91c1c; }
         .col-BLEU { background-color: #1d4ed8; }
         .col-VERT { background-color: #15803d; }
         .col-JAUNE { background-color: #a16207; }
+        
+        /* Bouton balise déjà validée */
+        .poste-done { opacity: 0.25; pointer-events: none; background-color: #020617 !important; border-color: #1e293b !important; }
     </style>
 </head>
 <body class="flex flex-col h-screen font-sans">
 
-    <header id="headerStatus" class="bg-slate-800 p-4 text-center border-b-4 border-slate-700 shadow-md">
-        <h1 class="text-2xl font-black italic text-blue-500 tracking-tighter uppercase">Orient'Show</h1>
-        <div id="courseState" class="text-sm font-bold text-slate-400 mt-1">Connexion en cours...</div>
+    <!-- HEADER & CHOIX CLASSE (Toujours actif) -->
+    <header class="bg-slate-800 p-4 text-center border-b border-slate-700 shadow-md z-10">
+        <h1 class="text-2xl font-black italic text-blue-500 tracking-tighter uppercase mb-2">Orient'Show</h1>
+        <select id="clSelect" class="w-full bg-slate-900 border border-slate-600 text-blue-400 font-bold p-3 rounded-lg outline-none focus:border-blue-500 text-center uppercase" onchange="changerClasse()">
+            <option value="">-- CHOISIS TA CLASSE --</option>
+        </select>
+        <div id="courseState" class="text-xs font-bold text-slate-500 mt-2 uppercase tracking-widest">En attente de classe...</div>
     </header>
 
+    <!-- ZONE DE SAISIE (Grisée si course inactive) -->
     <main id="mainZone" class="flex-1 overflow-y-auto p-4 flex flex-col gap-6 opacity-50 pointer-events-none transition-opacity duration-300">
         
+        <!-- ÉTAPE 1 : IDENTITÉ -->
         <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">1. Ta Classe</label>
-            <select id="clSelect" class="w-full bg-slate-900 border border-slate-600 text-white font-bold p-3 rounded-lg outline-none focus:border-blue-500" onchange="changerClasse()">
-                <option value="">Sélectionne ta classe...</option>
-            </select>
-        </div>
-
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">2. Ton Dossard</label>
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-3 text-center">1. Ton Dossard</label>
+            
             <div class="grid grid-cols-5 gap-2 mb-4" id="colorGrid">
-                <button class="btn-color col-NOIR h-12 rounded-lg font-bold border-2 border-transparent" onclick="selectColor('NOIR', this)"></button>
-                <button class="btn-color col-ROUGE h-12 rounded-lg font-bold border-2 border-transparent" onclick="selectColor('ROUGE', this)"></button>
-                <button class="btn-color col-BLEU h-12 rounded-lg font-bold border-2 border-transparent" onclick="selectColor('BLEU', this)"></button>
-                <button class="btn-color col-VERT h-12 rounded-lg font-bold border-2 border-transparent" onclick="selectColor('VERT', this)"></button>
-                <button class="btn-color col-JAUNE h-12 rounded-lg font-bold border-2 border-transparent" onclick="selectColor('JAUNE', this)"></button>
+                <button class="btn-color col-NOIR h-14 rounded-xl font-bold border-2 border-transparent transition-all" onclick="selectColor('NOIR', this)"></button>
+                <button class="btn-color col-ROUGE h-14 rounded-xl font-bold border-2 border-transparent transition-all" onclick="selectColor('ROUGE', this)"></button>
+                <button class="btn-color col-BLEU h-14 rounded-xl font-bold border-2 border-transparent transition-all" onclick="selectColor('BLEU', this)"></button>
+                <button class="btn-color col-VERT h-14 rounded-xl font-bold border-2 border-transparent transition-all" onclick="selectColor('VERT', this)"></button>
+                <button class="btn-color col-JAUNE h-14 rounded-xl font-bold border-2 border-transparent transition-all" onclick="selectColor('JAUNE', this)"></button>
             </div>
-            <div class="flex items-center gap-4">
-                <span class="font-bold text-slate-400">N°</span>
-                <input type="number" id="numEleve" class="flex-1 bg-slate-900 border border-slate-600 p-3 rounded-lg text-xl font-black text-center outline-none focus:border-blue-500" placeholder="Ex: 1">
+
+            <div class="grid grid-cols-5 gap-2" id="numGrid">
+                <script>
+                    for(let i=1; i<=10; i++) {
+                        document.write(`<button id="btnNum${i}" class="btn-num bg-slate-700 h-12 rounded-xl font-black text-xl border border-slate-600 active:scale-95 transition-all text-slate-300" onclick="selectNum(${i}, this)">${i}</button>`);
+                    }
+                </script>
             </div>
         </div>
 
+        <!-- ÉTAPE 2 : BALISE -->
         <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">3. La Balise</label>
-            <div class="flex items-center gap-4 mb-4">
-                <span class="font-bold text-slate-400">Poste N°</span>
-                <input type="number" id="numPoste" class="flex-1 bg-slate-900 border border-slate-600 p-3 rounded-lg text-xl font-black text-center outline-none focus:border-blue-500" placeholder="Ex: 5">
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-3 text-center">2. Ta Balise</label>
+            
+            <div class="grid grid-cols-3 gap-2 mb-6" id="posteGrid">
+                <script>
+                    for(let i=1; i<=12; i++) {
+                        document.write(`<button id="btnPoste${i}" class="btn-poste bg-slate-700 h-14 rounded-xl font-black text-2xl border border-slate-600 active:scale-95 transition-all text-blue-100" onclick="selectPoste(${i}, this)">P${i}</button>`);
+                    }
+                </script>
             </div>
             
-            <label class="block text-xs font-bold text-slate-400 uppercase mb-2 text-center">Code Lettres</label>
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2 text-center">Code Lettres (1 ou 2)</label>
             <div class="flex justify-center gap-4">
-                <input type="text" id="l1" class="input-box" maxlength="1" autocomplete="off" oninput="if(this.value.length===1) document.getElementById('l2').focus()">
-                <input type="text" id="l2" class="input-box" maxlength="1" autocomplete="off">
+                <input type="text" id="l1" class="input-box" maxlength="1" autocomplete="off" oninput="this.value = this.value.toUpperCase(); if(this.value.length===1) document.getElementById('l2').focus()">
+                <input type="text" id="l2" class="input-box" maxlength="1" autocomplete="off" oninput="this.value = this.value.toUpperCase();">
             </div>
         </div>
 
-        <button onclick="validerCode()" class="w-full py-5 bg-blue-600 active:bg-blue-800 text-white font-black text-2xl rounded-xl shadow-lg mt-auto mb-4">
+        <button onclick="validerCode()" class="w-full py-6 bg-blue-600 active:bg-blue-800 text-white font-black text-3xl rounded-xl shadow-lg mt-auto mb-4 tracking-wider">
             ✅ VALIDER
         </button>
 
     </main>
 
+    <!-- ÉCRAN DE FEEDBACK -->
     <div id="feedback" class="hidden fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center transition-all">
         <div id="fbIcon" class="text-8xl mb-4 drop-shadow-lg"></div>
         <div id="fbPoints" class="text-5xl font-black text-white mb-2 drop-shadow-md"></div>
         <div id="fbMessage" class="text-xl font-bold text-white/80 mb-8"></div>
-        <button onclick="fermerFeedback()" class="px-10 py-4 bg-white/20 hover:bg-white/30 border border-white rounded-xl text-white font-bold text-xl backdrop-blur-sm">
+        <button onclick="fermerFeedback()" class="px-12 py-5 bg-white/20 hover:bg-white/30 border-2 border-white rounded-2xl text-white font-black text-2xl backdrop-blur-sm shadow-xl active:scale-95">
             SUIVANT ➔
         </button>
     </div>
@@ -112,45 +127,54 @@
         // ==========================================
         let curCl = "";
         let selectedColor = "";
+        let selectedNum = null;
+        let selectedPoste = null;
         let isCourseActive = false;
+        
         let matriceCache = {}; 
         let startListener = null;
         let endListener = null;
+        let eleveListener = null; // Écouteur pour griser les balises
 
         // ==========================================
         // 4. INITIALISATION
         // ==========================================
         window.onload = () => {
-            // Remplir le menu (en ignorant les bugs potentiels comme "true")
             db.ref('settings/classes').on('value', snap => {
                 const classes = snap.val() || {};
                 const select = document.getElementById('clSelect');
-                select.innerHTML = '<option value="">Sélectionne ta classe...</option>';
+                const currentValue = select.value;
+                
+                select.innerHTML = '<option value="">-- CHOISIS TA CLASSE --</option>';
                 Object.keys(classes).forEach(c => {
-                    if(c !== "true" && c !== "null") select.innerHTML += `<option value="${c}">${c}</option>`;
+                    if(c !== "true" && c !== "null") {
+                        select.innerHTML += `<option value="${c}">${c}</option>`;
+                    }
                 });
+                if(currentValue) select.value = currentValue;
             });
 
-            // Cache de la matrice pour validation sans latence
             db.ref('settings/matrix').on('value', snap => {
                 matriceCache = snap.val() || {};
             });
             
-            // Activation audio sur le premier clic (Sécurité navigateurs)
             document.body.addEventListener('click', initAudio, { once: true });
         };
 
         // ==========================================
-        // 5. CHANGEMENT DE CLASSE & VERROUILLAGE
+        // 5. GESTION DES ÉTATS ET ÉCOUTEURS
         // ==========================================
         function changerClasse() {
             curCl = document.getElementById('clSelect').value;
 
             if (startListener) startListener.off();
             if (endListener) endListener.off();
+            if (eleveListener) eleveListener.off();
+
+            resetSelections();
 
             if (!curCl) {
-                verrouillerUI("Sélectionne une classe", "border-slate-700", "text-slate-400");
+                verrouillerUI("En attente de classe...", "text-slate-500");
                 return;
             }
 
@@ -165,74 +189,121 @@
 
                     if (!startTime) {
                         isCourseActive = false;
-                        verrouillerUI("En attente du départ...", "border-slate-700", "text-slate-400");
+                        verrouillerUI("Le professeur n'a pas lancé le chrono ⏳", "text-orange-400");
                     } else if (startTime && !endTime) {
                         isCourseActive = true;
-                        deverrouillerUI("Course en cours 🏃‍♂️", "border-emerald-600", "text-emerald-400");
+                        deverrouillerUI("🟢 COURSE EN COURS", "text-emerald-400");
                     } else if (endTime) {
                         isCourseActive = false;
-                        verrouillerUI("Course terminée 🛑", "border-red-600", "text-red-400");
+                        verrouillerUI("🛑 SÉANCE TERMINÉE", "text-red-500");
                     }
                 });
             });
         }
 
-        function verrouillerUI(msg, borderClass, textClass) {
+        function verrouillerUI(msg, textClass) {
             document.getElementById('mainZone').classList.add('opacity-50', 'pointer-events-none');
-            document.getElementById('courseState').innerText = msg;
-            document.getElementById('headerStatus').className = `bg-slate-800 p-4 text-center border-b-4 ${borderClass} shadow-md`;
-            document.getElementById('courseState').className = `text-sm font-bold mt-1 ${textClass}`;
+            const state = document.getElementById('courseState');
+            state.innerText = msg;
+            state.className = `text-sm font-black mt-2 uppercase tracking-widest ${textClass}`;
         }
 
-        function deverrouillerUI(msg, borderClass, textClass) {
+        function deverrouillerUI(msg, textClass) {
             document.getElementById('mainZone').classList.remove('opacity-50', 'pointer-events-none');
-            document.getElementById('courseState').innerText = msg;
-            document.getElementById('headerStatus').className = `bg-slate-800 p-4 text-center border-b-4 ${borderClass} shadow-md`;
-            document.getElementById('courseState').className = `text-sm font-bold mt-1 ${textClass}`;
+            const state = document.getElementById('courseState');
+            state.innerText = msg;
+            state.className = `text-sm font-black mt-2 uppercase tracking-widest ${textClass}`;
         }
 
+        // ==========================================
+        // 6. INTERACTIONS GRILLES (Couleur, N°, Poste)
+        // ==========================================
         function selectColor(color, btn) {
             selectedColor = color;
             document.querySelectorAll('.btn-color').forEach(b => b.classList.remove('btn-active'));
             btn.classList.add('btn-active');
+            verifierMiseAJourBalises();
+        }
+
+        function selectNum(num, btn) {
+            selectedNum = num;
+            document.querySelectorAll('.btn-num').forEach(b => b.classList.remove('btn-active'));
+            btn.classList.add('btn-active');
+            verifierMiseAJourBalises();
+        }
+
+        function selectPoste(poste, btn) {
+            selectedPoste = poste;
+            document.querySelectorAll('.btn-poste').forEach(b => b.classList.remove('btn-active'));
+            btn.classList.add('btn-active');
+            document.getElementById('l1').focus(); // Auto focus sur la lettre
         }
 
         // ==========================================
-        // 6. VALIDATION & SAUVEGARDE (Aligné avec Maître)
+        // 7. AUTO-GRISAGE DES BALISES DÉJÀ FAITES
+        // ==========================================
+        function verifierMiseAJourBalises() {
+            // Si on a la couleur ET le numéro, on écoute le score de l'élève
+            if (curCl && selectedColor && selectedNum) {
+                if (eleveListener) eleveListener.off();
+                
+                eleveListener = db.ref(`sessions/${curCl}/${selectedColor}_${selectedNum}`);
+                eleveListener.on('value', snap => {
+                    const data = snap.val() || {};
+                    
+                    // On parcourt les 12 balises possibles
+                    for(let i=1; i<=12; i++) {
+                        const btn = document.getElementById(`btnPoste${i}`);
+                        
+                        // Si le noeud Ci existe dans Firebase = balise scannée
+                        if (data[`C${i}`]) {
+                            btn.classList.add('poste-done');
+                            // Si l'élève avait sélectionné cette balise, on l'annule
+                            if (selectedPoste === i) {
+                                selectedPoste = null;
+                                btn.classList.remove('btn-active');
+                            }
+                        } else {
+                            btn.classList.remove('poste-done');
+                        }
+                    }
+                });
+            }
+        }
+
+        // ==========================================
+        // 8. VALIDATION ET SAUVEGARDE
         // ==========================================
         function validerCode() {
             if (!isCourseActive) return alert("La course n'est pas active.");
             
-            const num = document.getElementById('numEleve').value;
-            const poste = parseInt(document.getElementById('numPoste').value);
             const l1 = document.getElementById('l1').value.toUpperCase();
             const l2 = document.getElementById('l2').value.toUpperCase();
 
-            if (!selectedColor || !num || !poste || (!l1 && !l2)) {
-                return alert("Remplis tous les champs (au moins une lettre) !");
-            }
+            if (!selectedColor) return alert("Choisis ta COULEUR !");
+            if (!selectedNum) return alert("Choisis ton NUMÉRO !");
+            if (!selectedPoste) return alert("Choisis ta BALISE !");
+            if (!l1 && !l2) return alert("Saisis au moins une lettre du code !");
 
-            const codeVerite = matriceCache[poste]?.[selectedColor];
+            const codeVerite = matriceCache[selectedPoste]?.[selectedColor];
             let pts = 0;
             let msg = "Faux !";
             let succes = false;
 
             if (codeVerite) {
-                // Correspondance avec le barème attendu par ton fichier Maitre
-                if (l1 === codeVerite[0]) pts += 2.5;
-                if (l2 === codeVerite[1]) pts += 2.5;
+                if (l1 === codeVerite[0] && l1 !== "") pts += 2.5;
+                if (l2 === codeVerite[1] && l2 !== "") pts += 2.5;
                 
-                pts = Math.floor(pts === 5 ? 5 : (pts > 0 ? 2 : 0)); // 5pts = parfait, 2pts = partiel, 0pt = faux
+                pts = Math.floor(pts === 5 ? 5 : (pts > 0 ? 2 : 0));
                 
-                if (pts === 5) { msg = "Parfait !"; succes = true; playTone(880, 0.3, 'sine'); }
+                if (pts === 5) { msg = "Code Parfait !"; succes = true; playTone(880, 0.3, 'sine'); }
                 else if (pts === 2) { msg = "1 lettre correcte !"; succes = true; playTone(440, 0.2, 'sine'); }
                 else { playTone(150, 0.4, 'sawtooth'); }
             } else {
                 playTone(150, 0.4, 'sawtooth');
             }
 
-            // Écriture de la balise précise au bon endroit pour les stats de Maitre
-            db.ref(`sessions/${curCl}/${selectedColor}_${num}/C${poste}`).set({ 
+            db.ref(`sessions/${curCl}/${selectedColor}_${selectedNum}/C${selectedPoste}`).set({ 
                 score: pts, 
                 realTime: firebase.database.ServerValue.TIMESTAMP 
             }).then(() => {
@@ -241,7 +312,7 @@
         }
 
         // ==========================================
-        // 7. FEEDBACK ET NETTOYAGE (Stateless)
+        // 9. FEEDBACK ET NETTOYAGE
         // ==========================================
         function afficherFeedback(succes, pts, codeSaisi, msgTexte) {
             const fb = document.getElementById('feedback');
@@ -267,15 +338,26 @@
 
         function fermerFeedback() {
             document.getElementById('feedback').classList.add('hidden');
-            
-            document.getElementById('numEleve').value = "";
-            document.getElementById('numPoste').value = "";
+            resetSelections();
+            document.getElementById('mainZone').scrollTop = 0;
+        }
+
+        function resetSelections() {
             document.getElementById('l1').value = "";
             document.getElementById('l2').value = "";
             selectedColor = "";
-            document.querySelectorAll('.btn-color').forEach(b => b.classList.remove('btn-active'));
+            selectedNum = null;
+            selectedPoste = null;
             
-            document.getElementById('mainZone').scrollTop = 0;
+            document.querySelectorAll('.btn-color, .btn-num, .btn-poste').forEach(b => {
+                b.classList.remove('btn-active');
+                if(b.classList.contains('btn-poste')) b.classList.remove('poste-done');
+            });
+
+            if (eleveListener) {
+                eleveListener.off();
+                eleveListener = null;
+            }
         }
     </script>
 </body>
