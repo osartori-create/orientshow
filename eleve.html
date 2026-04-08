@@ -22,7 +22,7 @@
         .col-VERT { background-color: #15803d; }
         .col-JAUNE { background-color: #a16207; }
         
-        /* Bouton balise déjà validée */
+        /* Bouton circuit déjà validé */
         .poste-done { opacity: 0.25; pointer-events: none; background-color: #020617 !important; border-color: #1e293b !important; }
     </style>
 </head>
@@ -45,11 +45,12 @@
             <label class="block text-xs font-bold text-slate-400 uppercase mb-3 text-center">1. Ton Dossard</label>
             
             <div class="grid grid-cols-5 gap-2 mb-4" id="colorGrid">
-                <button class="btn-color col-NOIR h-14 rounded-xl font-bold border-2 border-transparent transition-all" onclick="selectColor('NOIR', this)"></button>
-                <button class="btn-color col-ROUGE h-14 rounded-xl font-bold border-2 border-transparent transition-all" onclick="selectColor('ROUGE', this)"></button>
-                <button class="btn-color col-BLEU h-14 rounded-xl font-bold border-2 border-transparent transition-all" onclick="selectColor('BLEU', this)"></button>
-                <button class="btn-color col-VERT h-14 rounded-xl font-bold border-2 border-transparent transition-all" onclick="selectColor('VERT', this)"></button>
-                <button class="btn-color col-JAUNE h-14 rounded-xl font-bold border-2 border-transparent transition-all" onclick="selectColor('JAUNE', this)"></button>
+                <!-- Hauteur h-28 au lieu de h-14, avec texte en blanc bien lisible -->
+                <button class="btn-color col-NOIR h-28 rounded-xl font-black text-[10px] sm:text-xs text-white border-2 border-transparent transition-all drop-shadow-md" onclick="selectColor('NOIR', this)">NOIR</button>
+                <button class="btn-color col-ROUGE h-28 rounded-xl font-black text-[10px] sm:text-xs text-white border-2 border-transparent transition-all drop-shadow-md" onclick="selectColor('ROUGE', this)">ROUGE</button>
+                <button class="btn-color col-BLEU h-28 rounded-xl font-black text-[10px] sm:text-xs text-white border-2 border-transparent transition-all drop-shadow-md" onclick="selectColor('BLEU', this)">BLEU</button>
+                <button class="btn-color col-VERT h-28 rounded-xl font-black text-[10px] sm:text-xs text-white border-2 border-transparent transition-all drop-shadow-md" onclick="selectColor('VERT', this)">VERT</button>
+                <button class="btn-color col-JAUNE h-28 rounded-xl font-black text-[10px] sm:text-xs text-white border-2 border-transparent transition-all shadow-[0_1px_2px_rgba(0,0,0,0.8)]" onclick="selectColor('JAUNE', this)">JAUNE</button>
             </div>
 
             <div class="grid grid-cols-5 gap-2" id="numGrid">
@@ -61,14 +62,15 @@
             </div>
         </div>
 
-        <!-- ÉTAPE 2 : BALISE -->
+        <!-- ÉTAPE 2 : CIRCUIT -->
         <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-            <label class="block text-xs font-bold text-slate-400 uppercase mb-3 text-center">2. Ta Balise</label>
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-3 text-center">2. Ton Circuit</label>
             
             <div class="grid grid-cols-3 gap-2 mb-6" id="posteGrid">
                 <script>
                     for(let i=1; i<=12; i++) {
-                        document.write(`<button id="btnPoste${i}" class="btn-poste bg-slate-700 h-14 rounded-xl font-black text-2xl border border-slate-600 active:scale-95 transition-all text-blue-100" onclick="selectPoste(${i}, this)">P${i}</button>`);
+                        // Modification : Affichage de C au lieu de P
+                        document.write(`<button id="btnPoste${i}" class="btn-poste bg-slate-700 h-14 rounded-xl font-black text-2xl border border-slate-600 active:scale-95 transition-all text-blue-100" onclick="selectPoste(${i}, this)">C${i}</button>`);
                     }
                 </script>
             </div>
@@ -128,13 +130,13 @@
         let curCl = "";
         let selectedColor = "";
         let selectedNum = null;
-        let selectedPoste = null;
+        let selectedPoste = null; // En interne, on garde le terme "poste" pour la logique de base de données
         let isCourseActive = false;
         
         let matriceCache = {}; 
         let startListener = null;
         let endListener = null;
-        let eleveListener = null; // Écouteur pour griser les balises
+        let eleveListener = null; 
 
         // ==========================================
         // 4. INITIALISATION
@@ -216,7 +218,7 @@
         }
 
         // ==========================================
-        // 6. INTERACTIONS GRILLES (Couleur, N°, Poste)
+        // 6. INTERACTIONS GRILLES (Couleur, N°, Circuit)
         // ==========================================
         function selectColor(color, btn) {
             selectedColor = color;
@@ -236,14 +238,13 @@
             selectedPoste = poste;
             document.querySelectorAll('.btn-poste').forEach(b => b.classList.remove('btn-active'));
             btn.classList.add('btn-active');
-            document.getElementById('l1').focus(); // Auto focus sur la lettre
+            document.getElementById('l1').focus(); 
         }
 
         // ==========================================
-        // 7. AUTO-GRISAGE DES BALISES DÉJÀ FAITES
+        // 7. AUTO-GRISAGE DES CIRCUITS DÉJÀ FAITS
         // ==========================================
         function verifierMiseAJourBalises() {
-            // Si on a la couleur ET le numéro, on écoute le score de l'élève
             if (curCl && selectedColor && selectedNum) {
                 if (eleveListener) eleveListener.off();
                 
@@ -251,14 +252,11 @@
                 eleveListener.on('value', snap => {
                     const data = snap.val() || {};
                     
-                    // On parcourt les 12 balises possibles
                     for(let i=1; i<=12; i++) {
                         const btn = document.getElementById(`btnPoste${i}`);
                         
-                        // Si le noeud Ci existe dans Firebase = balise scannée
                         if (data[`C${i}`]) {
                             btn.classList.add('poste-done');
-                            // Si l'élève avait sélectionné cette balise, on l'annule
                             if (selectedPoste === i) {
                                 selectedPoste = null;
                                 btn.classList.remove('btn-active');
@@ -282,7 +280,7 @@
 
             if (!selectedColor) return alert("Choisis ta COULEUR !");
             if (!selectedNum) return alert("Choisis ton NUMÉRO !");
-            if (!selectedPoste) return alert("Choisis ta BALISE !");
+            if (!selectedPoste) return alert("Choisis ton CIRCUIT !");
             if (!l1 && !l2) return alert("Saisis au moins une lettre du code !");
 
             const codeVerite = matriceCache[selectedPoste]?.[selectedColor];
