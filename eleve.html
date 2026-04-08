@@ -8,206 +8,256 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
-        body { background-color: #0f172a; touch-action: manipulation; }
-        .input-box { background: #1e293b; border: 2px solid #334155; text-align: center; font-size: 3rem; font-weight: 900; border-radius: 15px; width: 80px; height: 80px; text-transform: uppercase; outline: none; }
+        /* Optimisation Mobile / Forêt */
+        body { background-color: #0f172a; touch-action: manipulation; color: white; user-select: none; }
+        .input-box { background: #1e293b; border: 2px solid #334155; text-align: center; font-size: 3rem; font-weight: 900; border-radius: 15px; width: 80px; height: 80px; text-transform: uppercase; outline: none; transition: 0.2s; }
         .input-box:focus { border-color: #3b82f6; box-shadow: 0 0 15px rgba(59,130,246,0.5); }
         .btn-active { background: #3b82f6 !important; border-color: white !important; transform: scale(1.05); }
-        .done { opacity: 0.2; pointer-events: none; background: #020617 !important; }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
-        .animate-shake { animation: shake 0.3s ease-in-out; }
+        .btn-color { transition: 0.2s; }
+        
+        /* Couleurs des équipes */
+        .col-NOIR { background-color: #334155; }
+        .col-ROUGE { background-color: #b91c1c; }
+        .col-BLEU { background-color: #1d4ed8; }
+        .col-VERT { background-color: #15803d; }
+        .col-JAUNE { background-color: #a16207; }
     </style>
 </head>
-<body class="text-white p-4 font-sans select-none">
-    <div id="app" class="max-w-md mx-auto">
-        <h1 class="text-4xl font-black text-blue-500 italic text-center uppercase py-4">Orient'Show</h1>
+<body class="flex flex-col h-screen font-sans">
+
+    <header id="headerStatus" class="bg-slate-800 p-4 text-center border-b-4 border-slate-700 shadow-md">
+        <h1 class="text-2xl font-black italic text-blue-500 tracking-tighter uppercase">Orient'Show</h1>
+        <div id="courseState" class="text-sm font-bold text-slate-400 mt-1">Connexion en cours...</div>
+    </header>
+
+    <main id="mainZone" class="flex-1 overflow-y-auto p-4 flex flex-col gap-6 opacity-50 pointer-events-none transition-opacity duration-300">
         
-        <div id="waitChrono" class="hidden text-center py-20 flex-col items-center justify-center">
-            <div class="text-6xl animate-bounce">⏳</div>
-            <h2 class="text-2xl font-black uppercase mt-6 text-slate-300">En attente du départ...</h2>
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">1. Ta Classe</label>
+            <select id="clSelect" class="w-full bg-slate-900 border border-slate-600 text-white font-bold p-3 rounded-lg outline-none focus:border-blue-500" onchange="changerClasse()">
+                <option value="">Sélectionne ta classe...</option>
+            </select>
         </div>
 
-        <div id="main">
-            <select id="selectClasse" onchange="initAudio(); checkChrono();" class="w-full p-4 bg-slate-800 rounded-xl font-bold border border-slate-700 mb-6 text-lg outline-none text-blue-400"></select>
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">2. Ton Dossard</label>
+            <div class="grid grid-cols-5 gap-2 mb-4" id="colorGrid">
+                <button class="btn-color col-NOIR h-12 rounded-lg font-bold border-2 border-transparent" onclick="selectColor('NOIR', this)"></button>
+                <button class="btn-color col-ROUGE h-12 rounded-lg font-bold border-2 border-transparent" onclick="selectColor('ROUGE', this)"></button>
+                <button class="btn-color col-BLEU h-12 rounded-lg font-bold border-2 border-transparent" onclick="selectColor('BLEU', this)"></button>
+                <button class="btn-color col-VERT h-12 rounded-lg font-bold border-2 border-transparent" onclick="selectColor('VERT', this)"></button>
+                <button class="btn-color col-JAUNE h-12 rounded-lg font-bold border-2 border-transparent" onclick="selectColor('JAUNE', this)"></button>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="font-bold text-slate-400">N°</span>
+                <input type="number" id="numEleve" class="flex-1 bg-slate-900 border border-slate-600 p-3 rounded-lg text-xl font-black text-center outline-none focus:border-blue-500" placeholder="Ex: 1">
+            </div>
+        </div>
+
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">3. La Balise</label>
+            <div class="flex items-center gap-4 mb-4">
+                <span class="font-bold text-slate-400">Poste N°</span>
+                <input type="number" id="numPoste" class="flex-1 bg-slate-900 border border-slate-600 p-3 rounded-lg text-xl font-black text-center outline-none focus:border-blue-500" placeholder="Ex: 5">
+            </div>
             
-            <div id="stepDossard" class="space-y-4">
-                <div class="grid grid-cols-5 gap-2" id="gridNums">
-                    <script>for(let i=1;i<=10;i++) document.write(`<button onclick="setNum(${i})" id="btnN${i}" class="bg-slate-900 p-4 rounded-xl font-black border border-slate-700 transition-all">${i}</button>`)</script>
-                </div>
-                <div class="grid grid-cols-2 gap-2 font-black italic">
-                    <button onclick="setColor('NOIR')" class="p-5 bg-black rounded-2xl border border-slate-600 active:scale-95">NOIR</button>
-                    <button onclick="setColor('ROUGE')" class="p-5 bg-red-600 rounded-2xl border border-red-400 active:scale-95">ROUGE</button>
-                    <button onclick="setColor('BLEU')" class="p-5 bg-blue-600 rounded-2xl border border-blue-400 active:scale-95">BLEU</button>
-                    <button onclick="setColor('VERT')" class="p-5 bg-green-600 rounded-2xl border border-green-400 active:scale-95">VERT</button>
-                    <button onclick="setColor('JAUNE')" class="p-5 bg-yellow-500 text-black rounded-2xl col-span-2 active:scale-95">JAUNE</button>
-                </div>
-            </div>
-
-            <div id="stepSaisie" class="hidden space-y-6">
-                <div class="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
-                    <span id="labelDossard" class="font-black text-blue-400 uppercase tracking-widest text-lg"></span>
-                    <button onclick="retourDossard()" class="bg-slate-700 px-3 py-2 rounded-lg font-bold text-xs uppercase">Changer</button>
-                </div>
-                <div class="grid grid-cols-4 gap-2" id="pList">
-                    <script>for(let i=1;i<=12;i++) document.write(`<button onclick="setP(${i})" id="pBtn${i}" class="p-3 bg-slate-900 rounded-lg font-black border border-slate-700 transition-all">P${i}</button>`)</script>
-                </div>
-                <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-xl mt-4">
-                    <div class="flex justify-center gap-4 mb-6">
-                        <input type="text" id="l1" class="input-box" maxlength="1" oninput="this.value = this.value.toUpperCase(); if(this.value) document.getElementById('l2').focus();">
-                        <input type="text" id="l2" class="input-box" maxlength="1" oninput="this.value = this.value.toUpperCase();">
-                    </div>
-                    <button onclick="valider()" class="w-full bg-blue-600 p-6 rounded-2xl text-3xl font-black uppercase shadow-lg active:scale-95 transition-transform">Valider</button>
-                </div>
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2 text-center">Code Lettres</label>
+            <div class="flex justify-center gap-4">
+                <input type="text" id="l1" class="input-box" maxlength="1" autocomplete="off" oninput="if(this.value.length===1) document.getElementById('l2').focus()">
+                <input type="text" id="l2" class="input-box" maxlength="1" autocomplete="off">
             </div>
         </div>
 
-        <div id="feedback" class="hidden fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center">
-            <div id="fbIcon" class="text-8xl mb-4"></div>
-            <div id="fbPoints" class="text-7xl font-black mb-4 italic"></div>
-            <div id="fbLetters" class="flex gap-6 text-6xl font-black mb-6 justify-center uppercase bg-black/30 p-6 rounded-3xl w-full max-w-xs"></div>
-            <div id="fbStats" class="bg-white/10 p-4 rounded-xl mb-8 w-full font-bold text-blue-200"></div>
-            <button onclick="fermerFeedback()" class="bg-white text-black px-10 py-4 rounded-full font-black uppercase text-xl active:scale-95">Continuer</button>
-        </div>
+        <button onclick="validerCode()" class="w-full py-5 bg-blue-600 active:bg-blue-800 text-white font-black text-2xl rounded-xl shadow-lg mt-auto mb-4">
+            ✅ VALIDER
+        </button>
+
+    </main>
+
+    <div id="feedback" class="hidden fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center transition-all">
+        <div id="fbIcon" class="text-8xl mb-4 drop-shadow-lg"></div>
+        <div id="fbPoints" class="text-5xl font-black text-white mb-2 drop-shadow-md"></div>
+        <div id="fbMessage" class="text-xl font-bold text-white/80 mb-8"></div>
+        <button onclick="fermerFeedback()" class="px-10 py-4 bg-white/20 hover:bg-white/30 border border-white rounded-xl text-white font-bold text-xl backdrop-blur-sm">
+            SUIVANT ➔
+        </button>
     </div>
 
     <script>
-        const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
-        firebase.initializeApp(firebaseConfig); const db = firebase.database();
-        let curN, curC, curP, startT, matrix = {}, lastPunchTime = 0, audioCtx;
+        // ==========================================
+        // 1. CONFIGURATION FIREBASE (Récupérée depuis tes fichiers)
+        // ==========================================
+        const firebaseConfig = {
+            databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        // --- AUDIO ENGINE ---
-        function initAudio() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        function playTone(freq, duration, type) {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = type; osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-            osc.start(); osc.stop(audioCtx.currentTime + duration);
-        }
-
-        // --- SYNC ---
-        db.ref('settings/classes').on('value', snap => {
-            const sel = document.getElementById('selectClasse'); sel.innerHTML = '<option value="">-- CLASSE --</option>';
-            Object.keys(snap.val() || {}).forEach(c => sel.innerHTML += `<option value="${snap.val()[c]}">${snap.val()[c]}</option>`);
-        });
-
-        function checkChrono() {
-            const cl = document.getElementById('selectClasse').value; if(!cl) return;
-            db.ref(`classes/${cl}/settings/startTime`).on('value', snap => {
-                startT = snap.val();
-                const wait = document.getElementById('waitChrono'), main = document.getElementById('main');
-                if(!startT) { wait.classList.replace('hidden', 'flex'); main.classList.add('hidden'); }
-                else { wait.classList.replace('flex', 'hidden'); main.classList.remove('hidden'); }
-            });
-            db.ref(`classes/${cl}/matrix`).on('value', snap => { matrix = snap.val() || {}; });
-        }
-
-        function setNum(n) { 
-            curN = n; 
-            document.querySelectorAll('#gridNums button').forEach(b => b.classList.remove('btn-active')); 
-            document.getElementById('btnN'+n).classList.add('btn-active'); 
-        }
+        // ==========================================
+        // 2. VARIABLES GLOBALES (Limités au strict nécessaire)
+        // ==========================================
+        let curCl = "";
+        let selectedColor = "";
+        let isCourseActive = false;
+        let matriceCache = {}; // Cache local de la matrice pour validation instantanée (Offline)
         
-        function setColor(c) {
-            const cl = document.getElementById('selectClasse').value;
-            if(!curN || !startT) return alert("Choisis ton numéro d'abord !");
+        // Écouteurs pour pouvoir les détruire proprement
+        let startListener = null;
+        let endListener = null;
+
+        // ==========================================
+        // 3. INITIALISATION
+        // ==========================================
+        window.onload = () => {
+            // Remplir le menu des classes
+            db.ref('settings/classes').on('value', snap => {
+                const classes = snap.val() || {};
+                const select = document.getElementById('clSelect');
+                // On garde la première option (placeholder)
+                select.innerHTML = '<option value="">Sélectionne ta classe...</option>';
+                Object.keys(classes).forEach(c => {
+                    if(c !== "true") select.innerHTML += `<option value="${c}">${c}</option>`;
+                });
+            });
+
+            // Charger la matrice en mémoire cache
+            db.ref('settings/matrix').on('value', snap => {
+                matriceCache = snap.val() || {};
+            });
+        };
+
+        // ==========================================
+        // 4. GESTION DES ÉTATS (CHANGEMENT DE CLASSE)
+        // ==========================================
+        function changerClasse() {
+            curCl = document.getElementById('clSelect').value;
+
+            // Nettoyage des anciens écouteurs
+            if (startListener) startListener.off();
+            if (endListener) endListener.off();
+
+            if (!curCl) {
+                verrouillerUI("Sélectionne une classe", "border-slate-700", "text-slate-400");
+                return;
+            }
+
+            // Écoute du chrono (Start/Stop) de cette classe
+            startListener = db.ref(`settings/startTime/${curCl}`);
+            endListener = db.ref(`settings/endTime/${curCl}`);
+
+            startListener.on('value', snapStart => {
+                const startTime = snapStart.val();
+                
+                endListener.on('value', snapEnd => {
+                    const endTime = snapEnd.val();
+
+                    if (!startTime) {
+                        isCourseActive = false;
+                        verrouillerUI("En attente du départ...", "border-slate-700", "text-slate-400");
+                    } else if (startTime && !endTime) {
+                        isCourseActive = true;
+                        deverrouillerUI("Course en cours 🏃‍♂️", "border-emerald-600", "text-emerald-400");
+                    } else if (endTime) {
+                        isCourseActive = false;
+                        verrouillerUI("Course terminée 🛑", "border-red-600", "text-red-400");
+                    }
+                });
+            });
+        }
+
+        function verrouillerUI(msg, borderClass, textClass) {
+            document.getElementById('mainZone').classList.add('opacity-50', 'pointer-events-none');
+            document.getElementById('courseState').innerText = msg;
+            document.getElementById('headerStatus').className = `bg-slate-800 p-4 text-center border-b-4 ${borderClass} shadow-md`;
+            document.getElementById('courseState').className = `text-sm font-bold mt-1 ${textClass}`;
+        }
+
+        function deverrouillerUI(msg, borderClass, textClass) {
+            document.getElementById('mainZone').classList.remove('opacity-50', 'pointer-events-none');
+            document.getElementById('courseState').innerText = msg;
+            document.getElementById('headerStatus').className = `bg-slate-800 p-4 text-center border-b-4 ${borderClass} shadow-md`;
+            document.getElementById('courseState').className = `text-sm font-bold mt-1 ${textClass}`;
+        }
+
+        // ==========================================
+        // 5. INTERACTIONS UI
+        // ==========================================
+        function selectColor(color, btn) {
+            selectedColor = color;
+            document.querySelectorAll('.btn-color').forEach(b => b.classList.remove('btn-active'));
+            btn.classList.add('btn-active');
+        }
+
+        // ==========================================
+        // 6. VALIDATION (LOGIQUE OFFLINE-FIRST)
+        // ==========================================
+        function validerCode() {
+            if (!isCourseActive) return alert("La course n'est pas active.");
             
-            // Vérification absent
-            db.ref(`classes/${cl}/absents/${c}_${curN}`).once('value', snap => {
-                if(snap.exists()) return alert("Ce dossard est marqué ABSENT.");
-                
-                curC = c;
-                document.getElementById('labelDossard').innerText = `${curC} ${curN}`;
-                document.getElementById('stepDossard').classList.add('hidden');
-                document.getElementById('stepSaisie').classList.remove('hidden');
-                
-                db.ref(`classes/${cl}/results/${curC}_${curN}`).on('value', snap => {
-                    const res = snap.val() || {};
-                    lastPunchTime = 0; // Reset local
-                    document.querySelectorAll('#pList button').forEach(b => b.classList.remove('done'));
-                    Object.keys(res).forEach(k => {
-                        const btn = document.getElementById('pBtn'+k.replace('C',''));
-                        if(btn) btn.classList.add('done');
-                        // On cherche le dernier timestamp pour le cooldown de 45s
-                        if(res[k].realTime > lastPunchTime) lastPunchTime = res[k].realTime;
-                    });
-                });
-            });
-        }
+            const num = document.getElementById('numEleve').value;
+            const poste = document.getElementById('numPoste').value;
+            const codeSaisi = (document.getElementById('l1').value + document.getElementById('l2').value).toUpperCase();
 
-        function retourDossard() {
-            const cl = document.getElementById('selectClasse').value;
-            if(curC && curN) db.ref(`classes/${cl}/results/${curC}_${curN}`).off();
-            document.getElementById('stepSaisie').classList.add('hidden');
-            document.getElementById('stepDossard').classList.remove('hidden');
-            curC = null; curP = null; curN = null; lastPunchTime = 0;
-            document.querySelectorAll('#gridNums button').forEach(b => b.classList.remove('btn-active'));
-        }
-        
-        function setP(p) { 
-            curP = p; 
-            document.querySelectorAll('#pList button').forEach(b => b.classList.remove('btn-active')); 
-            document.getElementById('pBtn'+p).classList.add('btn-active'); 
-            document.getElementById('l1').focus();
-        }
-
-        function valider() {
-            if(!curP) return alert("Sélectionne un circuit (P1-P12) !");
-            const l1 = document.getElementById('l1').value.toUpperCase().trim(), l2 = document.getElementById('l2').value.toUpperCase().trim();
-            if(!l1 && !l2) return alert("Saisis les lettres !");
-
-            // Délai 45 secondes
-            const tempsEcoule = Date.now() - lastPunchTime;
-            if (lastPunchTime > 0 && tempsEcoule < 45000) {
-                return alert(`⏳ TROP RAPIDE ! Attend encore ${Math.ceil((45000 - tempsEcoule) / 1000)}s.`);
+            if (!selectedColor || !num || !poste || codeSaisi.length < 2) {
+                return alert("Remplis tous les champs !");
             }
 
-            const cl = document.getElementById('selectClasse').value;
-            const sol = matrix[curP]?.[curC]; 
-            let pts = 0, msg = "Faux !", icon = "❌", bg = "bg-red-600";
-            let s1 = "text-red-400 line-through", s2 = "text-red-400 line-through";
-
-            if(sol) {
-                const sArr = sol.split('');
-                if(l1 === sArr[0]) { pts += 2.5; s1 = "text-green-400"; }
-                if(l2 === sArr[1]) { pts += 2.5; s2 = "text-green-400"; }
-                pts = Math.floor(pts === 5 ? 5 : (pts > 0 ? 2 : 0)); // 5pts si parfait, 2pts si 1 lettre
-                if(pts === 5) { msg = "Parfait !"; icon = "🏆"; bg = "bg-green-600"; playTone(880, 0.3, 'sine'); }
-                else if(pts === 2) { msg = "1 lettre !"; icon = "🆗"; bg = "bg-orange-500"; playTone(440, 0.2, 'sine'); }
-                else { playTone(150, 0.4, 'sawtooth'); }
-            }
-
-            db.ref(`classes/${cl}/results/${curC}_${curN}/C${curP}`).set({ 
-                score: pts, 
-                time: Math.floor((Date.now()-startT)/1000),
-                realTime: Date.now() 
-            }).then(() => {
-                db.ref(`classes/${cl}/results/${curC}_${curN}`).once('value', snap => {
-                    const all = snap.val() || {};
-                    const totalPts = Object.values(all).reduce((a,b) => a + (b.score||0), 0);
-                    const count = Object.keys(all).length;
-                    
-                    document.getElementById('fbStats').innerText = `${count} Balise(s) | Total : ${totalPts} Points`;
-                    document.getElementById('fbIcon').innerText = icon;
-                    document.getElementById('fbPoints').innerText = `+${pts} PTS`;
-                    document.getElementById('fbLetters').innerHTML = `<span class="${s1}">${l1||'?'}</span><span class="${s2}">${l2||'?'}</span>`;
-                    const fb = document.getElementById('feedback');
-                    fb.className = `fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center ${bg}`;
-                    if(pts === 0) fb.classList.add('animate-shake');
-                    fb.classList.remove('hidden');
+            // Vérification locale (Instantanée, pas besoin de réseau)
+            const codeVerite = matriceCache[poste]?.[selectedColor];
+            
+            if (codeVerite && (codeSaisi === codeVerite[0] || codeSaisi === codeVerite[1])) {
+                // BONNE RÉPONSE
+                const points = 10; // Tu peux ajuster le barème ici
+                
+                // Envoi Firebase robuste (ServerValue.increment gère très bien les pertes réseau)
+                const userRef = db.ref(`sessions/${curCl}/${selectedColor}_${num}`);
+                userRef.update({
+                    score: firebase.database.ServerValue.increment(points),
+                    lastScan: firebase.database.ServerValue.TIMESTAMP
                 });
-            });
+
+                afficherFeedback(true, points, codeSaisi);
+            } else {
+                // MAUVAISE RÉPONSE
+                afficherFeedback(false, 0, codeSaisi);
+            }
+        }
+
+        // ==========================================
+        // 7. FEEDBACK ET NETTOYAGE
+        // ==========================================
+        function afficherFeedback(succes, pts, codeSaisi) {
+            const fb = document.getElementById('feedback');
+            const icon = document.getElementById('fbIcon');
+            const points = document.getElementById('fbPoints');
+            const msg = document.getElementById('fbMessage');
+
+            if (succes) {
+                fb.className = "fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center bg-emerald-600 transition-all";
+                icon.innerText = "🎯";
+                points.innerText = `+${pts} PTS`;
+                msg.innerText = `Super ! Le code ${codeSaisi} est correct.`;
+            } else {
+                fb.className = "fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center bg-red-600 transition-all";
+                icon.innerText = "❌";
+                points.innerText = "0 PTS";
+                msg.innerText = `Erreur. Le code ${codeSaisi} n'est pas le bon.`;
+            }
         }
 
         function fermerFeedback() {
             document.getElementById('feedback').classList.add('hidden');
-            document.getElementById('feedback').classList.remove('animate-shake');
-            document.getElementById('l1').value = ""; document.getElementById('l2').value = "";
-            curP = null; document.querySelectorAll('#pList button').forEach(b => b.classList.remove('btn-active'));
+            
+            // Nettoyage Stateless : On vide tout pour le prochain élève
+            document.getElementById('numEleve').value = "";
+            document.getElementById('numPoste').value = "";
+            document.getElementById('l1').value = "";
+            document.getElementById('l2').value = "";
+            selectedColor = "";
+            document.querySelectorAll('.btn-color').forEach(b => b.classList.remove('btn-active'));
+            
+            // Retour en haut de page
+            document.getElementById('mainZone').scrollTop = 0;
         }
     </script>
 </body>
