@@ -8,14 +8,12 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
-        /* Optimisation Mobile / Forêt */
         body { background-color: #0f172a; touch-action: manipulation; color: white; user-select: none; }
         .input-box { background: #1e293b; border: 2px solid #334155; text-align: center; font-size: 3rem; font-weight: 900; border-radius: 15px; width: 80px; height: 80px; text-transform: uppercase; outline: none; transition: 0.2s; }
         .input-box:focus { border-color: #3b82f6; box-shadow: 0 0 15px rgba(59,130,246,0.5); }
         .btn-active { background: #3b82f6 !important; border-color: white !important; transform: scale(1.05); }
         .btn-color { transition: 0.2s; }
         
-        /* Couleurs des équipes */
         .col-NOIR { background-color: #334155; }
         .col-ROUGE { background-color: #b91c1c; }
         .col-BLEU { background-color: #1d4ed8; }
@@ -85,7 +83,7 @@
 
     <script>
         // ==========================================
-        // 1. CONFIGURATION FIREBASE (Récupérée depuis tes fichiers)
+        // 1. CONFIGURATION FIREBASE
         // ==========================================
         const firebaseConfig = {
             databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/"
@@ -94,45 +92,60 @@
         const db = firebase.database();
 
         // ==========================================
-        // 2. VARIABLES GLOBALES (Limités au strict nécessaire)
+        // 2. AUDIO (Bips)
+        // ==========================================
+        let audioCtx;
+        function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        function playTone(freq, duration, type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = type; osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
+        }
+
+        // ==========================================
+        // 3. VARIABLES GLOBALES
         // ==========================================
         let curCl = "";
         let selectedColor = "";
         let isCourseActive = false;
-        let matriceCache = {}; // Cache local de la matrice pour validation instantanée (Offline)
-        
-        // Écouteurs pour pouvoir les détruire proprement
+        let matriceCache = {}; 
         let startListener = null;
         let endListener = null;
 
         // ==========================================
-        // 3. INITIALISATION
+        // 4. INITIALISATION
         // ==========================================
         window.onload = () => {
-            // Remplir le menu des classes
+            // Remplir le menu (en ignorant les bugs potentiels comme "true")
             db.ref('settings/classes').on('value', snap => {
                 const classes = snap.val() || {};
                 const select = document.getElementById('clSelect');
-                // On garde la première option (placeholder)
                 select.innerHTML = '<option value="">Sélectionne ta classe...</option>';
                 Object.keys(classes).forEach(c => {
-                    if(c !== "true") select.innerHTML += `<option value="${c}">${c}</option>`;
+                    if(c !== "true" && c !== "null") select.innerHTML += `<option value="${c}">${c}</option>`;
                 });
             });
 
-            // Charger la matrice en mémoire cache
+            // Cache de la matrice pour validation sans latence
             db.ref('settings/matrix').on('value', snap => {
                 matriceCache = snap.val() || {};
             });
+            
+            // Activation audio sur le premier clic (Sécurité navigateurs)
+            document.body.addEventListener('click', initAudio, { once: true });
         };
 
         // ==========================================
-        // 4. GESTION DES ÉTATS (CHANGEMENT DE CLASSE)
+        // 5. CHANGEMENT DE CLASSE & VERROUILLAGE
         // ==========================================
         function changerClasse() {
             curCl = document.getElementById('clSelect').value;
 
-            // Nettoyage des anciens écouteurs
             if (startListener) startListener.off();
             if (endListener) endListener.off();
 
@@ -141,7 +154,6 @@
                 return;
             }
 
-            // Écoute du chrono (Start/Stop) de cette classe
             startListener = db.ref(`settings/startTime/${curCl}`);
             endListener = db.ref(`settings/endTime/${curCl}`);
 
@@ -179,9 +191,6 @@
             document.getElementById('courseState').className = `text-sm font-bold mt-1 ${textClass}`;
         }
 
-        // ==========================================
-        // 5. INTERACTIONS UI
-        // ==========================================
         function selectColor(color, btn) {
             selectedColor = color;
             document.querySelectorAll('.btn-color').forEach(b => b.classList.remove('btn-active'));
@@ -189,66 +198,76 @@
         }
 
         // ==========================================
-        // 6. VALIDATION (LOGIQUE OFFLINE-FIRST)
+        // 6. VALIDATION & SAUVEGARDE (Aligné avec Maître)
         // ==========================================
         function validerCode() {
             if (!isCourseActive) return alert("La course n'est pas active.");
             
             const num = document.getElementById('numEleve').value;
-            const poste = document.getElementById('numPoste').value;
-            const codeSaisi = (document.getElementById('l1').value + document.getElementById('l2').value).toUpperCase();
+            const poste = parseInt(document.getElementById('numPoste').value);
+            const l1 = document.getElementById('l1').value.toUpperCase();
+            const l2 = document.getElementById('l2').value.toUpperCase();
 
-            if (!selectedColor || !num || !poste || codeSaisi.length < 2) {
-                return alert("Remplis tous les champs !");
+            if (!selectedColor || !num || !poste || (!l1 && !l2)) {
+                return alert("Remplis tous les champs (au moins une lettre) !");
             }
 
-            // Vérification locale (Instantanée, pas besoin de réseau)
             const codeVerite = matriceCache[poste]?.[selectedColor];
-            
-            if (codeVerite && (codeSaisi === codeVerite[0] || codeSaisi === codeVerite[1])) {
-                // BONNE RÉPONSE
-                const points = 10; // Tu peux ajuster le barème ici
-                
-                // Envoi Firebase robuste (ServerValue.increment gère très bien les pertes réseau)
-                const userRef = db.ref(`sessions/${curCl}/${selectedColor}_${num}`);
-                userRef.update({
-                    score: firebase.database.ServerValue.increment(points),
-                    lastScan: firebase.database.ServerValue.TIMESTAMP
-                });
+            let pts = 0;
+            let msg = "Faux !";
+            let succes = false;
 
-                afficherFeedback(true, points, codeSaisi);
+            if (codeVerite) {
+                // Correspondance avec le barème attendu par ton fichier Maitre
+                if (l1 === codeVerite[0]) pts += 2.5;
+                if (l2 === codeVerite[1]) pts += 2.5;
+                
+                pts = Math.floor(pts === 5 ? 5 : (pts > 0 ? 2 : 0)); // 5pts = parfait, 2pts = partiel, 0pt = faux
+                
+                if (pts === 5) { msg = "Parfait !"; succes = true; playTone(880, 0.3, 'sine'); }
+                else if (pts === 2) { msg = "1 lettre correcte !"; succes = true; playTone(440, 0.2, 'sine'); }
+                else { playTone(150, 0.4, 'sawtooth'); }
             } else {
-                // MAUVAISE RÉPONSE
-                afficherFeedback(false, 0, codeSaisi);
+                playTone(150, 0.4, 'sawtooth');
             }
+
+            // Écriture de la balise précise au bon endroit pour les stats de Maitre
+            db.ref(`sessions/${curCl}/${selectedColor}_${num}/C${poste}`).set({ 
+                score: pts, 
+                realTime: firebase.database.ServerValue.TIMESTAMP 
+            }).then(() => {
+                afficherFeedback(succes, pts, l1+l2, msg);
+            }).catch(err => alert("Erreur réseau : " + err));
         }
 
         // ==========================================
-        // 7. FEEDBACK ET NETTOYAGE
+        // 7. FEEDBACK ET NETTOYAGE (Stateless)
         // ==========================================
-        function afficherFeedback(succes, pts, codeSaisi) {
+        function afficherFeedback(succes, pts, codeSaisi, msgTexte) {
             const fb = document.getElementById('feedback');
             const icon = document.getElementById('fbIcon');
             const points = document.getElementById('fbPoints');
             const msg = document.getElementById('fbMessage');
 
-            if (succes) {
+            if (pts === 5) {
                 fb.className = "fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center bg-emerald-600 transition-all";
-                icon.innerText = "🎯";
-                points.innerText = `+${pts} PTS`;
-                msg.innerText = `Super ! Le code ${codeSaisi} est correct.`;
+                icon.innerText = "🏆";
+            } else if (pts === 2) {
+                fb.className = "fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center bg-orange-500 transition-all";
+                icon.innerText = "🆗";
             } else {
                 fb.className = "fixed inset-0 flex flex-col items-center justify-center z-50 p-8 text-center bg-red-600 transition-all";
                 icon.innerText = "❌";
-                points.innerText = "0 PTS";
-                msg.innerText = `Erreur. Le code ${codeSaisi} n'est pas le bon.`;
             }
+            
+            points.innerText = `+${pts} PTS`;
+            msg.innerText = msgTexte;
+            fb.classList.remove('hidden');
         }
 
         function fermerFeedback() {
             document.getElementById('feedback').classList.add('hidden');
             
-            // Nettoyage Stateless : On vide tout pour le prochain élève
             document.getElementById('numEleve').value = "";
             document.getElementById('numPoste').value = "";
             document.getElementById('l1').value = "";
@@ -256,7 +275,6 @@
             selectedColor = "";
             document.querySelectorAll('.btn-color').forEach(b => b.classList.remove('btn-active'));
             
-            // Retour en haut de page
             document.getElementById('mainZone').scrollTop = 0;
         }
     </script>
