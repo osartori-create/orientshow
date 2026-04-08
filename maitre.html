@@ -1,340 +1,268 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Master PRO | Orient'Show</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    
-    <script>
-        // Sécurité basique
-        if (sessionStorage.getItem("os_access") !== "granted") window.location.href = "index.html";
-    </script>
-    
+    <!-- SheetJS pour export Excel côté client -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>if (sessionStorage.getItem("os_access") !== "granted") window.location.href = "index.html";</script>
     <style>
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .tab-btn { transition: 0.3s; }
-        .tab-btn.active { background-color: #1e293b; border-bottom: 4px solid #3b82f6; color: #60a5fa; }
+        .tab-btn { flex: 1; padding: 20px; font-weight: 900; text-transform: uppercase; background: #1e293b; border-bottom: 5px solid transparent; transition: 0.3s; }
+        .tab-active { background: #3b82f6; border-color: white; }
+        .pastille { width: 45px; height: 45px; border-radius: 50%; border: 3px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; color: white; }
+        
+        /* Stats table */
+        .stats-bar-bg { background: #1e293b; border-radius: 999px; height: 10px; width: 100%; }
+        .stats-bar { height: 10px; border-radius: 999px; transition: width 0.6s ease; }
+        .stats-table th { background: #1e293b; padding: 10px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; z-index: 10; }
+        .stats-table td { padding: 10px 8px; border-bottom: 1px solid #1e293b; font-size: 13px; }
+        .stats-table tr:hover td { background: #1e293b55; }
     </style>
 </head>
-<body class="h-screen flex flex-col">
-
-    <header class="bg-slate-900 border-b border-slate-800 p-4 shadow-md z-10 relative">
-        <h1 class="text-2xl font-black italic text-blue-500 uppercase tracking-tighter">Orient'Show <span class="text-white text-sm">PRO</span></h1>
-        <div class="flex items-center gap-4 mt-4">
-            <span class="font-bold text-slate-400">Classe active :</span>
-            <span id="displayCurCl" class="px-3 py-1 bg-blue-900/50 text-blue-400 font-bold rounded border border-blue-800">Aucune</span>
+<body class="p-4">
+    <header class="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4 italic font-black uppercase text-sm">
+        <div class="flex items-center gap-4">
+            <h1 class="text-2xl text-blue-500 tracking-tighter">Master PRO</h1>
+            <!-- Modification : Bouton de chrono Start/Stop -->
+            <button id="btnChrono" onclick="toggleChrono()" class="bg-emerald-600 px-6 py-2 rounded-full animate-pulse shadow-[0_0_15px_rgba(5,150,105,0.6)]">🚀 TOP DÉPART</button>
+            <div id="chronoDisplay" class="hidden text-2xl font-mono text-yellow-400">00:00</div>
+        </div>
+        <div class="flex items-center gap-2">
+            <select id="activeClasse" onchange="loadClasse()" class="bg-slate-800 p-2 rounded-lg border border-slate-700 min-w-[150px]"></select>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="document.getElementById('csv').click()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-[10px] shadow-lg">📂 Import iDoceo</button>
+            <input type="file" id="csv" class="hidden" accept=".csv" onchange="importCSV(this)">
+            <button onclick="resetData('scores')" class="bg-yellow-600 px-3 py-2 rounded-lg text-[10px]">Vider Scores</button>
+            <button onclick="resetData('base')" class="bg-red-600 px-3 py-2 rounded-lg text-[10px]">Purger Base</button>
         </div>
     </header>
 
-    <nav class="flex bg-slate-800 text-slate-400 font-bold uppercase text-sm shadow-sm z-0">
-        <button class="tab-btn active flex-1 p-4" onclick="openTab('tab-config', this)">⚙️ Config</button>
-        <button class="tab-btn flex-1 p-4" onclick="openTab('tab-csv', this)">📄 Import CSV</button>
-        <button class="tab-btn flex-1 p-4" onclick="openTab('tab-chrono', this)">⏱️ Chrono</button>
-        <button class="tab-btn flex-1 p-4" onclick="openTab('tab-carte', this)">🏆 Podium</button>
+    <nav class="flex gap-2 mb-6">
+        <button onclick="switchTab('bilan')" id="btnTabBilan" class="tab-btn tab-active">📊 Bilan</button>
+        <button onclick="switchTab('carte')" id="btnTabCarte" class="tab-btn">🏆 Podium</button>
+        <button onclick="switchTab('groupes')" id="btnTabGroupes" class="tab-btn">👥 Groupes</button>
+        <button onclick="switchTab('stats')" id="btnTabStats" class="tab-btn">📈 Stats</button>
+        <button onclick="switchTab('codes')" id="btnTabCodes" class="tab-btn !flex-none !w-24 text-[10px]">📝 Codes</button>
     </nav>
 
-    <main class="flex-1 overflow-auto p-6 relative">
-
-        <div id="tab-config" class="tab-content active space-y-6">
-            <div class="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg">
-                <h2 class="text-xl font-black">Administration Base de données</h2>
-                <div class="space-x-2">
-                    <button onclick="resetData('scores')" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded transition">Vider les scores</button>
-                    <button onclick="resetData('all')" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition shadow-[0_0_15px_rgba(220,38,38,0.3)]">PURGE TOTALE</button>
-                </div>
-            </div>
-
-            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 overflow-x-auto shadow-lg">
-                <h2 class="text-xl font-black mb-4 text-blue-400">Matrice des Codes</h2>
-                <table class="w-full text-center border-collapse">
-                    <thead id="matrixHead"></thead>
-                    <tbody id="matrixBody"></tbody>
-                </table>
-            </div>
+    <div id="viewBilan" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
+    <div id="viewGroupes" class="hidden grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
+    
+    <!-- Modification : Remplacement de la carte par le Podium -->
+    <div id="viewCarte" class="hidden">
+        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 min-h-[500px]">
+            <h3 class="text-xl font-black text-blue-400 mb-8 uppercase text-center">🏆 Classement en direct</h3>
+            <div id="podiumContainer" class="flex justify-center items-end gap-4 h-56 mb-10 border-b border-slate-700 pb-4"></div>
+            <div id="leaderboardList" class="space-y-2 max-w-2xl mx-auto"></div>
         </div>
-
-        <div id="tab-csv" class="tab-content">
-            <div class="bg-slate-800 p-8 rounded-xl border border-slate-700 text-center max-w-2xl mx-auto mt-10 shadow-lg">
-                <h2 class="text-2xl font-black mb-2 text-white">Importer une classe (iDoceo)</h2>
-                <p class="text-sm text-slate-400 mb-8 leading-relaxed">Traitement local (iPad) strict pour le respect du RGPD.<br>Seuls les dossards et les points sont synchronisés sur le réseau.</p>
-                <label class="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-wide py-5 px-10 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] transition inline-block">
-                    📂 Parcourir et Importer
-                    <input type="file" accept=".csv" class="hidden" onchange="handleFile(event)">
-                </label>
-            </div>
+    </div>
+    
+    <div id="viewStats" class="hidden space-y-6">
+        <div class="flex justify-between items-center">
+            <h2 class="text-xl font-black uppercase text-blue-400 italic tracking-tight">📈 Statistiques par balise</h2>
+            <button onclick="exportExcel()" class="bg-green-600 hover:bg-green-500 px-5 py-2 rounded-xl font-black uppercase text-sm flex items-center gap-2 shadow-lg">⬇️ Export Excel iDoceo</button>
         </div>
-
-        <div id="tab-chrono" class="tab-content">
-            <div class="bg-slate-800 p-10 rounded-xl border border-slate-700 text-center max-w-xl mx-auto mt-10 shadow-lg">
-                <h2 class="text-3xl font-black mb-8 text-white">Contrôle de la Course</h2>
-                <button id="btnChrono" onclick="toggleChrono()" class="w-full py-8 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-2xl uppercase rounded-2xl shadow-[0_0_30px_rgba(5,150,105,0.4)] transition-all transform active:scale-95">
-                    ⏱️ DONNER LE DÉPART
-                </button>
-                <p id="chronoStatus" class="mt-6 text-lg text-slate-400 font-bold uppercase tracking-widest">En attente...</p>
-            </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="statsResume"></div>
+        <div class="overflow-auto rounded-2xl border border-slate-700">
+            <table class="w-full stats-table text-left font-bold">
+                <thead><tr><th class="rounded-tl-2xl">Balise</th><th>Tentatives</th><th>✅ Parfait (5pts)</th><th>🆗 Partiel (2pts)</th><th>❌ Faux (0pt)</th><th class="rounded-tr-2xl">Taux réussite</th></tr></thead>
+                <tbody id="statsBody"></tbody>
+            </table>
         </div>
-
-        <div id="tab-carte" class="tab-content">
-            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 min-h-[500px] shadow-lg">
-                <div class="flex justify-between items-center mb-10 border-b border-slate-700 pb-4">
-                    <h3 class="text-2xl font-black text-blue-400 uppercase tracking-tight">🏆 Classement Live</h3>
-                    <div class="text-sm font-bold text-slate-400 bg-slate-900 px-3 py-1 rounded">Mise à jour instantanée</div>
-                </div>
-                
-                <div id="podiumContainer" class="flex justify-center items-end gap-4 h-64 mb-12">
-                    </div>
-
-                <div id="leaderboardList" class="space-y-3 max-w-2xl mx-auto">
-                    </div>
-            </div>
+        <div class="bg-slate-800 rounded-2xl border border-slate-700 p-5">
+            <h3 class="font-black uppercase text-sm text-slate-400 mb-4">🏅 Classement des balises</h3>
+            <div id="statsRanking" class="space-y-3"></div>
         </div>
+    </div>
 
-    </main>
+    <div id="viewCodes" class="hidden overflow-auto border border-slate-700 rounded-xl"><table class="w-full text-xs text-center font-bold uppercase" id="matrixTable"></table></div>
+
+    <div id="modalDetails" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4">
+        <div class="bg-slate-800 w-full max-w-xl rounded-3xl p-6 border border-slate-700">
+            <div class="flex justify-between items-start mb-6"><h2 id="mName" class="text-2xl font-black text-blue-400 italic"></h2><button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl">&times;</button></div>
+            <div id="mHistory" class="space-y-2 max-h-[60vh] overflow-auto"></div>
+        </div>
+    </div>
 
     <script>
-        // ==========================================
-        // 1. CONFIGURATION FIREBASE (Extraite de tes fichiers)
-        // ==========================================
-        const firebaseConfig = {
-            databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/"
-        };
-        
-        // Initialisation sécurisée
+        const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-
-        // ==========================================
-        // 2. VARIABLES GLOBALES ET ÉTAT
-        // ==========================================
-        let curCl = localStorage.getItem('os_last_cl') || null;
-        let activeScoresListener = null;
+        const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
+        const colStyles = { NOIR:"bg-black", ROUGE:"bg-red-600", BLEU:"bg-blue-600", VERT:"bg-green-600", JAUNE:"bg-yellow-500 text-black" };
+        
+        let mapping = JSON.parse(localStorage.getItem('os_map_final') || '{}');
+        let curCl = localStorage.getItem('os_last_cl') || ""; 
+        let results = {};
         let chronoActive = false;
-        const couleurs = ['NOIR', 'ROUGE', 'BLEU', 'VERT', 'JAUNE'];
 
-        // Initialisation au lancement
-        window.onload = () => {
-            updateUIState();
-            genererMatriceEnDur();
-            if (curCl && curCl !== "true") {
-                ecouterClassement(curCl);
-                verifierEtatChrono();
-            }
+        const myCodes = { 
+            1:{NOIR:["D","Q"],ROUGE:["O","U"],BLEU:["Y","A"],VERT:["E","R"],JAUNE:["N","K"]}, 
+            2:{NOIR:["E","X"],ROUGE:["X","Y"],BLEU:["T","L"],VERT:["R","O"],JAUNE:["A","L"]}, 
+            3:{NOIR:["C","L"],ROUGE:["H","U"],BLEU:["I","B"],VERT:["O","I"],JAUNE:["T","E"]}, 
+            4:{NOIR:["R","V"],ROUGE:["E","E"],BLEU:["C","R"],VERT:["T","N"],JAUNE:["O","I"]}, 
+            5:{NOIR:["A","B"],ROUGE:["J","O"],BLEU:["O","U"],VERT:["N","E"],JAUNE:["C","S"]}, 
+            6:{NOIR:["F","M"],ROUGE:["I","E"],BLEU:["C","R"],VERT:["U","O"],JAUNE:["S","U"]}, 
+            7:{NOIR:["G","H"],ROUGE:["U","A"],BLEU:["E","C"],VERT:["U","H"],JAUNE:["X","E"]}, 
+            8:{NOIR:["I","J"],ROUGE:["V","E"],BLEU:["R","A"],VERT:["E","N"],JAUNE:["S","S"]}, 
+            9:{NOIR:["K","N"],ROUGE:["R","Y"],BLEU:["A","L"],VERT:["F","O"],JAUNE:["T","N"]}, 
+            10:{NOIR:["O","S"],ROUGE:["C","E"],BLEU:["E","I"],VERT:["A","Z"],JAUNE:["N","E"]}, 
+            11:{NOIR:["P","T"],ROUGE:["A","U"],BLEU:["L","Y"],VERT:["U","A"],JAUNE:["D","U"]}, 
+            12:{NOIR:["U","W"],ROUGE:["L","I"],BLEU:["T","N"],VERT:["R","C"],JAUNE:["A","H"]} 
         };
+        
+        db.ref('settings/matrix').once('value', snap => { if(!snap.exists()) db.ref('settings/matrix').set(myCodes); });
 
-        // Navigation des onglets
-        function openTab(tabId, btn) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            btn.classList.add('active');
-        }
+        db.ref('settings/classes').on('value', snap => {
+            // Modification : on filtre le bug 'true' pour éviter qu'il n'apparaisse
+            const clArr = Object.keys(snap.val() || {}).filter(c => c !== "null" && c !== "true");
+            document.getElementById('activeClasse').innerHTML = '<option value="">-- CHOISIR --</option>' + clArr.map(c => `<option value="${c}" ${c===curCl?'selected':''}>${c}</option>`).join('');
+            if(!curCl && clArr.length > 0) { curCl = clArr[0]; loadClasse(); }
+        });
 
-        function updateUIState() {
-            document.getElementById('displayCurCl').innerText = (curCl && curCl !== "true") ? curCl : "Aucune";
-        }
-
-        // ==========================================
-        // 3. MATRICE DES CODES EN DUR
-        // ==========================================
-        const MATRICE_DEFAUT = {
-            1: { NOIR: ["A1",""], ROUGE: ["B2",""], BLEU: ["C3",""], VERT: ["D4",""], JAUNE: ["E5",""] },
-            2: { NOIR: ["F6",""], ROUGE: ["G7",""], BLEU: ["H8",""], VERT: ["I9",""], JAUNE: ["J0",""] },
-            3: { NOIR: ["K1",""], ROUGE: ["L2",""], BLEU: ["M3",""], VERT: ["N4",""], JAUNE: ["O5",""] },
-            4: { NOIR: ["P6",""], ROUGE: ["Q7",""], BLEU: ["R8",""], VERT: ["S9",""], JAUNE: ["T0",""] },
-            5: { NOIR: ["U1",""], ROUGE: ["V2",""], BLEU: ["W3",""], VERT: ["X4",""], JAUNE: ["Y5",""] },
-            6: { NOIR: ["Z6",""], ROUGE: ["A7",""], BLEU: ["B8",""], VERT: ["C9",""], JAUNE: ["D0",""] },
-            7: { NOIR: ["E1",""], ROUGE: ["F2",""], BLEU: ["G3",""], VERT: ["H4",""], JAUNE: ["I5",""] },
-            8: { NOIR: ["J6",""], ROUGE: ["K7",""], BLEU: ["L8",""], VERT: ["M9",""], JAUNE: ["N0",""] },
-            9: { NOIR: ["O1",""], ROUGE: ["P2",""], BLEU: ["Q3",""], VERT: ["R4",""], JAUNE: ["S5",""] },
-            10:{ NOIR: ["T6",""], ROUGE: ["U7",""], BLEU: ["V8",""], VERT: ["W9",""], JAUNE: ["X0",""] },
-            11:{ NOIR: ["Y1",""], ROUGE: ["Z2",""], BLEU: ["A3",""], VERT: ["B4",""], JAUNE: ["C5",""] },
-            12:{ NOIR: ["D6",""], ROUGE: ["E7",""], BLEU: ["F8",""], VERT: ["G9",""], JAUNE: ["H0",""] }
-        };
-
-        function genererMatriceEnDur() {
-            let hHead = `<tr class="bg-slate-900 text-xs"><th>Balise</th>`;
-            couleurs.forEach(col => hHead += `<th colspan="2" class="py-3 text-${col === 'NOIR' ? 'gray-400' : col.toLowerCase()+'-500'}">${col}</th>`);
-            hHead += `</tr>`;
-            document.getElementById('matrixHead').innerHTML = hHead;
-
-            let hBody = "";
-            for (let c = 1; c <= 12; c++) {
-                hBody += `<tr class="border-b border-slate-800 hover:bg-slate-800/50 transition">
-                            <td class="font-black py-2 text-slate-400">P${c}</td>`;
-                couleurs.forEach(col => {
-                    const l = MATRICE_DEFAUT[c][col];
-                    // Synchronisation initiale silencieuse avec Firebase
-                    db.ref(`settings/matrix/${c}/${col}`).set(l);
-                    
-                    hBody += `<td><input class="w-12 bg-slate-900 text-center font-bold text-blue-400 uppercase outline-none focus:bg-slate-700 focus:ring-1 focus:ring-blue-500 rounded py-1" value="${l[0]}" maxlength="2" onchange="updateMatrix(${c}, '${col}', 0, this.value)"></td>
-                              <td><input class="w-12 bg-slate-900 text-center font-bold text-blue-400 uppercase outline-none focus:bg-slate-700 focus:ring-1 focus:ring-blue-500 rounded py-1 ml-1" value="${l[1]}" maxlength="2" onchange="updateMatrix(${c}, '${col}', 1, this.value)"></td>`;
-                });
-                hBody += `</tr>`;
-            }
-            document.getElementById('matrixBody').innerHTML = hBody;
-        }
-
-        function updateMatrix(poste, couleur, index, valeur) {
-            db.ref(`settings/matrix/${poste}/${couleur}/${index}`).set(valeur.toUpperCase());
-        }
-
-        // ==========================================
-        // 4. IMPORT CSV & TRAITEMENT RGPD LOCAL
-        // ==========================================
-        function handleFile(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            Papa.parse(file, {
-                complete: function(results) { processCSVData(results.data); }
-            });
-        }
-
-        function processCSVData(data) {
-            if (data.length < 2) return alert("Fichier vide ou invalide.");
-            const classe = data[1][4]; 
-            if (!classe) return alert("Classe non trouvée dans le CSV.");
-
-            const localDict = {}; 
-            const firebasePayload = {}; 
-            let studentCount = 0;
-
-            for (let i = 1; i < data.length; i++) {
-                const prenom = data[i][0];
-                const nom = data[i][1];
-                
-                if (prenom && nom) {
-                    const col = couleurs[studentCount % 5];
-                    const num = Math.floor(studentCount / 5) + 1;
-                    const code = `${col}_${num}`;
-
-                    // Dictionnaire local (iPad) : Prénom + Initiale (Ex: "Hugo H.")
-                    localDict[code] = `${prenom.trim()} ${nom.trim().charAt(0).toUpperCase()}.`;
-                    
-                    // Squelette Firebase : Anonyme (Juste le code et les scores)
-                    firebasePayload[code] = { score: 0, count: 0, lastScan: 0 };
-                    studentCount++;
-                }
-            }
-
-            // Sauvegarde dans le navigateur de l'iPad
-            localStorage.setItem(`os_dict_${classe}`, JSON.stringify(localDict));
-            localStorage.setItem('os_last_cl', classe);
-            curCl = classe;
-            updateUIState();
-
-            // Envoi atomique Firebase
-            db.ref(`settings/classes/${classe}`).set(true);
-            db.ref(`sessions/${classe}`).set(firebasePayload, (error) => {
-                if(!error) {
-                    alert(`Import réussi : ${studentCount} élèves ajoutés pour la classe ${classe}.`);
-                    ecouterClassement(curCl);
-                    verifierEtatChrono(); // Met à jour l'UI du chrono
-                }
-            });
-        }
-
-        // ==========================================
-        // 5. GESTION DU CHRONO (START / STOP)
-        // ==========================================
-        function toggleChrono() {
-            if (!curCl || curCl === "true") return alert("Sélectionnez/Importez une classe valide d'abord !");
+        function loadClasse() {
+            curCl = document.getElementById('activeClasse').value;
+            if(!curCl) return;
+            localStorage.setItem('os_last_cl', curCl);
             
-            const btn = document.getElementById('btnChrono');
-            const status = document.getElementById('chronoStatus');
-
-            if (!chronoActive) {
-                // START : On écrit le timestamp et on efface l'ancien signal de fin
-                db.ref(`settings/startTime/${curCl}`).set(firebase.database.ServerValue.TIMESTAMP);
-                db.ref(`settings/endTime/${curCl}`).remove();
-                
-                chronoActive = true;
-                btn.innerHTML = "🛑 STOP (Verrouiller le jeu)";
-                btn.classList.replace('bg-emerald-600', 'bg-red-600');
-                btn.classList.replace('hover:bg-emerald-500', 'hover:bg-red-500');
-                btn.classList.replace('shadow-[0_0_30px_rgba(5,150,105,0.4)]', 'shadow-[0_0_30px_rgba(220,38,38,0.4)]');
-                status.innerText = "Course en cours...";
-                status.classList.replace('text-slate-400', 'text-emerald-400');
-                status.classList.replace('text-red-400', 'text-emerald-400');
-            } else {
-                // STOP : On écrit le signal de fin qui verrouille les tablettes élèves
-                if(confirm("Arrêter la course ? Les élèves ne pourront plus saisir de codes.")) {
-                    db.ref(`settings/endTime/${curCl}`).set(firebase.database.ServerValue.TIMESTAMP);
-                    
-                    chronoActive = false;
-                    btn.innerHTML = "⏱️ DONNER LE DÉPART";
-                    btn.classList.replace('bg-red-600', 'bg-emerald-600');
-                    btn.classList.replace('hover:bg-red-500', 'hover:bg-emerald-500');
-                    btn.classList.replace('shadow-[0_0_30px_rgba(220,38,38,0.4)]', 'shadow-[0_0_30px_rgba(5,150,105,0.4)]');
-                    status.innerText = "Course terminée / verrouillée.";
-                    status.classList.replace('text-emerald-400', 'text-red-400');
-                }
-            }
-        }
-
-        // Fonction pour recaler l'UI du chrono si on recharge la page
-        function verifierEtatChrono() {
-            if (!curCl) return;
-            db.ref(`settings/startTime/${curCl}`).once('value', snapStart => {
-                db.ref(`settings/endTime/${curCl}`).once('value', snapEnd => {
+            db.ref(`sessions/${curCl}`).on('value', snap => { results = snap.val() || {}; updateUI(); });
+            
+            // Modification : Gestion Start / Stop synchronisée
+            db.ref(`settings/startTime/${curCl}`).on('value', snapStart => {
+                db.ref(`settings/endTime/${curCl}`).on('value', snapEnd => {
                     const start = snapStart.val();
                     const end = snapEnd.val();
                     const btn = document.getElementById('btnChrono');
-                    const status = document.getElementById('chronoStatus');
+                    const chronoDisplay = document.getElementById('chronoDisplay');
                     
-                    if (start && !end) {
-                        chronoActive = true;
-                        btn.innerHTML = "🛑 STOP (Verrouiller le jeu)";
-                        btn.className = "w-full py-8 bg-red-600 hover:bg-red-500 text-white font-black text-2xl uppercase rounded-2xl shadow-[0_0_30px_rgba(220,38,38,0.4)] transition-all transform active:scale-95";
-                        status.innerText = "Course en cours...";
-                        status.className = "mt-6 text-lg text-emerald-400 font-bold uppercase tracking-widest";
-                    } else {
+                    if (!start) {
                         chronoActive = false;
-                        btn.innerHTML = "⏱️ DONNER LE DÉPART";
-                        btn.className = "w-full py-8 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-2xl uppercase rounded-2xl shadow-[0_0_30px_rgba(5,150,105,0.4)] transition-all transform active:scale-95";
-                        status.innerText = end ? "Course terminée / verrouillée." : "En attente...";
-                        status.className = `mt-6 text-lg ${end ? 'text-red-400' : 'text-slate-400'} font-bold uppercase tracking-widest`;
+                        btn.innerHTML = "🚀 TOP DÉPART";
+                        btn.className = "bg-emerald-600 px-6 py-2 rounded-full animate-pulse shadow-[0_0_15px_rgba(5,150,105,0.6)] text-white";
+                        chronoDisplay.classList.add('hidden');
+                        clearInterval(window.it);
+                    } else if (start && !end) {
+                        chronoActive = true;
+                        btn.innerHTML = "🛑 STOP SÉANCE";
+                        btn.className = "bg-red-600 px-6 py-2 rounded-full shadow-[0_0_15px_rgba(220,38,38,0.6)] text-white";
+                        chronoDisplay.classList.remove('hidden');
+                        startTimer(start);
+                    } else if (end) {
+                        chronoActive = false;
+                        btn.innerHTML = "⏱️ SÉANCE TERMINÉE";
+                        btn.className = "bg-orange-600 px-6 py-2 rounded-full text-white";
+                        chronoDisplay.classList.remove('hidden');
+                        clearInterval(window.it); // Figé sur le temps de fin
                     }
                 });
             });
         }
 
-        // ==========================================
-        // 6. LE PODIUM ET CLASSEMENT LIVE
-        // ==========================================
-        function ecouterClassement(classe) {
-            if (!classe) return;
-            if (activeScoresListener) activeScoresListener.off(); // Empêche les fuites de mémoire
-
-            activeScoresListener = db.ref(`sessions/${classe}`);
-            activeScoresListener.on('value', snap => {
-                mettreAJourPodium(snap.val() || {}, classe);
-            });
+        function toggleChrono() {
+            if(!curCl) return alert("Sélectionnez une classe !");
+            if (!chronoActive) {
+                if(confirm("Lancer le chrono pour toute la classe ?")) {
+                    db.ref(`settings/startTime/${curCl}`).set(firebase.database.ServerValue.TIMESTAMP);
+                    db.ref(`settings/endTime/${curCl}`).remove();
+                }
+            } else {
+                if(confirm("Arrêter la course ? Les élèves seront verrouillés.")) {
+                    db.ref(`settings/endTime/${curCl}`).set(firebase.database.ServerValue.TIMESTAMP);
+                }
+            }
         }
 
-        function mettreAJourPodium(firebaseData, classe) {
-            // Lecture du dictionnaire local (Anonymisation inverse)
-            const dictRaw = localStorage.getItem(`os_dict_${classe}`);
-            const dict = dictRaw ? JSON.parse(dictRaw) : {};
+        // L'import CSV iDoceo strict de ton architecture
+        function importCSV(input) {
+            Papa.parse(input.files[0], { header: true, complete: res => {
+                const colNom = res.meta.fields.find(c => c.toLowerCase().includes('lastname'));
+                const colPre = res.meta.fields.find(c => c.toLowerCase().includes('name') && !c.toLowerCase().includes('last'));
+                const data = res.data.filter(r => r[colNom]);
+                const cName = (data[0]['@classe'] || prompt("Nom de la classe ?")).toUpperCase();
+                
+                mapping[cName] = data.map((r, i) => ({ 
+                    id: Date.now()+i, 
+                    last: r[colNom].toUpperCase(), 
+                    first: r[colPre], 
+                    code: `${colors[i % 5]}_${Math.floor(i / 5) + 1}`, 
+                    absent: false 
+                }));
+                localStorage.setItem('os_map_final', JSON.stringify(mapping));
+                
+                // On met à jour la classe AVANT d'écrire sur firebase pour ne pas envoyer 'true' par erreur
+                curCl = cName;
+                localStorage.setItem('os_last_cl', curCl);
+                
+                db.ref(`settings/classes/${cName}`).set(true).then(() => {
+                    alert(`Import de la classe ${cName} réussi !`);
+                    location.reload();
+                });
+            }});
+        }
 
-            const students = Object.keys(firebaseData).map(code => ({
-                code: code,
-                score: firebaseData[code].score || 0,
-                lastScan: firebaseData[code].lastScan || 0,
-                name: dict[code] || code 
-            })).filter(s => s.score > 0); 
-
-            // Tri : Points décroissants. En cas d'égalité, scan le plus ancien (le plus rapide)
-            students.sort((a, b) => {
-                if (b.score !== a.score) return b.score - a.score;
-                return a.lastScan - b.lastScan; 
+        function getStudentScore(sessionData) {
+            let pts = 0;
+            Object.keys(sessionData).forEach(key => {
+                if (key.startsWith('C') && sessionData[key].score !== undefined) pts += Number(sessionData[key].score) || 0;
             });
+            return pts;
+        }
+
+        function updateUI() {
+            const bil = document.getElementById('viewBilan'); const grp = document.getElementById('viewGroupes');
+            bil.innerHTML = ""; grp.innerHTML = "";
+            const list = mapping[curCl] || [];
+            
+            list.forEach((s, i) => {
+                const sessionData = results[s.code] || {}; 
+                const pts = getStudentScore(sessionData);
+                const colorCode = s.code.split('_')[0]; 
+                const numCode = s.code.split('_')[1];
+                let bg = pts > 0 ? "bg-blue-600" : "bg-slate-800";
+                
+                bil.innerHTML += `<div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-4 rounded-2xl text-center shadow-lg border border-white/5 cursor-pointer active:scale-95 transition-transform"><div class="flex justify-between font-black"><span class="pastille ${colStyles[colorCode]}">${numCode}</span><span class="text-2xl">${pts}</span></div><p class="text-lg font-black mt-2 truncate">${s.first}</p></div>`;
+                
+                grp.innerHTML += `<div class="bg-slate-800 p-4 rounded-2xl text-center border border-slate-700"><div class="pastille ${colStyles[colorCode]} mx-auto mb-2">${numCode}</div><p class="font-bold text-[10px] truncate uppercase opacity-50">${s.last}</p><p class="font-black text-xs truncate mb-2">${s.first}</p><select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 p-1 rounded text-[10px] w-full border border-slate-700 text-white"><option value="ABS" ${s.absent?'selected':''}>ABSENT</option>${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}</select></div>`;
+            });
+
+            updatePodium();
+            updateStats();
+        }
+
+        // Modification : Le Podium intégré qui utilise la structure `mapping`
+        function updatePodium() {
+            const list = mapping[curCl] || [];
+            if (!list.length) return;
+
+            let students = list.map(s => {
+                const sessionData = results[s.code] || {};
+                const pts = getStudentScore(sessionData);
+                
+                // Recherche de la balise scannée la plus récente pour départager les égalités
+                let derniereValidation = 0;
+                Object.keys(sessionData).forEach(k => {
+                    if (k.startsWith('C') && sessionData[k].realTime > derniereValidation) {
+                        derniereValidation = sessionData[k].realTime;
+                    }
+                });
+
+                return { 
+                    name: `${s.first} ${s.last.charAt(0)}.`, // Anonymisation UI
+                    score: pts, 
+                    time: derniereValidation, 
+                    code: s.code,
+                    absent: s.absent
+                };
+            }).filter(s => !s.absent && s.score > 0);
+
+            // Tri par points décroissants, puis temps croissant
+            students.sort((a, b) => b.score - a.score || a.time - b.time);
 
             const top3 = students.slice(0, 3);
             const rest = students.slice(3);
@@ -342,76 +270,159 @@
             const podiumEl = document.getElementById('podiumContainer');
             if (top3.length > 0) {
                 let podiumHTML = "";
-                const hauteurs = ['h-32', 'h-48', 'h-24']; 
+                const hauteurs = ['h-32', 'h-44', 'h-24']; 
                 const ordres = ['order-2', 'order-1', 'order-3']; 
-                const couleursPodium = ['bg-slate-400', 'bg-yellow-500', 'bg-amber-700']; 
-                const bgColors = ['bg-slate-700', 'bg-yellow-600/20', 'bg-amber-900/40'];
+                const couleursPodium = ['bg-slate-500', 'bg-yellow-500', 'bg-amber-700']; 
 
                 top3.forEach((s, index) => {
                     const vIndex = index === 0 ? 1 : (index === 1 ? 0 : 2); 
                     podiumHTML += `
-                        <div class="flex flex-col items-center justify-end ${ordres[vIndex]} w-32">
-                            <span class="text-sm font-bold truncate w-full text-center mb-1 drop-shadow-md text-slate-200">${s.name}</span>
-                            <span class="text-xl font-black text-blue-400 mb-2">${s.score} <span class="text-[10px] text-slate-500 uppercase">pts</span></span>
-                            <div class="w-full ${hauteurs[vIndex]} ${couleursPodium[vIndex]} rounded-t-2xl flex flex-col items-center justify-start pt-4 shadow-2xl border-t-[3px] border-white/40 relative overflow-hidden">
-                                <div class="absolute inset-0 ${bgColors[vIndex]} mix-blend-overlay"></div>
-                                <span class="text-5xl font-black text-white drop-shadow-lg z-10">${index + 1}</span>
+                        <div class="flex flex-col items-center justify-end ${ordres[vIndex]} w-28">
+                            <span class="text-sm font-bold truncate w-full text-center mb-1">${s.name}</span>
+                            <span class="text-base font-black text-blue-400 mb-2">${s.score} pts</span>
+                            <div class="w-full ${hauteurs[vIndex]} ${couleursPodium[vIndex]} rounded-t-xl flex flex-col items-center pt-3 shadow-2xl relative overflow-hidden">
+                                <span class="text-4xl font-black text-white/90 drop-shadow-lg z-10">${index + 1}</span>
                             </div>
                         </div>
                     `;
                 });
                 podiumEl.innerHTML = podiumHTML;
             } else {
-                podiumEl.innerHTML = `<div class="text-slate-500 text-sm flex items-center justify-center h-full w-full uppercase tracking-widest font-bold">En attente des premiers scans...</div>`;
+                podiumEl.innerHTML = `<div class="text-slate-500 text-sm flex items-center h-full">En attente des premiers points...</div>`;
             }
 
             const listEl = document.getElementById('leaderboardList');
-            let listHTML = "";
-            rest.forEach((s, index) => {
-                listHTML += `
-                    <div class="flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-sm hover:bg-slate-700/50 transition">
-                        <div class="flex items-center gap-4">
-                            <span class="text-slate-500 font-black w-8 text-right text-lg">${index + 4}.</span>
-                            <span class="font-bold text-lg uppercase tracking-wide text-slate-200">${s.name}</span>
-                        </div>
-                        <div class="font-black text-blue-400 text-xl">${s.score} <span class="text-xs text-slate-500 font-bold uppercase tracking-wider">pts</span></div>
+            listEl.innerHTML = rest.map((s, index) => `
+                <div class="flex items-center justify-between bg-slate-800/80 p-3 rounded-lg border border-slate-700">
+                    <div class="flex items-center gap-4">
+                        <span class="text-slate-500 font-black w-6 text-right">${index + 4}.</span>
+                        <span class="font-bold uppercase">${s.name}</span>
                     </div>
-                `;
-            });
-            listEl.innerHTML = listHTML;
+                    <div class="font-black text-blue-400 text-lg">${s.score} <span class="text-xs text-slate-500 font-normal">pts</span></div>
+                </div>
+            `).join('');
         }
 
-        // ==========================================
-        // 7. PURGE AUTOMATISÉE ET SÉCURISÉE
-        // ==========================================
+        // --- STATS CONSERVÉES À L'IDENTIQUE ---
+        function updateStats() {
+            const list = mapping[curCl] || [];
+            if (!list.length) return;
+            const circuitStats = {}; 
+            for (let p = 1; p <= 12; p++) circuitStats[p] = { tentatives: 0, parfait: 0, partiel: 0, faux: 0 };
+            let totalScore = 0, totalPunches = 0, studentsWithScore = 0;
+
+            list.forEach(s => {
+                const sessionData = results[s.code] || {};
+                const pts = getStudentScore(sessionData);
+                if (pts > 0) studentsWithScore++;
+                totalScore += pts;
+                Object.keys(sessionData).forEach(key => {
+                    if (!key.startsWith('C')) return;
+                    const pNum = parseInt(key.replace('C', ''));
+                    if (!circuitStats[pNum]) return;
+                    const score = Number(sessionData[key].score) || 0;
+                    circuitStats[pNum].tentatives++;
+                    totalPunches++;
+                    if (score === 5) circuitStats[pNum].parfait++;
+                    else if (score === 2) circuitStats[pNum].partiel++;
+                    else circuitStats[pNum].faux++;
+                });
+            });
+
+            const avgScore = list.length ? (totalScore / list.length).toFixed(1) : 0;
+            const globalRate = totalPunches ? Math.round(((Object.values(circuitStats).reduce((a,c)=>a+c.parfait,0)) / totalPunches) * 100) : 0;
+            document.getElementById('statsResume').innerHTML = `
+                <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 text-center"><div class="text-4xl font-black text-blue-400">${list.length}</div><div class="text-xs font-bold uppercase text-slate-400 mt-1">Élèves</div></div>
+                <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 text-center"><div class="text-4xl font-black text-yellow-400">${avgScore}</div><div class="text-xs font-bold uppercase text-slate-400 mt-1">Moy. points</div></div>
+                <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 text-center"><div class="text-4xl font-black text-green-400">${totalPunches}</div><div class="text-xs font-bold uppercase text-slate-400 mt-1">Balises validées</div></div>
+                <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 text-center"><div class="text-4xl font-black text-purple-400">${globalRate}%</div><div class="text-xs font-bold uppercase text-slate-400 mt-1">Taux réussite</div></div>
+            `;
+
+            let tbody = '';
+            for (let p = 1; p <= 12; p++) {
+                const c = circuitStats[p];
+                const rate = c.tentatives ? Math.round((c.parfait / c.tentatives) * 100) : 0;
+                const partialRate = c.tentatives ? Math.round((c.partiel / c.tentatives) * 100) : 0;
+                const color = rate >= 70 ? 'text-green-400' : rate >= 40 ? 'text-yellow-400' : rate > 0 ? 'text-red-400' : 'text-slate-500';
+                tbody += `<tr><td class="font-black text-blue-400">P${p}</td><td class="text-slate-300">${c.tentatives}</td><td class="text-green-400 font-bold">${c.parfait} <span class="text-slate-500 text-xs">(${rate}%)</span></td><td class="text-orange-400 font-bold">${c.partiel} <span class="text-slate-500 text-xs">(${partialRate}%)</span></td><td class="text-red-400 font-bold">${c.faux}</td><td><div class="flex items-center gap-2"><div class="stats-bar-bg flex-1"><div class="stats-bar bg-green-500" style="width:${rate}%"></div></div><span class="font-black ${color} w-10 text-right">${rate}%</span></div></td></tr>`;
+            }
+            document.getElementById('statsBody').innerHTML = tbody;
+
+            const ranked = Object.entries(circuitStats).filter(([,c]) => c.tentatives > 0).map(([p, c]) => ({ p: parseInt(p), rate: Math.round((c.parfait / c.tentatives) * 100), tentatives: c.tentatives })).sort((a, b) => b.rate - a.rate);
+            document.getElementById('statsRanking').innerHTML = ranked.map((r, i) => {
+                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
+                const barColor = r.rate >= 70 ? 'bg-green-500' : r.rate >= 40 ? 'bg-yellow-500' : 'bg-red-500';
+                return `<div class="flex items-center gap-3"><span class="w-8 text-center font-black">${medal}</span><span class="font-black text-blue-400 w-8">P${r.p}</span><div class="stats-bar-bg flex-1"><div class="stats-bar ${barColor}" style="width:${r.rate}%"></div></div><span class="font-black w-12 text-right">${r.rate}%</span><span class="text-slate-500 text-xs w-20">${r.tentatives} passages</span></div>`;
+            }).join('') || '<p class="text-slate-500 text-sm text-center">Aucune donnée pour l\'instant</p>';
+        }
+
+        // --- EXPORT EXCEL CONSERVÉ ---
+        function exportExcel() {
+            const list = mapping[curCl] || [];
+            if (!list.length) return alert("Aucun élève !");
+            const wb = XLSX.utils.book_new();
+            const notesData = [["Nom", "Prénom", "Dossard", "Score brut (/60)", "Note (/20)", ...Array.from({length:12},(_,i)=>`P${i+1}`)]];
+            list.forEach(s => {
+                const sessionData = results[s.code] || {};
+                const pts = getStudentScore(sessionData);
+                const note20 = Math.round((pts / 60) * 20 * 10) / 10;
+                const circuitScores = Array.from({length:12}, (_, i) => sessionData[`C${i+1}`] ? sessionData[`C${i+1}`].score : '');
+                notesData.push([s.last, s.first, s.code, pts, note20, ...circuitScores]);
+            });
+            const wsNotes = XLSX.utils.aoa_to_sheet(notesData);
+            wsNotes['!cols'] = [{wch:18},{wch:14},{wch:12},{wch:16},{wch:10},...Array(12).fill({wch:6})];
+            XLSX.utils.book_append_sheet(wb, wsNotes, "Notes");
+            XLSX.writeFile(wb, `OrientShow_${curCl}.xlsx`);
+        }
+
+        // --- UTILITAIRES ---
+        function openModal(n, c) {
+            document.getElementById('mName').innerText = n; document.getElementById('modalDetails').classList.remove('hidden');
+            db.ref(`sessions/${curCl}/${c}`).once('value', snap => {
+                const res = snap.val() || {};
+                document.getElementById('mHistory').innerHTML = Object.entries(res).map(([k, v]) => {
+                    if (!k.startsWith('C')) return '';
+                    return `<div class="bg-slate-900 p-3 rounded-xl flex justify-between items-center border border-slate-700 font-bold"><span>P${k.replace('C','')} - ${v.score} pts</span><button onclick="if(confirm('Sûr?')) db.ref('sessions/${curCl}/${c}/${k}').remove().then(()=>document.getElementById('modalDetails').classList.add('hidden'))" class="bg-red-600 px-3 rounded text-[10px] uppercase">Suppr</button></div>`;
+                }).join('') || "<p class='text-center opacity-50'>Aucun passage</p>";
+            });
+        }
+
+        function changeCode(id, val) { const s = mapping[curCl].find(x => x.id == id); s.absent = (val === "ABS"); if(!s.absent) s.code = val; localStorage.setItem('os_map_final', JSON.stringify(mapping)); updateUI(); }
+        function startTimer(s) { clearInterval(window.it); window.it = setInterval(() => { const sec = Math.floor((Date.now()-s)/1000); document.getElementById('chronoDisplay').innerText = new Date(sec*1000).toISOString().substr(14,5); }, 1000); }
+        
+        function switchTab(t) {
+            ['viewBilan','viewGroupes','viewCarte','viewStats','viewCodes'].forEach(v => document.getElementById(v).classList.add('hidden'));
+            document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden');
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
+            document.getElementById('btnTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('tab-active');
+            if (t === 'stats') updateStats();
+        }
+        
+        // Modification : La purge qui répare le bug "true"
         function resetData(type) { 
-            if(prompt("Code de sécurité (RNE) :") === "0680013V" && confirm("Action irréversible. Confirmer ?")) { 
-                if(type === 'scores') { 
-                    if(curCl && curCl !== "true") {
-                        // Remise à zéro des scores en gardant les élèves dans la base
-                        db.ref(`sessions/${curCl}`).once('value', snap => {
-                            let updates = {};
-                            snap.forEach(child => {
-                                updates[child.key] = { score: 0, count: 0, lastScan: 0 };
-                            });
-                            db.ref(`sessions/${curCl}`).set(updates);
-                        });
-                        db.ref(`settings/startTime/${curCl}`).remove(); 
-                        db.ref(`settings/endTime/${curCl}`).remove();
-                    }
+            if(prompt("RNE (0680013V) :")==="0680013V" && confirm("Certain ?")) { 
+                if(type==='scores') { 
+                    db.ref(`sessions/${curCl}`).remove(); 
+                    db.ref(`settings/startTime/${curCl}`).remove(); 
+                    db.ref(`settings/endTime/${curCl}`).remove();
                 } else { 
-                    // Purge TOTALE (Cloud + Appareil local)
                     db.ref('sessions').remove(); 
                     db.ref('settings/classes').remove(); 
                     db.ref('settings/startTime').remove(); 
-                    db.ref('settings/endTime').remove();
-                    
-                    localStorage.clear();
-                    curCl = null;
+                    db.ref('settings/endTime').remove(); 
+                    localStorage.removeItem('os_map_final');
+                    localStorage.removeItem('os_last_cl');
+                    curCl = "";
                 } 
                 location.reload(); 
             } 
         }
+
+        db.ref('settings/matrix').on('value', snap => {
+            let m = snap.val() || {}; let h = `<tr class="bg-slate-900 text-[10px]"><th>#</th><th colspan="2">NOIR</th><th colspan="2">ROUGE</th><th colspan="2">BLEU</th><th colspan="2">VERT</th><th colspan="2">JAUNE</th></tr>`;
+            for(let c=1; c<=12; c++) { h += `<tr class="border-b border-slate-800"><td>P${c}</td>`; colors.forEach(col => { const l = m[c]?.[col] || ["",""]; h += `<td><input class="w-8 bg-transparent text-center font-bold text-blue-400" value="${l[0]}" onchange="db.ref('settings/matrix/${c}/${col}/0').set(this.value.toUpperCase())"></td><td class="border-r border-slate-800"><input class="w-8 bg-transparent text-center font-bold text-blue-400" value="${l[1]}" onchange="db.ref('settings/matrix/${c}/${col}/1').set(this.value.toUpperCase())"></td>`; }); h += `</tr>`; }
+            document.getElementById('matrixTable').innerHTML = h;
+        });
     </script>
 </body>
 </html>
