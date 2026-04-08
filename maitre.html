@@ -1,384 +1,382 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Master PRO | Orient'Show</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <!-- SheetJS pour export Excel côté client -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script>if (sessionStorage.getItem("os_access") !== "granted") window.location.href = "index.html";</script>
+    
+    <script>
+        // Sécurité basique
+        if (sessionStorage.getItem("os_access") !== "granted") window.location.href = "index.html";
+    </script>
+    
     <style>
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
-        .tab-btn { flex: 1; padding: 20px; font-weight: 900; text-transform: uppercase; background: #1e293b; border-bottom: 5px solid transparent; transition: 0.3s; }
-        .tab-active { background: #3b82f6; border-color: white; }
-        .pastille { width: 45px; height: 45px; border-radius: 50%; border: 3px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; color: white; }
-        #m-mountain { position: relative; width: 100%; height: 65vh; background: #1e293b; border-radius: 1.5rem; overflow: hidden; border: 1px solid #334155; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="none"><path d="M0 1000 L300 400 L500 600 L700 200 L1000 1000 Z" fill="%230f172a" opacity="0.5"/></svg>'); background-size: cover; background-position: bottom; }
-        .m-line { position: absolute; left: 0; width: 100%; border-top: 1px dashed rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); font-size: 10px; padding-left: 10px; }
-        .m-pion { position: absolute; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; transition: all 1s; z-index: 10; color: white; }
-        .m-pion-name { position: absolute; top: 110%; font-size: 9px; font-weight: 900; white-space: nowrap; background: rgba(0,0,0,0.8); padding: 2px 5px; border-radius: 4px; color: white !important; }
-
-        /* Stats table */
-        .stats-bar-bg { background: #1e293b; border-radius: 999px; height: 10px; width: 100%; }
-        .stats-bar { height: 10px; border-radius: 999px; transition: width 0.6s ease; }
-        .stats-table th { background: #1e293b; padding: 10px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; z-index: 10; }
-        .stats-table td { padding: 10px 8px; border-bottom: 1px solid #1e293b; font-size: 13px; }
-        .stats-table tr:hover td { background: #1e293b55; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-btn { transition: 0.3s; }
+        .tab-btn.active { background-color: #1e293b; border-bottom: 4px solid #3b82f6; color: #60a5fa; }
     </style>
 </head>
-<body class="p-4">
-    <header class="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4 italic font-black uppercase text-sm">
-        <div class="flex items-center gap-4">
-            <h1 class="text-2xl text-blue-500 tracking-tighter">Master PRO</h1>
-            <button id="btnChrono" onclick="startChrono()" class="hidden bg-green-600 px-6 py-2 rounded-full animate-pulse shadow-[0_0_15px_rgba(22,163,74,0.6)]">🚀 TOP DÉPART</button>
-            <div id="chronoDisplay" class="hidden text-2xl font-mono text-yellow-400">00:00</div>
-        </div>
-        <div class="flex items-center gap-2">
-            <select id="activeClasse" onchange="loadClasse()" class="bg-slate-800 p-2 rounded-lg border border-slate-700 min-w-[150px]"></select>
-            <button onclick="addClasse()" class="bg-blue-600 w-10 h-10 rounded-full text-xl">+</button>
-        </div>
-        <div class="flex gap-2">
-            <button onclick="document.getElementById('csv').click()" class="bg-slate-700 px-4 py-2 rounded-lg text-[10px]">Import iDoceo</button>
-            <input type="file" id="csv" class="hidden" accept=".csv" onchange="importCSV(this)">
-            <button onclick="resetData('scores')" class="bg-red-600 px-3 py-2 rounded-lg text-[10px]">Vider Scores</button>
-            <button onclick="resetData('base')" class="bg-red-900 px-3 py-2 rounded-lg text-[10px]">Purger Classes</button>
+<body class="h-screen flex flex-col">
+
+    <header class="bg-slate-900 border-b border-slate-800 p-4">
+        <h1 class="text-2xl font-black italic text-blue-500 uppercase tracking-tighter">Orient'Show <span class="text-white text-sm">PRO</span></h1>
+        <div class="flex items-center gap-4 mt-4">
+            <span class="font-bold text-slate-400">Classe active :</span>
+            <span id="displayCurCl" class="px-3 py-1 bg-blue-900/50 text-blue-400 font-bold rounded border border-blue-800">Aucune</span>
         </div>
     </header>
 
-    <nav class="flex gap-2 mb-6">
-        <button onclick="switchTab('bilan')" id="btnTabBilan" class="tab-btn tab-active">📊 Bilan</button>
-        <button onclick="switchTab('carte')" id="btnTabCarte" class="tab-btn">🏔️ Carte</button>
-        <button onclick="switchTab('groupes')" id="btnTabGroupes" class="tab-btn">👥 Groupes</button>
-        <button onclick="switchTab('stats')" id="btnTabStats" class="tab-btn">📈 Stats</button>
-        <button onclick="switchTab('codes')" id="btnTabCodes" class="tab-btn !flex-none !w-24 text-[10px]">📝 Codes</button>
+    <nav class="flex bg-slate-800 text-slate-400 font-bold uppercase text-sm">
+        <button class="tab-btn active flex-1 p-4" onclick="openTab('tab-config', this)">⚙️ Config</button>
+        <button class="tab-btn flex-1 p-4" onclick="openTab('tab-csv', this)">📄 Import CSV</button>
+        <button class="tab-btn flex-1 p-4" onclick="openTab('tab-chrono', this)">⏱️ Chrono</button>
+        <button class="tab-btn flex-1 p-4" onclick="openTab('tab-carte', this)">🗺️ Podium (Carte)</button>
     </nav>
 
-    <div id="viewBilan" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
-    <div id="viewGroupes" class="hidden grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
-    <div id="viewCarte" class="hidden"><div id="m-mountain"><script>for(let s=0; s<=60; s+=10) { const pos = 90 - (s * (75/60)); document.write(`<div class="m-line" style="top: ${pos}%;">${s} PTS</div>`); }</script><div id="m-players-layer"></div></div></div>
-    
-    <!-- NOUVEL ONGLET STATS -->
-    <div id="viewStats" class="hidden space-y-6">
-        <div class="flex justify-between items-center">
-            <h2 class="text-xl font-black uppercase text-blue-400 italic tracking-tight">📈 Statistiques par balise</h2>
-            <button onclick="exportExcel()" class="bg-green-600 hover:bg-green-500 px-5 py-2 rounded-xl font-black uppercase text-sm flex items-center gap-2 active:scale-95 transition-transform shadow-lg">
-                ⬇️ Export Excel iDoceo
-            </button>
+    <main class="flex-1 overflow-auto p-6">
+
+        <div id="tab-config" class="tab-content active space-y-6">
+            <div class="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
+                <h2 class="text-xl font-black">Administration Base de données</h2>
+                <div class="space-x-2">
+                    <button onclick="resetData('scores')" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded transition">Vider les scores</button>
+                    <button onclick="resetData('all')" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition">PURGE TOTALE</button>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 overflow-x-auto">
+                <h2 class="text-xl font-black mb-4">Matrice des Codes (En dur)</h2>
+                <table class="w-full text-center border-collapse">
+                    <thead id="matrixHead"></thead>
+                    <tbody id="matrixBody"></tbody>
+                </table>
+            </div>
         </div>
 
-        <!-- Résumé classe -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="statsResume"></div>
-
-        <!-- Tableau par balise -->
-        <div class="overflow-auto rounded-2xl border border-slate-700">
-            <table class="w-full stats-table text-left font-bold">
-                <thead>
-                    <tr>
-                        <th class="rounded-tl-2xl">Balise</th>
-                        <th>Tentatives</th>
-                        <th>✅ Parfait (5pts)</th>
-                        <th>🆗 Partiel (2pts)</th>
-                        <th>❌ Faux (0pt)</th>
-                        <th class="rounded-tr-2xl">Taux réussite</th>
-                    </tr>
-                </thead>
-                <tbody id="statsBody"></tbody>
-            </table>
+        <div id="tab-csv" class="tab-content">
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 text-center max-w-2xl mx-auto mt-10">
+                <h2 class="text-2xl font-black mb-2">Importer une classe (iDoceo)</h2>
+                <p class="text-sm text-slate-400 mb-6">Traitement local RGPD : Seuls les identifiants partent sur le cloud.</p>
+                <label class="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition inline-block">
+                    📂 Sélectionner le fichier CSV
+                    <input type="file" accept=".csv" class="hidden" onchange="handleFile(event)">
+                </label>
+            </div>
         </div>
 
-        <!-- Classement des balises -->
-        <div class="bg-slate-800 rounded-2xl border border-slate-700 p-5">
-            <h3 class="font-black uppercase text-sm text-slate-400 mb-4">🏅 Classement des balises (du plus au moins réussi)</h3>
-            <div id="statsRanking" class="space-y-3"></div>
+        <div id="tab-chrono" class="tab-content">
+            <div class="bg-slate-800 p-10 rounded-xl border border-slate-700 text-center max-w-xl mx-auto mt-10">
+                <h2 class="text-3xl font-black mb-8">Gestion de la course</h2>
+                <button id="btnChrono" onclick="toggleChrono()" class="w-full py-6 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-2xl rounded-xl shadow-[0_0_20px_rgba(5,150,105,0.4)] transition">
+                    ⏱️ DÉMARRER LA SÉANCE
+                </button>
+                <p id="chronoStatus" class="mt-4 text-slate-400 font-mono">En attente...</p>
+            </div>
         </div>
-    </div>
 
-    <div id="viewCodes" class="hidden overflow-auto border border-slate-700 rounded-xl"><table class="w-full text-xs text-center font-bold uppercase" id="matrixTable"></table></div>
+        <div id="tab-carte" class="tab-content">
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 min-h-[500px]">
+                <h3 class="text-2xl font-black text-blue-400 mb-8 uppercase text-center">🏆 Classement en direct</h3>
+                
+                <div id="podiumContainer" class="flex justify-center items-end gap-4 h-56 mb-10 border-b border-slate-700 pb-4">
+                    </div>
 
-    <div id="modalDetails" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4">
-        <div class="bg-slate-800 w-full max-w-xl rounded-3xl p-6 border border-slate-700">
-            <div class="flex justify-between items-start mb-6"><h2 id="mName" class="text-2xl font-black text-blue-400 italic"></h2><button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl">&times;</button></div>
-            <div id="mHistory" class="space-y-2 max-h-[60vh] overflow-auto"></div>
+                <div id="leaderboardList" class="space-y-2 max-w-2xl mx-auto">
+                    </div>
+            </div>
         </div>
-    </div>
+
+    </main>
 
     <script>
-        const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
-        firebase.initializeApp(firebaseConfig); const db = firebase.database();
-        const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
-        const colStyles = { NOIR:"bg-black", ROUGE:"bg-red-600", BLEU:"bg-blue-600", VERT:"bg-green-600", JAUNE:"bg-yellow-500 text-black" };
-        
-        let mapping = JSON.parse(localStorage.getItem('os_map_final') || '{}'), curCl = localStorage.getItem('os_last_cl') || "", results = {};
-
-        const myCodes = { 
-            1:{NOIR:["D","Q"],ROUGE:["O","U"],BLEU:["Y","A"],VERT:["E","R"],JAUNE:["N","K"]}, 
-            2:{NOIR:["E","X"],ROUGE:["X","Y"],BLEU:["T","L"],VERT:["R","O"],JAUNE:["A","L"]}, 
-            3:{NOIR:["C","L"],ROUGE:["H","U"],BLEU:["I","B"],VERT:["O","I"],JAUNE:["T","E"]}, 
-            4:{NOIR:["R","V"],ROUGE:["E","E"],BLEU:["C","R"],VERT:["T","N"],JAUNE:["O","I"]}, 
-            5:{NOIR:["A","B"],ROUGE:["J","O"],BLEU:["O","U"],VERT:["N","E"],JAUNE:["C","S"]}, 
-            6:{NOIR:["F","M"],ROUGE:["I","E"],BLEU:["C","R"],VERT:["U","O"],JAUNE:["S","U"]}, 
-            7:{NOIR:["G","H"],ROUGE:["U","A"],BLEU:["E","C"],VERT:["U","H"],JAUNE:["X","E"]}, 
-            8:{NOIR:["I","J"],ROUGE:["V","E"],BLEU:["R","A"],VERT:["E","N"],JAUNE:["S","S"]}, 
-            9:{NOIR:["K","N"],ROUGE:["R","Y"],BLEU:["A","L"],VERT:["F","O"],JAUNE:["T","N"]}, 
-            10:{NOIR:["O","S"],ROUGE:["C","E"],BLEU:["E","I"],VERT:["A","Z"],JAUNE:["N","E"]}, 
-            11:{NOIR:["P","T"],ROUGE:["A","U"],BLEU:["L","Y"],VERT:["U","A"],JAUNE:["D","U"]}, 
-            12:{NOIR:["U","W"],ROUGE:["L","I"],BLEU:["T","N"],VERT:["R","C"],JAUNE:["A","H"]} 
+        // ==========================================
+        // 1. CONFIGURATION FIREBASE (À remplir avec tes clés)
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "TA_CLE_API",
+            authDomain: "TON_DOMAINE.firebaseapp.com",
+            databaseURL: "TA_DATABASE_URL",
+            projectId: "TON_PROJET",
+            storageBucket: "TON_BUCKET",
+            messagingSenderId: "TON_ID",
+            appId: "TON_APP_ID"
         };
-        
-        db.ref('settings/matrix').once('value', snap => { if(!snap.exists()) db.ref('settings/matrix').set(myCodes); });
+        // Initialisation sécurisée pour éviter les erreurs si déjà init
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        db.ref('settings/classes').on('value', snap => {
-            const clArr = Object.keys(snap.val() || {}).filter(c => c !== "null");
-            document.getElementById('activeClasse').innerHTML = clArr.map(c => `<option value="${c}" ${c===curCl?'selected':''}>${c}</option>`).join('');
-            if(!curCl && clArr.length > 0) curCl = clArr[0]; loadClasse();
-        });
+        // ==========================================
+        // 2. VARIABLES GLOBALES ET ÉTAT
+        // ==========================================
+        let curCl = localStorage.getItem('os_last_cl') || null;
+        let activeScoresListener = null;
+        let chronoActive = false;
+        const couleurs = ['NOIR', 'ROUGE', 'BLEU', 'VERT', 'JAUNE'];
 
-        function loadClasse() {
-            curCl = document.getElementById('activeClasse').value;
-            localStorage.setItem('os_last_cl', curCl);
-            db.ref(`sessions/${curCl}`).on('value', snap => { results = snap.val() || {}; updateUI(); });
-            db.ref(`settings/startTime/${curCl}`).on('value', snap => {
-                const s = snap.val(); if(!s) { document.getElementById('btnChrono').classList.remove('hidden'); document.getElementById('chronoDisplay').classList.add('hidden'); }
-                else { document.getElementById('btnChrono').classList.add('hidden'); document.getElementById('chronoDisplay').classList.remove('hidden'); startTimer(s); }
+        // Initialisation au lancement
+        window.onload = () => {
+            updateUIState();
+            genererMatriceEnDur();
+            if (curCl && curCl !== "true") ecouterClassement(curCl);
+        };
+
+        // Navigation des onglets
+        function openTab(tabId, btn) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        function updateUIState() {
+            document.getElementById('displayCurCl').innerText = (curCl && curCl !== "true") ? curCl : "Aucune";
+        }
+
+        // ==========================================
+        // 3. MATRICE DES CODES EN DUR (Ergonomie conservée)
+        // ==========================================
+        // Tu peux modifier ces valeurs directement ici. Elles servent de base.
+        const MATRICE_DEFAUT = {
+            1: { NOIR: ["A1",""], ROUGE: ["B2",""], BLEU: ["C3",""], VERT: ["D4",""], JAUNE: ["E5",""] },
+            2: { NOIR: ["F6",""], ROUGE: ["G7",""], BLEU: ["H8",""], VERT: ["I9",""], JAUNE: ["J0",""] },
+            3: { NOIR: ["K1",""], ROUGE: ["L2",""], BLEU: ["M3",""], VERT: ["N4",""], JAUNE: ["O5",""] },
+            4: { NOIR: ["P6",""], ROUGE: ["Q7",""], BLEU: ["R8",""], VERT: ["S9",""], JAUNE: ["T0",""] },
+            5: { NOIR: ["U1",""], ROUGE: ["V2",""], BLEU: ["W3",""], VERT: ["X4",""], JAUNE: ["Y5",""] },
+            6: { NOIR: ["Z6",""], ROUGE: ["A7",""], BLEU: ["B8",""], VERT: ["C9",""], JAUNE: ["D0",""] },
+            7: { NOIR: ["E1",""], ROUGE: ["F2",""], BLEU: ["G3",""], VERT: ["H4",""], JAUNE: ["I5",""] },
+            8: { NOIR: ["J6",""], ROUGE: ["K7",""], BLEU: ["L8",""], VERT: ["M9",""], JAUNE: ["N0",""] },
+            9: { NOIR: ["O1",""], ROUGE: ["P2",""], BLEU: ["Q3",""], VERT: ["R4",""], JAUNE: ["S5",""] },
+            10:{ NOIR: ["T6",""], ROUGE: ["U7",""], BLEU: ["V8",""], VERT: ["W9",""], JAUNE: ["X0",""] },
+            11:{ NOIR: ["Y1",""], ROUGE: ["Z2",""], BLEU: ["A3",""], VERT: ["B4",""], JAUNE: ["C5",""] },
+            12:{ NOIR: ["D6",""], ROUGE: ["E7",""], BLEU: ["F8",""], VERT: ["G9",""], JAUNE: ["H0",""] }
+        };
+
+        function genererMatriceEnDur() {
+            let hHead = `<tr class="bg-slate-900 text-xs"><th>Balise</th>`;
+            couleurs.forEach(col => hHead += `<th colspan="2" class="py-2 text-${col === 'NOIR' ? 'gray-400' : col.toLowerCase()+'-500'}">${col}</th>`);
+            hHead += `</tr>`;
+            document.getElementById('matrixHead').innerHTML = hHead;
+
+            let hBody = "";
+            for (let c = 1; c <= 12; c++) {
+                hBody += `<tr class="border-b border-slate-800">
+                            <td class="font-bold py-2">P${c}</td>`;
+                couleurs.forEach(col => {
+                    const l = MATRICE_DEFAUT[c][col];
+                    // On écrit également en base au chargement pour s'assurer que Firebase est synchro avec la version en dur
+                    db.ref(`settings/matrix/${c}/${col}`).set(l);
+                    
+                    hBody += `<td><input class="w-10 bg-transparent text-center font-bold text-blue-400 uppercase outline-none focus:bg-slate-700 rounded" value="${l[0]}" maxlength="2" onchange="updateMatrix(${c}, '${col}', 0, this.value)"></td>
+                              <td><input class="w-10 bg-transparent text-center font-bold text-blue-400 uppercase outline-none focus:bg-slate-700 rounded border-l border-slate-700/50" value="${l[1]}" maxlength="2" onchange="updateMatrix(${c}, '${col}', 1, this.value)"></td>`;
+                });
+                hBody += `</tr>`;
+            }
+            document.getElementById('matrixBody').innerHTML = hBody;
+        }
+
+        function updateMatrix(poste, couleur, index, valeur) {
+            db.ref(`settings/matrix/${poste}/${couleur}/${index}`).set(valeur.toUpperCase());
+        }
+
+        // ==========================================
+        // 4. IMPORT CSV & RGPD
+        // ==========================================
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            Papa.parse(file, {
+                complete: function(results) { processCSVData(results.data); }
             });
         }
 
-        function importCSV(input) {
-            Papa.parse(input.files[0], { header: true, complete: res => {
-                const colNom = res.meta.fields.find(c => c.toLowerCase().includes('lastname'));
-                const colPre = res.meta.fields.find(c => c.toLowerCase().includes('name') && !c.toLowerCase().includes('last'));
-                const data = res.data.filter(r => r[colNom]);
-                const cName = (data[0]['@classe'] || prompt("Nom de la classe ?")).toUpperCase();
-                mapping[cName] = data.map((r, i) => ({ id: Date.now()+i, last: r[colNom].toUpperCase(), first: r[colPre], code: `${colors[i % 5]}_${Math.floor(i / 5) + 1}`, absent: false }));
-                localStorage.setItem('os_map_final', JSON.stringify(mapping));
-                db.ref(`settings/classes/${cName}`).set(true).then(() => location.reload());
-            }});
-        }
+        function processCSVData(data) {
+            if (data.length < 2) return alert("Fichier vide ou invalide.");
+            const classe = data[1][4]; 
+            if (!classe) return alert("Classe non trouvée dans le CSV.");
 
-        function getStudentScore(sessionData) {
-            let pts = 0;
-            Object.keys(sessionData).forEach(key => {
-                if (key.startsWith('C') && sessionData[key].score !== undefined) pts += Number(sessionData[key].score) || 0;
-            });
-            return pts;
-        }
+            const localDict = {}; 
+            const firebasePayload = {}; 
+            let studentCount = 0;
 
-        function updateUI() {
-            const bil = document.getElementById('viewBilan'); const grp = document.getElementById('viewGroupes'); const mtn = document.getElementById('m-players-layer');
-            bil.innerHTML = ""; grp.innerHTML = ""; mtn.innerHTML = "";
-            const list = mapping[curCl] || [];
-            
-            list.forEach((s, i) => {
-                const sessionData = results[s.code] || {}; 
-                const pts = getStudentScore(sessionData);
-                const colorCode = s.code.split('_')[0]; 
-                const numCode = s.code.split('_')[1];
-                let bg = pts > 0 ? "bg-blue-600" : "bg-slate-800";
+            for (let i = 1; i < data.length; i++) {
+                const prenom = data[i][0];
+                const nom = data[i][1];
                 
-                bil.innerHTML += `<div onclick="openModal('${s.last} ${s.first}','${s.code}')" class="${bg} p-4 rounded-2xl text-center shadow-lg border border-white/5 cursor-pointer active:scale-95 transition-transform"><div class="flex justify-between font-black"><span class="pastille ${colStyles[colorCode]}">${numCode}</span><span class="text-2xl">${pts}</span></div><p class="text-lg font-black mt-2 truncate">${s.first}</p></div>`;
-                
-                grp.innerHTML += `<div class="bg-slate-800 p-4 rounded-2xl text-center border border-slate-700"><div class="pastille ${colStyles[colorCode]} mx-auto mb-2">${numCode}</div><p class="font-bold text-[10px] truncate uppercase opacity-50">${s.last}</p><p class="font-black text-xs truncate mb-2">${s.first}</p><select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 p-1 rounded text-[10px] w-full border border-slate-700 text-white"><option value="ABS" ${s.absent?'selected':''}>ABSENT</option>${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}</select></div>`;
-                
-                if(!s.absent) {
-                    const pion = document.createElement('div'); pion.className = `m-pion ${colStyles[colorCode]}`;
-                    const safePts = isNaN(pts) ? 0 : pts; 
-                    pion.style.top = `${90 - (Math.min(60, safePts) * (75/60))}%`; 
-                    pion.style.left = `${5 + (i * (90/list.length))}%`;
-                    pion.innerHTML = `${numCode}<span class="m-pion-name">${s.first}</span>`; mtn.appendChild(pion);
+                if (prenom && nom) {
+                    const col = couleurs[studentCount % 5];
+                    const num = Math.floor(studentCount / 5) + 1;
+                    const code = `${col}_${num}`;
+
+                    // Dictionnaire local (iPad)
+                    localDict[code] = `${prenom.trim()} ${nom.trim().charAt(0).toUpperCase()}.`;
+                    // Squelette Firebase
+                    firebasePayload[code] = { score: 0, count: 0, lastScan: 0 };
+                    studentCount++;
+                }
+            }
+
+            localStorage.setItem(`os_dict_${classe}`, JSON.stringify(localDict));
+            localStorage.setItem('os_last_cl', classe);
+            curCl = classe;
+            updateUIState();
+
+            // Envoi atomique Firebase
+            db.ref(`settings/classes/${classe}`).set(true);
+            db.ref(`sessions/${classe}`).set(firebasePayload, (error) => {
+                if(!error) {
+                    alert(`Import réussi : ${studentCount} élèves ajoutés pour la classe ${classe}.`);
+                    ecouterClassement(curCl);
                 }
             });
-
-            updateStats();
         }
 
-        // ─── STATS ────────────────────────────────────────────────────────────────
+        // ==========================================
+        // 5. GESTION DU CHRONO (START / STOP)
+        // ==========================================
+        function toggleChrono() {
+            if (!curCl || curCl === "true") return alert("Sélectionnez/Importez une classe valide d'abord !");
+            
+            const btn = document.getElementById('btnChrono');
+            const status = document.getElementById('chronoStatus');
 
-        function updateStats() {
-            const list = mapping[curCl] || [];
-            if (!list.length) return;
+            if (!chronoActive) {
+                // START
+                db.ref(`settings/startTime/${curCl}`).set(firebase.database.ServerValue.TIMESTAMP);
+                db.ref(`settings/endTime/${curCl}`).remove();
+                chronoActive = true;
+                btn.innerHTML = "🛑 STOP (Verrouiller le jeu)";
+                btn.classList.replace('bg-emerald-600', 'bg-red-600');
+                btn.classList.replace('shadow-[0_0_20px_rgba(5,150,105,0.4)]', 'shadow-[0_0_20px_rgba(220,38,38,0.4)]');
+                status.innerText = "Course en cours...";
+                status.classList.replace('text-slate-400', 'text-emerald-400');
+            } else {
+                // STOP
+                if(confirm("Arrêter la course ? Les élèves ne pourront plus saisir de codes.")) {
+                    db.ref(`settings/endTime/${curCl}`).set(firebase.database.ServerValue.TIMESTAMP);
+                    chronoActive = false;
+                    btn.innerHTML = "⏱️ DÉMARRER LA SÉANCE";
+                    btn.classList.replace('bg-red-600', 'bg-emerald-600');
+                    btn.classList.replace('shadow-[0_0_20px_rgba(220,38,38,0.4)]', 'shadow-[0_0_20px_rgba(5,150,105,0.4)]');
+                    status.innerText = "Course terminée / verrouillée.";
+                    status.classList.replace('text-emerald-400', 'text-red-400');
+                }
+            }
+        }
 
-            // Agréger les données par circuit P1..P12
-            const circuitStats = {}; // { 1: { tentatives, parfait, partiel, faux } }
-            for (let p = 1; p <= 12; p++) circuitStats[p] = { tentatives: 0, parfait: 0, partiel: 0, faux: 0 };
+        // ==========================================
+        // 6. LE PODIUM ET CLASSEMENT
+        // ==========================================
+        function ecouterClassement(classe) {
+            if (!classe) return;
+            if (activeScoresListener) activeScoresListener.off(); 
 
-            let totalScore = 0, totalPunches = 0, studentsWithScore = 0;
+            activeScoresListener = db.ref(`sessions/${classe}`);
+            activeScoresListener.on('value', snap => {
+                mettreAJourPodium(snap.val() || {}, classe);
+            });
+        }
 
-            list.forEach(s => {
-                const sessionData = results[s.code] || {};
-                const pts = getStudentScore(sessionData);
-                if (pts > 0) studentsWithScore++;
-                totalScore += pts;
+        function mettreAJourPodium(firebaseData, classe) {
+            const dictRaw = localStorage.getItem(`os_dict_${classe}`);
+            const dict = dictRaw ? JSON.parse(dictRaw) : {};
 
-                Object.keys(sessionData).forEach(key => {
-                    if (!key.startsWith('C')) return;
-                    const pNum = parseInt(key.replace('C', ''));
-                    if (!circuitStats[pNum]) return;
-                    const score = Number(sessionData[key].score) || 0;
-                    circuitStats[pNum].tentatives++;
-                    totalPunches++;
-                    if (score === 5) circuitStats[pNum].parfait++;
-                    else if (score === 2) circuitStats[pNum].partiel++;
-                    else circuitStats[pNum].faux++;
-                });
+            const students = Object.keys(firebaseData).map(code => ({
+                code: code,
+                score: firebaseData[code].score || 0,
+                lastScan: firebaseData[code].lastScan || 0,
+                name: dict[code] || code 
+            })).filter(s => s.score > 0); 
+
+            // Tri : points décroissants, puis scan le plus ancien (le plus rapide à atteindre ce score)
+            students.sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                return a.lastScan - b.lastScan; 
             });
 
-            // ── Résumé 4 cartes
-            const avgScore = list.length ? (totalScore / list.length).toFixed(1) : 0;
-            const globalRate = totalPunches ? Math.round(((Object.values(circuitStats).reduce((a,c)=>a+c.parfait,0)) / totalPunches) * 100) : 0;
-            document.getElementById('statsResume').innerHTML = `
-                <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 text-center">
-                    <div class="text-4xl font-black text-blue-400">${list.length}</div>
-                    <div class="text-xs font-bold uppercase text-slate-400 mt-1">Élèves</div>
-                </div>
-                <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 text-center">
-                    <div class="text-4xl font-black text-yellow-400">${avgScore}</div>
-                    <div class="text-xs font-bold uppercase text-slate-400 mt-1">Moy. points</div>
-                </div>
-                <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 text-center">
-                    <div class="text-4xl font-black text-green-400">${totalPunches}</div>
-                    <div class="text-xs font-bold uppercase text-slate-400 mt-1">Balises validées</div>
-                </div>
-                <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 text-center">
-                    <div class="text-4xl font-black text-purple-400">${globalRate}%</div>
-                    <div class="text-xs font-bold uppercase text-slate-400 mt-1">Taux réussite global</div>
-                </div>
-            `;
+            const top3 = students.slice(0, 3);
+            const rest = students.slice(3);
 
-            // ── Tableau par balise
-            let tbody = '';
-            for (let p = 1; p <= 12; p++) {
-                const c = circuitStats[p];
-                const rate = c.tentatives ? Math.round((c.parfait / c.tentatives) * 100) : 0;
-                const partialRate = c.tentatives ? Math.round((c.partiel / c.tentatives) * 100) : 0;
-                const color = rate >= 70 ? 'text-green-400' : rate >= 40 ? 'text-yellow-400' : rate > 0 ? 'text-red-400' : 'text-slate-500';
-                tbody += `
-                    <tr>
-                        <td class="font-black text-blue-400">P${p}</td>
-                        <td class="text-slate-300">${c.tentatives}</td>
-                        <td class="text-green-400 font-bold">${c.parfait} <span class="text-slate-500 text-xs">(${c.tentatives ? Math.round(c.parfait/c.tentatives*100) : 0}%)</span></td>
-                        <td class="text-orange-400 font-bold">${c.partiel} <span class="text-slate-500 text-xs">(${partialRate}%)</span></td>
-                        <td class="text-red-400 font-bold">${c.faux}</td>
-                        <td>
-                            <div class="flex items-center gap-2">
-                                <div class="stats-bar-bg flex-1"><div class="stats-bar bg-green-500" style="width:${rate}%"></div></div>
-                                <span class="font-black ${color} w-10 text-right">${rate}%</span>
+            const podiumEl = document.getElementById('podiumContainer');
+            if (top3.length > 0) {
+                let podiumHTML = "";
+                const hauteurs = ['h-32', 'h-44', 'h-24']; 
+                const ordres = ['order-2', 'order-1', 'order-3']; 
+                const couleursPodium = ['bg-slate-400', 'bg-yellow-500', 'bg-amber-700']; 
+                const bgColors = ['bg-slate-700', 'bg-yellow-600/20', 'bg-amber-900/40'];
+
+                top3.forEach((s, index) => {
+                    const vIndex = index === 0 ? 1 : (index === 1 ? 0 : 2); 
+                    podiumHTML += `
+                        <div class="flex flex-col items-center justify-end ${ordres[vIndex]} w-28">
+                            <span class="text-sm font-bold truncate w-full text-center mb-1 drop-shadow-md">${s.name}</span>
+                            <span class="text-base font-black text-blue-400 mb-2">${s.score} pts</span>
+                            <div class="w-full ${hauteurs[vIndex]} ${couleursPodium[vIndex]} rounded-t-xl flex flex-col items-center justify-start pt-3 shadow-2xl border-t-2 border-white/30 relative overflow-hidden">
+                                <div class="absolute inset-0 ${bgColors[vIndex]} mix-blend-overlay"></div>
+                                <span class="text-4xl font-black text-white/90 drop-shadow-lg z-10">${index + 1}</span>
                             </div>
-                        </td>
-                    </tr>`;
-            }
-            document.getElementById('statsBody').innerHTML = tbody;
-
-            // ── Classement balises (triées par taux de réussite)
-            const ranked = Object.entries(circuitStats)
-                .filter(([,c]) => c.tentatives > 0)
-                .map(([p, c]) => ({ p: parseInt(p), rate: Math.round((c.parfait / c.tentatives) * 100), tentatives: c.tentatives }))
-                .sort((a, b) => b.rate - a.rate);
-
-            document.getElementById('statsRanking').innerHTML = ranked.map((r, i) => {
-                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
-                const barColor = r.rate >= 70 ? 'bg-green-500' : r.rate >= 40 ? 'bg-yellow-500' : 'bg-red-500';
-                return `<div class="flex items-center gap-3">
-                    <span class="w-8 text-center font-black">${medal}</span>
-                    <span class="font-black text-blue-400 w-8">P${r.p}</span>
-                    <div class="stats-bar-bg flex-1"><div class="stats-bar ${barColor}" style="width:${r.rate}%"></div></div>
-                    <span class="font-black w-12 text-right">${r.rate}%</span>
-                    <span class="text-slate-500 text-xs w-20">${r.tentatives} passage${r.tentatives>1?'s':''}</span>
-                </div>`;
-            }).join('') || '<p class="text-slate-500 text-sm text-center">Aucune donnée pour l\'instant</p>';
-        }
-
-        // ─── EXPORT EXCEL ─────────────────────────────────────────────────────────
-
-        function exportExcel() {
-            const list = mapping[curCl] || [];
-            if (!list.length) return alert("Aucun élève dans cette classe !");
-
-            const wb = XLSX.utils.book_new();
-
-            // ── Feuille 1 : Notes iDoceo (Nom, Prénom, Score total, note /20)
-            const notesData = [["Nom", "Prénom", "Dossard", "Score brut (/60)", "Note (/20)", ...Array.from({length:12},(_,i)=>`P${i+1}`)]];
-            list.forEach(s => {
-                const sessionData = results[s.code] || {};
-                const pts = getStudentScore(sessionData);
-                const note20 = Math.round((pts / 60) * 20 * 10) / 10;
-                const circuitScores = Array.from({length:12}, (_, i) => {
-                    const key = `C${i+1}`;
-                    return sessionData[key] ? sessionData[key].score : '';
+                        </div>
+                    `;
                 });
-                notesData.push([s.last, s.first, s.code, pts, note20, ...circuitScores]);
-            });
-            const wsNotes = XLSX.utils.aoa_to_sheet(notesData);
-            // Largeurs colonnes
-            wsNotes['!cols'] = [{wch:18},{wch:14},{wch:12},{wch:16},{wch:10},...Array(12).fill({wch:6})];
-            XLSX.utils.book_append_sheet(wb, wsNotes, "Notes");
-
-            // ── Feuille 2 : Stats par balise
-            const statsData = [["Balise", "Tentatives", "Parfait (5pts)", "Partiel (2pts)", "Faux (0pt)", "Taux réussite %"]];
-            for (let p = 1; p <= 12; p++) {
-                let tentatives = 0, parfait = 0, partiel = 0, faux = 0;
-                list.forEach(s => {
-                    const d = (results[s.code] || {})[`C${p}`];
-                    if (d) {
-                        tentatives++;
-                        if (d.score === 5) parfait++;
-                        else if (d.score === 2) partiel++;
-                        else faux++;
-                    }
-                });
-                const rate = tentatives ? Math.round((parfait / tentatives) * 100) : 0;
-                statsData.push([`P${p}`, tentatives, parfait, partiel, faux, `${rate}%`]);
+                podiumEl.innerHTML = podiumHTML;
+            } else {
+                podiumEl.innerHTML = `<div class="text-slate-500 text-sm flex items-center justify-center h-full w-full">En attente des premiers scans...</div>`;
             }
-            const wsStats = XLSX.utils.aoa_to_sheet(statsData);
-            wsStats['!cols'] = [{wch:8},{wch:12},{wch:16},{wch:16},{wch:12},{wch:16}];
-            XLSX.utils.book_append_sheet(wb, wsStats, "Stats balises");
 
-            // Nom du fichier avec classe + date
-            const d = new Date(); const dateStr = `${d.getDate()}-${d.getMonth()+1}-${d.getFullYear()}`;
-            XLSX.writeFile(wb, `OrientShow_${curCl}_${dateStr}.xlsx`);
-        }
-
-        // ─── MODAL & UTILITAIRES ──────────────────────────────────────────────────
-
-        function openModal(n, c) {
-            document.getElementById('mName').innerText = n; document.getElementById('modalDetails').classList.remove('hidden');
-            db.ref(`sessions/${curCl}/${c}`).once('value', snap => {
-                const res = snap.val() || {};
-                document.getElementById('mHistory').innerHTML = Object.entries(res).map(([k, v]) => {
-                    if (!k.startsWith('C')) return '';
-                    return `<div class="bg-slate-900 p-3 rounded-xl flex justify-between items-center border border-slate-700 font-bold"><span>P${k.replace('C','')} - ${v.score} pts</span><button onclick="if(confirm('Sûr?')) db.ref('sessions/${curCl}/${c}/${k}').remove().then(()=>document.getElementById('modalDetails').classList.add('hidden'))" class="bg-red-600 px-3 rounded text-[10px] uppercase">Suppr</button></div>`;
-                }).join('') || "<p class='text-center opacity-50'>Aucun passage</p>";
+            const listEl = document.getElementById('leaderboardList');
+            let listHTML = "";
+            rest.forEach((s, index) => {
+                listHTML += `
+                    <div class="flex items-center justify-between bg-slate-800/80 p-3 rounded-lg border border-slate-700 shadow-sm">
+                        <div class="flex items-center gap-4">
+                            <span class="text-slate-500 font-black w-6 text-right">${index + 4}.</span>
+                            <span class="font-bold uppercase tracking-wide">${s.name}</span>
+                        </div>
+                        <div class="font-black text-blue-400 text-lg">${s.score} <span class="text-xs text-slate-500 font-normal">pts</span></div>
+                    </div>
+                `;
             });
+            listEl.innerHTML = listHTML;
         }
 
-        function changeCode(id, val) { const s = mapping[curCl].find(x => x.id == id); s.absent = (val === "ABS"); if(!s.absent) s.code = val; localStorage.setItem('os_map_final', JSON.stringify(mapping)); updateUI(); }
-        function startTimer(s) { clearInterval(window.it); window.it = setInterval(() => { const sec = Math.floor((Date.now()-s)/1000); document.getElementById('chronoDisplay').innerText = new Date(sec*1000).toISOString().substr(14,5); }, 1000); }
-        function startChrono() { if(confirm("Lancer le chrono pour toute la classe ?")) db.ref(`settings/startTime/${curCl}`).set(Date.now()); }
-        
-        function switchTab(t) {
-            ['viewBilan','viewGroupes','viewCarte','viewStats','viewCodes'].forEach(v => document.getElementById(v).classList.add('hidden'));
-            document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden');
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
-            document.getElementById('btnTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('tab-active');
-            if (t === 'stats') updateStats();
-        }
-        
-        function addClasse() { const n = prompt("Nom de la classe :"); if(n) { db.ref(`settings/classes/${n.toUpperCase()}`).set(true); location.reload(); } }
-        
+        // ==========================================
+        // 7. PURGE AUTOMATISÉE ET SÉCURISÉE
+        // ==========================================
         function resetData(type) { 
-            if(prompt("RNE (0680013V) :")==="0680013V" && confirm("Certain ?")) { 
-                if(type==='scores') { db.ref(`sessions/${curCl}`).remove(); db.ref(`settings/startTime/${curCl}`).remove(); }
-                else { db.ref('sessions').remove(); db.ref('settings/classes').remove(); db.ref('settings/startTime').remove(); localStorage.clear(); } 
+            if(prompt("Code de sécurité (RNE) :") === "0680013V" && confirm("Action irréversible. Confirmer ?")) { 
+                if(type === 'scores') { 
+                    if(curCl && curCl !== "true") {
+                        // Remise à zéro des scores en gardant les élèves
+                        db.ref(`sessions/${curCl}`).once('value', snap => {
+                            let updates = {};
+                            snap.forEach(child => {
+                                updates[child.key] = { score: 0, count: 0, lastScan: 0 };
+                            });
+                            db.ref(`sessions/${curCl}`).set(updates);
+                        });
+                        db.ref(`settings/startTime/${curCl}`).remove(); 
+                        db.ref(`settings/endTime/${curCl}`).remove();
+                    }
+                } else { 
+                    // Purge TOTALE Cloud
+                    db.ref('sessions').remove(); 
+                    db.ref('settings/classes').remove(); 
+                    db.ref('settings/startTime').remove(); 
+                    db.ref('settings/endTime').remove();
+                    
+                    // Nettoyage complet iPad
+                    localStorage.clear();
+                    curCl = null;
+                } 
                 location.reload(); 
             } 
         }
-
-        db.ref('settings/matrix').on('value', snap => {
-            let m = snap.val() || {}; let h = `<tr class="bg-slate-900 text-[10px]"><th>#</th><th colspan="2">NOIR</th><th colspan="2">ROUGE</th><th colspan="2">BLEU</th><th colspan="2">VERT</th><th colspan="2">JAUNE</th></tr>`;
-            for(let c=1; c<=12; c++) { h += `<tr class="border-b border-slate-800"><td>P${c}</td>`; colors.forEach(col => { const l = m[c]?.[col] || ["",""]; h += `<td><input class="w-8 bg-transparent text-center font-bold text-blue-400" value="${l[0]}" onchange="db.ref('settings/matrix/${c}/${col}/0').set(this.value.toUpperCase())"></td><td class="border-r border-slate-800"><input class="w-8 bg-transparent text-center font-bold text-blue-400" value="${l[1]}" onchange="db.ref('settings/matrix/${c}/${col}/1').set(this.value.toUpperCase())"></td>`; }); h += `</tr>`; }
-            document.getElementById('matrixTable').innerHTML = h;
-        });
     </script>
 </body>
 </html>
