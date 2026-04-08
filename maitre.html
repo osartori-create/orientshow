@@ -21,6 +21,11 @@
         .stats-table th { background: #1e293b; padding: 10px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; z-index: 10; }
         .stats-table td { padding: 10px 8px; border-bottom: 1px solid #1e293b; font-size: 13px; }
         .stats-table tr:hover td { background: #1e293b55; }
+
+        /* Personnalisation de l'ascenseur (Scrollbar) pour l'iPad */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
     </style>
 </head>
 <body class="p-4">
@@ -56,38 +61,43 @@
         <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 min-h-[500px]">
             <h3 class="text-xl font-black text-blue-400 mb-8 uppercase text-center">🏆 Classement en direct</h3>
             <div id="podiumContainer" class="flex justify-center items-end gap-4 h-56 mb-10 border-b border-slate-700 pb-4"></div>
-            <div id="leaderboardList" class="space-y-2 max-w-2xl mx-auto"></div>
+            <div id="leaderboardList" class="space-y-2 max-w-2xl mx-auto max-h-[40vh] overflow-y-auto pr-2"></div>
         </div>
     </div>
     
     <div id="viewStats" class="hidden space-y-6">
         <div class="flex justify-between items-center">
-            <h2 class="text-xl font-black uppercase text-blue-400 italic tracking-tight">📈 Statistiques par balise</h2>
+            <h2 class="text-xl font-black uppercase text-blue-400 italic tracking-tight">📈 Statistiques par circuit</h2>
             <button onclick="exportExcel()" class="bg-green-600 hover:bg-green-500 px-5 py-2 rounded-xl font-black uppercase text-sm flex items-center gap-2 shadow-lg">⬇️ Export Excel iDoceo</button>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="statsResume"></div>
         <div class="overflow-auto rounded-2xl border border-slate-700">
             <table class="w-full stats-table text-left font-bold">
-                <thead><tr><th class="rounded-tl-2xl">Balise</th><th>Tentatives</th><th>✅ Parfait (5pts)</th><th>🆗 Partiel (2pts)</th><th>❌ Faux (0pt)</th><th class="rounded-tr-2xl">Taux réussite</th></tr></thead>
+                <thead><tr><th class="rounded-tl-2xl">Circuit</th><th>Tentatives</th><th>✅ Parfait (5pts)</th><th>🆗 Partiel (2pts)</th><th>❌ Faux (0pt)</th><th class="rounded-tr-2xl">Taux réussite</th></tr></thead>
                 <tbody id="statsBody"></tbody>
             </table>
         </div>
         <div class="bg-slate-800 rounded-2xl border border-slate-700 p-5">
-            <h3 class="font-black uppercase text-sm text-slate-400 mb-4">🏅 Classement des balises</h3>
+            <h3 class="font-black uppercase text-sm text-slate-400 mb-4">🏅 Classement des circuits</h3>
             <div id="statsRanking" class="space-y-3"></div>
         </div>
     </div>
 
-    <div id="viewCodes" class="hidden overflow-auto border border-slate-700 rounded-xl"><table class="w-full text-xs text-center font-bold uppercase" id="matrixTable"></table></div>
+    <div id="viewCodes" class="hidden overflow-x-auto bg-slate-800 p-4 border border-slate-700 rounded-xl shadow-lg">
+        <table class="w-full text-center font-bold" id="matrixTable"></table>
+    </div>
 
     <div id="modalDetails" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4">
-        <div class="bg-slate-800 w-full max-w-xl rounded-3xl p-6 border border-slate-700">
-            <div class="flex justify-between items-start mb-6"><h2 id="mName" class="text-2xl font-black text-blue-400 italic"></h2><button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl">&times;</button></div>
-            <div id="mHistory" class="space-y-2 max-h-[60vh] overflow-auto"></div>
+        <div class="bg-slate-800 w-full max-w-xl rounded-3xl p-6 border border-slate-700 shadow-2xl">
+            <div class="flex justify-between items-start mb-6"><h2 id="mName" class="text-2xl font-black text-blue-400 italic"></h2><button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl text-slate-400 hover:text-white transition">&times;</button></div>
+            <div id="mHistory" class="space-y-2 max-h-[60vh] overflow-auto pr-2"></div>
         </div>
     </div>
 
     <script>
+        // ==========================================
+        // 1. CONFIGURATION FIREBASE
+        // ==========================================
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -116,33 +126,23 @@
         
         db.ref('settings/matrix').once('value', snap => { if(!snap.exists()) db.ref('settings/matrix').set(myCodes); });
 
-        // --- CORRECTION DU CHARGEMENT DES CLASSES ---
+        // --- CHARGEMENT DES CLASSES ---
         db.ref('settings/classes').on('value', snap => {
             const clArr = Object.keys(snap.val() || {}).filter(c => c !== "null" && c !== "true");
             document.getElementById('activeClasse').innerHTML = '<option value="">-- CHOISIR --</option>' + clArr.map(c => `<option value="${c}" ${c===curCl?'selected':''}>${c}</option>`).join('');
             
-            // Si aucune classe n'est en mémoire mais qu'il y en a dans la base, on sélectionne la 1ère
-            if(!curCl && clArr.length > 0) { 
-                curCl = clArr[0]; 
-            }
-            
-            // On lance le chargement de l'interface
-            if(curCl) {
-                loadClasse(); 
-            }
+            if(!curCl && clArr.length > 0) { curCl = clArr[0]; }
+            if(curCl) { loadClasse(); }
         });
 
         function loadClasse() {
-            // Si l'utilisateur change de classe via le menu déroulant
             const selectValue = document.getElementById('activeClasse').value;
             if(selectValue) curCl = selectValue;
-            
             if(!curCl) return;
             localStorage.setItem('os_last_cl', curCl);
             
             db.ref(`sessions/${curCl}`).on('value', snap => { results = snap.val() || {}; updateUI(); });
             
-            // Gestion Start / Stop synchronisée
             db.ref(`settings/startTime/${curCl}`).on('value', snapStart => {
                 db.ref(`settings/endTime/${curCl}`).on('value', snapEnd => {
                     const start = snapStart.val();
@@ -167,7 +167,7 @@
                         btn.innerHTML = "⏱️ SÉANCE TERMINÉE";
                         btn.className = "bg-orange-600 px-6 py-2 rounded-full text-white";
                         chronoDisplay.classList.remove('hidden');
-                        clearInterval(window.it); // Figé sur le temps de fin
+                        clearInterval(window.it); 
                     }
                 });
             });
@@ -203,7 +203,6 @@
                 }));
                 localStorage.setItem('os_map_final', JSON.stringify(mapping));
                 
-                // On met à jour la classe AVANT d'écrire sur firebase
                 curCl = cName;
                 localStorage.setItem('os_last_cl', curCl);
                 
@@ -234,9 +233,23 @@
                 const numCode = s.code.split('_')[1];
                 let bg = pts > 0 ? "bg-blue-600" : "bg-slate-800";
                 
+                // Styles dynamiques pour les absents (Groupes)
+                let groupCardStyle = s.absent 
+                    ? "bg-slate-800/30 border-slate-600 border-dashed opacity-50 grayscale" 
+                    : "bg-slate-800 border-slate-700 shadow-md";
+
                 bil.innerHTML += `<div onclick="openModal('${s.last.replace(/'/g, "\\'")} ${s.first.replace(/'/g, "\\'")}','${s.code}')" class="${bg} p-4 rounded-2xl text-center shadow-lg border border-white/5 cursor-pointer active:scale-95 transition-transform"><div class="flex justify-between font-black"><span class="pastille ${colStyles[colorCode]}">${numCode}</span><span class="text-2xl">${pts}</span></div><p class="text-lg font-black mt-2 truncate">${s.first}</p></div>`;
                 
-                grp.innerHTML += `<div class="bg-slate-800 p-4 rounded-2xl text-center border border-slate-700"><div class="pastille ${colStyles[colorCode]} mx-auto mb-2">${numCode}</div><p class="font-bold text-[10px] truncate uppercase opacity-50">${s.last}</p><p class="font-black text-xs truncate mb-2">${s.first}</p><select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 p-1 rounded text-[10px] w-full border border-slate-700 text-white"><option value="ABS" ${s.absent?'selected':''}>ABSENT</option>${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}</select></div>`;
+                grp.innerHTML += `
+                    <div class="p-4 rounded-2xl text-center border transition-all ${groupCardStyle}">
+                        <div class="pastille ${colStyles[colorCode]} mx-auto mb-2">${numCode}</div>
+                        <p class="font-bold text-[10px] truncate uppercase opacity-50">${s.last}</p>
+                        <p class="font-black text-xs truncate mb-2">${s.first}</p>
+                        <select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 p-1 rounded text-[10px] w-full border border-slate-700 text-white font-bold outline-none focus:ring-1 focus:ring-blue-500">
+                            <option value="ABS" ${s.absent ? 'selected' : ''}>❌ ABSENT</option>
+                            ${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}
+                        </select>
+                    </div>`;
             });
 
             updatePodium();
@@ -318,10 +331,11 @@
             list.forEach(s => {
                 const sessionData = results[s.code] || {};
                 const pts = getStudentScore(sessionData);
-                if (pts > 0) studentsWithScore++;
-                totalScore += pts;
+                if (pts > 0 && !s.absent) studentsWithScore++;
+                if (!s.absent) totalScore += pts;
+                
                 Object.keys(sessionData).forEach(key => {
-                    if (!key.startsWith('C')) return;
+                    if (!key.startsWith('C') || s.absent) return;
                     const pNum = parseInt(key.replace('C', ''));
                     if (!circuitStats[pNum]) return;
                     const score = Number(sessionData[key].score) || 0;
@@ -333,12 +347,14 @@
                 });
             });
 
-            const avgScore = list.length ? (totalScore / list.length).toFixed(1) : 0;
+            const activeStudents = list.filter(s => !s.absent).length;
+            const avgScore = activeStudents ? (totalScore / activeStudents).toFixed(1) : 0;
             const globalRate = totalPunches ? Math.round(((Object.values(circuitStats).reduce((a,c)=>a+c.parfait,0)) / totalPunches) * 100) : 0;
+            
             document.getElementById('statsResume').innerHTML = `
-                <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 text-center"><div class="text-4xl font-black text-blue-400">${list.length}</div><div class="text-xs font-bold uppercase text-slate-400 mt-1">Élèves</div></div>
+                <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 text-center"><div class="text-4xl font-black text-blue-400">${activeStudents}</div><div class="text-xs font-bold uppercase text-slate-400 mt-1">Élèves Actifs</div></div>
                 <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 text-center"><div class="text-4xl font-black text-yellow-400">${avgScore}</div><div class="text-xs font-bold uppercase text-slate-400 mt-1">Moy. points</div></div>
-                <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 text-center"><div class="text-4xl font-black text-green-400">${totalPunches}</div><div class="text-xs font-bold uppercase text-slate-400 mt-1">Balises validées</div></div>
+                <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 text-center"><div class="text-4xl font-black text-green-400">${totalPunches}</div><div class="text-xs font-bold uppercase text-slate-400 mt-1">Circuits validés</div></div>
                 <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 text-center"><div class="text-4xl font-black text-purple-400">${globalRate}%</div><div class="text-xs font-bold uppercase text-slate-400 mt-1">Taux réussite</div></div>
             `;
 
@@ -348,7 +364,7 @@
                 const rate = c.tentatives ? Math.round((c.parfait / c.tentatives) * 100) : 0;
                 const partialRate = c.tentatives ? Math.round((c.partiel / c.tentatives) * 100) : 0;
                 const color = rate >= 70 ? 'text-green-400' : rate >= 40 ? 'text-yellow-400' : rate > 0 ? 'text-red-400' : 'text-slate-500';
-                tbody += `<tr><td class="font-black text-blue-400">P${p}</td><td class="text-slate-300">${c.tentatives}</td><td class="text-green-400 font-bold">${c.parfait} <span class="text-slate-500 text-xs">(${rate}%)</span></td><td class="text-orange-400 font-bold">${c.partiel} <span class="text-slate-500 text-xs">(${partialRate}%)</span></td><td class="text-red-400 font-bold">${c.faux}</td><td><div class="flex items-center gap-2"><div class="stats-bar-bg flex-1"><div class="stats-bar bg-green-500" style="width:${rate}%"></div></div><span class="font-black ${color} w-10 text-right">${rate}%</span></div></td></tr>`;
+                tbody += `<tr><td class="font-black text-blue-400">C${p}</td><td class="text-slate-300">${c.tentatives}</td><td class="text-green-400 font-bold">${c.parfait} <span class="text-slate-500 text-xs">(${rate}%)</span></td><td class="text-orange-400 font-bold">${c.partiel} <span class="text-slate-500 text-xs">(${partialRate}%)</span></td><td class="text-red-400 font-bold">${c.faux}</td><td><div class="flex items-center gap-2"><div class="stats-bar-bg flex-1"><div class="stats-bar bg-green-500" style="width:${rate}%"></div></div><span class="font-black ${color} w-10 text-right">${rate}%</span></div></td></tr>`;
             }
             document.getElementById('statsBody').innerHTML = tbody;
 
@@ -356,7 +372,7 @@
             document.getElementById('statsRanking').innerHTML = ranked.map((r, i) => {
                 const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
                 const barColor = r.rate >= 70 ? 'bg-green-500' : r.rate >= 40 ? 'bg-yellow-500' : 'bg-red-500';
-                return `<div class="flex items-center gap-3"><span class="w-8 text-center font-black">${medal}</span><span class="font-black text-blue-400 w-8">P${r.p}</span><div class="stats-bar-bg flex-1"><div class="stats-bar ${barColor}" style="width:${r.rate}%"></div></div><span class="font-black w-12 text-right">${r.rate}%</span><span class="text-slate-500 text-xs w-20">${r.tentatives} passages</span></div>`;
+                return `<div class="flex items-center gap-3"><span class="w-8 text-center font-black">${medal}</span><span class="font-black text-blue-400 w-8">C${r.p}</span><div class="stats-bar-bg flex-1"><div class="stats-bar ${barColor}" style="width:${r.rate}%"></div></div><span class="font-black w-12 text-right">${r.rate}%</span><span class="text-slate-500 text-xs w-20">${r.tentatives} passages</span></div>`;
             }).join('') || '<p class="text-slate-500 text-sm text-center">Aucune donnée pour l\'instant</p>';
         }
 
@@ -364,13 +380,17 @@
             const list = mapping[curCl] || [];
             if (!list.length) return alert("Aucun élève !");
             const wb = XLSX.utils.book_new();
-            const notesData = [["Nom", "Prénom", "Dossard", "Score brut (/60)", "Note (/20)", ...Array.from({length:12},(_,i)=>`P${i+1}`)]];
+            const notesData = [["Nom", "Prénom", "Dossard", "Score brut (/60)", "Note (/20)", ...Array.from({length:12},(_,i)=>`C${i+1}`)]];
             list.forEach(s => {
-                const sessionData = results[s.code] || {};
-                const pts = getStudentScore(sessionData);
-                const note20 = Math.round((pts / 60) * 20 * 10) / 10;
-                const circuitScores = Array.from({length:12}, (_, i) => sessionData[`C${i+1}`] ? sessionData[`C${i+1}`].score : '');
-                notesData.push([s.last, s.first, s.code, pts, note20, ...circuitScores]);
+                if(s.absent) {
+                    notesData.push([s.last, s.first, "ABSENT", "", "", ...Array(12).fill('')]);
+                } else {
+                    const sessionData = results[s.code] || {};
+                    const pts = getStudentScore(sessionData);
+                    const note20 = Math.round((pts / 60) * 20 * 10) / 10;
+                    const circuitScores = Array.from({length:12}, (_, i) => sessionData[`C${i+1}`] ? sessionData[`C${i+1}`].score : '');
+                    notesData.push([s.last, s.first, s.code, pts, note20, ...circuitScores]);
+                }
             });
             const wsNotes = XLSX.utils.aoa_to_sheet(notesData);
             wsNotes['!cols'] = [{wch:18},{wch:14},{wch:12},{wch:16},{wch:10},...Array(12).fill({wch:6})];
@@ -384,12 +404,19 @@
                 const res = snap.val() || {};
                 document.getElementById('mHistory').innerHTML = Object.entries(res).map(([k, v]) => {
                     if (!k.startsWith('C')) return '';
-                    return `<div class="bg-slate-900 p-3 rounded-xl flex justify-between items-center border border-slate-700 font-bold"><span>P${k.replace('C','')} - ${v.score} pts</span><button onclick="if(confirm('Sûr?')) db.ref('sessions/${curCl}/${c}/${k}').remove().then(()=>document.getElementById('modalDetails').classList.add('hidden'))" class="bg-red-600 px-3 rounded text-[10px] uppercase">Suppr</button></div>`;
-                }).join('') || "<p class='text-center opacity-50'>Aucun passage</p>";
+                    return `<div class="bg-slate-900 p-4 rounded-xl flex justify-between items-center border border-slate-700 font-bold mb-2 shadow-sm"><span class="text-lg">C${k.replace('C','')} <span class="text-slate-500 mx-2">|</span> <span class="text-blue-400">${v.score} pts</span></span><button onclick="if(confirm('Sûr de vouloir supprimer ce passage ?')) db.ref('sessions/${curCl}/${c}/${k}').remove().then(()=>document.getElementById('modalDetails').classList.add('hidden'))" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded text-xs uppercase font-black tracking-wider transition">Supprimer</button></div>`;
+                }).join('') || "<p class='text-center opacity-50 italic mt-4'>Aucun passage enregistré.</p>";
             });
         }
 
-        function changeCode(id, val) { const s = mapping[curCl].find(x => x.id == id); s.absent = (val === "ABS"); if(!s.absent) s.code = val; localStorage.setItem('os_map_final', JSON.stringify(mapping)); updateUI(); }
+        function changeCode(id, val) { 
+            const s = mapping[curCl].find(x => x.id == id); 
+            s.absent = (val === "ABS"); 
+            if(!s.absent) s.code = val; 
+            localStorage.setItem('os_map_final', JSON.stringify(mapping)); 
+            updateUI(); 
+        }
+        
         function startTimer(s) { clearInterval(window.it); window.it = setInterval(() => { const sec = Math.floor((Date.now()-s)/1000); document.getElementById('chronoDisplay').innerText = new Date(sec*1000).toISOString().substr(14,5); }, 1000); }
         
         function switchTab(t) {
@@ -419,9 +446,29 @@
             } 
         }
 
+        // --- MATRICE DES CODES REDESIGNÉE ---
         db.ref('settings/matrix').on('value', snap => {
-            let m = snap.val() || {}; let h = `<tr class="bg-slate-900 text-[10px]"><th>#</th><th colspan="2">NOIR</th><th colspan="2">ROUGE</th><th colspan="2">BLEU</th><th colspan="2">VERT</th><th colspan="2">JAUNE</th></tr>`;
-            for(let c=1; c<=12; c++) { h += `<tr class="border-b border-slate-800"><td>P${c}</td>`; colors.forEach(col => { const l = m[c]?.[col] || ["",""]; h += `<td><input class="w-8 bg-transparent text-center font-bold text-blue-400" value="${l[0]}" onchange="db.ref('settings/matrix/${c}/${col}/0').set(this.value.toUpperCase())"></td><td class="border-r border-slate-800"><input class="w-8 bg-transparent text-center font-bold text-blue-400" value="${l[1]}" onchange="db.ref('settings/matrix/${c}/${col}/1').set(this.value.toUpperCase())"></td>`; }); h += `</tr>`; }
+            let m = snap.val() || {}; 
+            
+            let h = `<tr class="text-white">
+                        <th class="p-2 w-16"></th>
+                        <th colspan="2" class="bg-black p-4 text-lg sm:text-xl font-black rounded-t-xl border-r border-slate-700 shadow-md">NOIR</th>
+                        <th colspan="2" class="bg-red-600 p-4 text-lg sm:text-xl font-black rounded-t-xl border-r border-slate-700 shadow-md">ROUGE</th>
+                        <th colspan="2" class="bg-blue-600 p-4 text-lg sm:text-xl font-black rounded-t-xl border-r border-slate-700 shadow-md">BLEU</th>
+                        <th colspan="2" class="bg-green-600 p-4 text-lg sm:text-xl font-black rounded-t-xl border-r border-slate-700 shadow-md">VERT</th>
+                        <th colspan="2" class="bg-yellow-500 text-black p-4 text-lg sm:text-xl font-black rounded-t-xl shadow-md">JAUNE</th>
+                     </tr>`;
+                     
+            for(let c=1; c<=12; c++) { 
+                h += `<tr class="border-b border-slate-700 hover:bg-slate-700/30 transition">
+                        <td class="font-black text-2xl text-slate-500 py-4">C${c}</td>`; 
+                colors.forEach(col => { 
+                    const l = m[c]?.[col] || ["",""]; 
+                    h += `<td><input class="w-12 h-12 sm:w-16 sm:h-16 bg-slate-900 rounded-lg text-center font-black text-2xl sm:text-4xl text-blue-400 outline-none focus:ring-2 focus:ring-blue-500 m-1 uppercase shadow-inner" value="${l[0]}" maxlength="1" onchange="db.ref('settings/matrix/${c}/${col}/0').set(this.value.toUpperCase())"></td>
+                          <td class="border-r border-slate-700/50"><input class="w-12 h-12 sm:w-16 sm:h-16 bg-slate-900 rounded-lg text-center font-black text-2xl sm:text-4xl text-blue-400 outline-none focus:ring-2 focus:ring-blue-500 m-1 uppercase shadow-inner" value="${l[1]}" maxlength="1" onchange="db.ref('settings/matrix/${c}/${col}/1').set(this.value.toUpperCase())"></td>`; 
+                }); 
+                h += `</tr>`; 
+            }
             document.getElementById('matrixTable').innerHTML = h;
         });
     </script>
