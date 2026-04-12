@@ -55,20 +55,31 @@
 
     <div id="viewStats" class="hidden space-y-6">
         <div class="grid grid-cols-4 gap-4" id="statsResume"></div>
-        <div class="overflow-auto rounded-2xl border border-slate-700"><table class="w-full text-left font-bold text-sm"><thead class="bg-slate-900"><tr><th class="p-4">Circuit</th><th>Passages</th><th>✅ 5pts</th><th>🆗 2pts</th><th>❌ 0pt</th></tr></thead><tbody id="statsBody"></tbody></table></div>
+        <div class="overflow-auto rounded-2xl border border-slate-700">
+            <table class="w-full text-left font-bold text-sm">
+                <thead class="bg-slate-900"><tr><th class="p-4">Circuit</th><th>Passages</th><th>✅ 5pts</th><th>🆗 2pts</th><th>❌ 0pt</th></tr></thead>
+                <tbody id="statsBody"></tbody>
+            </table>
+        </div>
     </div>
 
-    <div id="viewCodes" class="hidden overflow-x-auto bg-slate-800 p-4 border border-slate-700 rounded-xl"><table class="w-full text-center font-bold" id="matrixTable"></table></div>
+    <div id="viewCodes" class="hidden overflow-x-auto bg-slate-800 p-4 border border-slate-700 rounded-xl">
+        <table class="w-full text-center font-bold" id="matrixTable"></table>
+    </div>
 
     <div id="modalDetails" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4">
         <div class="bg-slate-800 w-full max-w-2xl rounded-3xl p-6 border border-slate-700">
-            <div class="flex justify-between items-start mb-4 text-blue-400 font-black italic text-xl"><h2 id="mName"></h2><button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl text-slate-400">&times;</button></div>
+            <div class="flex justify-between items-start mb-4 text-blue-400 font-black italic text-xl">
+                <h2 id="mName"></h2>
+                <button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl text-slate-400 hover:text-white">&times;</button>
+            </div>
             <div class="bg-slate-900 rounded-xl p-4 mb-4 h-64"><canvas id="detailChart"></canvas></div>
             <div id="mHistory" class="space-y-2 max-h-[30vh] overflow-auto pr-2"></div>
         </div>
     </div>
 
     <script>
+        // 1. INIT FIREBASE
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -76,16 +87,40 @@
         let mapping = JSON.parse(localStorage.getItem('os_map_final') || '{}'), curCl = localStorage.getItem('os_last_cl') || "", results = {};
         let startT = 0, stopT = 0, detailChart = null;
 
+        // ==========================================
+        // LA MATRICE DE SECOURS (L'erreur était ici)
+        // ==========================================
+        const myCodes = { 
+            1:{NOIR:["D","Q"],ROUGE:["O","U"],BLEU:["Y","A"],VERT:["E","R"],JAUNE:["N","K"]}, 
+            2:{NOIR:["E","X"],ROUGE:["X","Y"],BLEU:["T","L"],VERT:["R","O"],JAUNE:["A","L"]}, 
+            3:{NOIR:["C","L"],ROUGE:["H","U"],BLEU:["I","B"],VERT:["O","I"],JAUNE:["T","E"]}, 
+            4:{NOIR:["R","V"],ROUGE:["E","E"],BLEU:["C","R"],VERT:["T","N"],JAUNE:["O","I"]}, 
+            5:{NOIR:["A","B"],ROUGE:["J","O"],BLEU:["O","U"],VERT:["N","E"],JAUNE:["C","S"]}, 
+            6:{NOIR:["F","M"],ROUGE:["I","E"],BLEU:["C","R"],VERT:["U","O"],JAUNE:["S","U"]}, 
+            7:{NOIR:["G","H"],ROUGE:["U","A"],BLEU:["E","C"],VERT:["U","H"],JAUNE:["X","E"]}, 
+            8:{NOIR:["I","J"],ROUGE:["V","E"],BLEU:["R","A"],VERT:["E","N"],JAUNE:["S","S"]}, 
+            9:{NOIR:["K","N"],ROUGE:["R","Y"],BLEU:["A","L"],VERT:["F","O"],JAUNE:["T","N"]}, 
+            10:{NOIR:["O","S"],ROUGE:["C","E"],BLEU:["E","I"],VERT:["A","Z"],JAUNE:["N","E"]}, 
+            11:{NOIR:["P","T"],ROUGE:["A","U"],BLEU:["L","Y"],VERT:["U","A"],JAUNE:["D","U"]}, 
+            12:{NOIR:["U","W"],ROUGE:["L","I"],BLEU:["T","N"],VERT:["R","C"],JAUNE:["A","H"]} 
+        };
+        // Si Firebase est vide, on force l'injection des codes !
+        db.ref('settings/matrix').once('value', snap => { if(!snap.exists()) db.ref('settings/matrix').set(myCodes); });
+
+        // 2. GESTION DES CLASSES
         db.ref('settings/classes').on('value', snap => {
             const clArr = Object.keys(snap.val()||{}).filter(c => c!=="true" && c!=="null");
-            document.getElementById('activeClasse').innerHTML = clArr.map(c => `<option value="${c}" ${c===curCl?'selected':''}>${c}</option>`).join('');
+            document.getElementById('activeClasse').innerHTML = '<option value="">-- CHOISIR --</option>' + clArr.map(c => `<option value="${c}" ${c===curCl?'selected':''}>${c}</option>`).join('');
+            if(!curCl && clArr.length > 0) { curCl = clArr[0]; }
             if(curCl) loadClasse();
         });
 
         function loadClasse() {
-            curCl = document.getElementById('activeClasse').value;
+            const val = document.getElementById('activeClasse').value;
+            if(val) curCl = val;
             if(!curCl) return;
             localStorage.setItem('os_last_cl', curCl);
+            
             db.ref(`sessions/${curCl}`).on('value', snap => { results = snap.val() || {}; updateUI(); });
             db.ref(`settings/startTime/${curCl}`).on('value', s => { 
                 startT = s.val(); 
@@ -93,47 +128,59 @@
             });
         }
 
+        // 3. CHRONO
         function toggleChrono() {
-            if(!curCl) return;
+            if(!curCl) return alert("Choisis une classe");
             if(!startT) db.ref(`settings/startTime/${curCl}`).set(Date.now());
             else if(!stopT) { if(confirm("Arrêter la course ?")) db.ref(`settings/endTime/${curCl}`).set(Date.now()); }
         }
 
         function updateChronoUI() {
             const btn = document.getElementById('btnChrono'), disp = document.getElementById('chronoDisplay');
-            if(!startT) { btn.innerText = "🚀 TOP DÉPART"; btn.className = "bg-emerald-600 px-6 py-2 rounded-full font-black"; disp.classList.add('hidden'); }
+            if(!startT) { btn.innerText = "🚀 TOP DÉPART"; btn.className = "bg-emerald-600 px-6 py-2 rounded-full font-black animate-pulse"; disp.classList.add('hidden'); }
             else if(!stopT) { 
                 btn.innerText = "🛑 STOP SÉANCE"; btn.className = "bg-red-600 px-6 py-2 rounded-full font-black"; disp.classList.remove('hidden');
                 clearInterval(window.it); window.it = setInterval(() => { const s = Math.floor((Date.now()-startT)/1000); disp.innerText = new Date(s*1000).toISOString().substr(14,5); }, 1000);
             } else { btn.innerText = "⏱️ TERMINÉ"; btn.className = "bg-slate-600 px-6 py-2 rounded-full font-black"; disp.classList.remove('hidden'); clearInterval(window.it); }
         }
 
+        // 4. UI & DONNÉES
         function updateUI() {
             const bil = document.getElementById('viewBilan'); const grp = document.getElementById('viewGroupes');
             bil.innerHTML = ""; grp.innerHTML = "";
             const list = mapping[curCl] || [];
+            
             list.forEach(s => {
                 const sess = results[s.code] || {};
                 const pts = Object.keys(sess).reduce((a,k) => a + (k.startsWith('C')?sess[k].score:0), 0);
+                const colorCode = s.code.split('_')[0]; 
+                const numCode = s.code.split('_')[1];
+                const colStyles = { NOIR:"bg-black", ROUGE:"bg-red-600", BLEU:"bg-blue-600", VERT:"bg-green-600", JAUNE:"bg-yellow-500 text-black" };
+                
                 const bg = pts > 0 ? "bg-blue-600" : "bg-slate-800";
-                bil.innerHTML += `<div onclick="openModal('${s.first.replace(/'/g,"\\'")} ${s.last.replace(/'/g,"\\'")}','${s.code}')" class="${bg} p-4 rounded-xl text-center cursor-pointer shadow-lg active:scale-95 transition-transform"><div class="text-2xl font-black">${pts}</div><p class="font-bold truncate">${s.first}</p></div>`;
+                
+                bil.innerHTML += `<div onclick="openModal('${s.first.replace(/'/g,"\\'")} ${s.last.replace(/'/g,"\\'")}','${s.code}')" class="${bg} p-4 rounded-xl text-center cursor-pointer shadow-lg active:scale-95 transition-transform"><div class="flex justify-between font-black"><span class="pastille ${colStyles[colorCode]}">${numCode}</span><span class="text-2xl">${pts}</span></div><p class="font-bold mt-2 truncate">${s.first}</p></div>`;
+                
                 grp.innerHTML += `<div class="bg-slate-800 p-4 rounded-xl border ${s.absent?'opacity-30 grayscale border-dashed border-slate-600':'border-slate-700 shadow-md'}">
-                    <select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 w-full text-[10px] font-black p-1 rounded border border-slate-700">
+                    <select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 w-full text-[10px] font-black p-1 rounded border border-slate-700 outline-none">
                         <option value="ABS" ${s.absent?'selected':''}>❌ ABSENT</option>
                         ${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}
                     </select>
-                    <p class="mt-2 text-[10px] truncate uppercase font-bold text-slate-500">${s.last}</p>
+                    <div class="pastille ${colStyles[colorCode]} mx-auto my-2">${numCode}</div>
+                    <p class="text-[10px] truncate uppercase font-bold text-slate-500">${s.last}</p>
                     <p class="text-xs font-black truncate">${s.first}</p>
                 </div>`;
             });
             updatePodium(); updateStats();
         }
 
+        // 5. GRAPHIQUE ÉLÈVE
         function openModal(name, code) {
             document.getElementById('mName').innerText = name;
             document.getElementById('modalDetails').classList.remove('hidden');
             const data = results[code] || {};
             const history = Object.keys(data).filter(k => k.startsWith('C')).map(k => ({ p: k, ...data[k] })).sort((a,b) => a.realTime - b.realTime);
+            
             document.getElementById('mHistory').innerHTML = history.map(h => `<div class="bg-slate-900 p-3 rounded flex justify-between font-bold border border-slate-700 mb-2"><span>${h.p} : ${h.score} pts</span><span class="text-slate-500">${new Date(h.realTime).toLocaleTimeString()}</span></div>`).join('') || "<p class='opacity-50 italic text-center'>Aucun circuit validé</p>";
             
             if(detailChart) detailChart.destroy();
@@ -143,42 +190,45 @@
                 type: 'line',
                 data: {
                     labels: history.map(h => Math.floor((h.realTime - startT)/60000) + 'm'),
-                    datasets: [{ data: history.map(h => h.score), borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.2)', fill: true, pointRadius: 8, pointHoverRadius: 12, tension: 0.3, borderWidth: 4 }]
+                    datasets: [{ data: history.map(h => h.score), borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.2)', fill: true, pointRadius: 8, tension: 0.3, borderWidth: 4 }]
                 },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    scales: { 
-                        y: { min: -0.5, max: 5.5, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { stepSize: 1, color: '#94a3b8' } },
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
-                    },
-                    plugins: { legend: { display: false } }
-                }
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: -0.5, max: 5.5, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
             });
         }
 
+        // 6. IMPORT INTELLIGENT
         function importCSV(input) {
             Papa.parse(input.files[0], { header: true, skipEmptyLines: true, complete: res => {
                 const fields = res.meta.fields;
-                const colNom = fields.find(f => f.toLowerCase().includes('name') || f.toLowerCase().includes('nom'));
-                const colPre = fields.find(f => f.toLowerCase().includes('first') || f.toLowerCase().includes('prénom') || f.toLowerCase().includes('prenom'));
+                // Détecte "Nom", "Name" ou "@lastname"
+                const colNom = fields.find(f => f.toLowerCase().includes('name') || f.toLowerCase().includes('nom') || f.toLowerCase() === '@lastname');
+                // Détecte "Prénom", "First" ou "@name"
+                const colPre = fields.find(f => f.toLowerCase().includes('first') || f.toLowerCase().includes('prénom') || f.toLowerCase().includes('prenom') || f.toLowerCase() === '@name');
+                
                 const data = res.data.filter(r => r[colNom]);
-                const cName = (data[0]['@classe'] || prompt("Nom de la classe ?")).toUpperCase();
+                if(!data.length) return alert("Fichier invalide ou vide.");
+                
+                const cName = (data[0]['@classe'] || prompt("Nom de la classe ?") || "CLASSE").toUpperCase();
                 
                 mapping[cName] = data.map((r, i) => ({ 
                     id: Date.now()+i, 
                     last: r[colNom].toUpperCase(), 
-                    first: r[colPre], 
+                    first: r[colPre] || "", 
                     code: `${colors[i % 5]}_${Math.floor(i / 5) + 1}`, 
                     absent: false 
                 }));
+                
                 localStorage.setItem('os_map_final', JSON.stringify(mapping));
                 db.ref(`settings/classes/${cName}`).set(true).then(() => location.reload());
             }});
         }
 
+        // 7. EXPORT EXCEL RATIO
         function exportExcel() {
             const list = mapping[curCl] || [];
-            const duration = ((stopT || Date.now()) - startT) / 60000;
+            let duration = ((stopT || Date.now()) - startT) / 60000;
+            if(duration <= 0 || !startT) duration = 1; // Sécurité division par zéro
+            
             let maxPts = 0;
             const data = list.map(s => {
                 const sess = results[s.code] || {};
@@ -186,13 +236,24 @@
                 if(pts > maxPts) maxPts = pts;
                 return { s, pts, ratio: pts/duration };
             });
+
             const wb = XLSX.utils.book_new();
             const notes = [["@lastname", "@name", "Dossard", "Score", "Ratio", "Note /20"]];
-            data.forEach(d => notes.push([d.s.last, d.s.first, d.s.code, d.pts, d.ratio.toFixed(2), (maxPts > 0 ? (d.pts/maxPts*20).toFixed(1) : 0)]));
+            
+            data.forEach(d => {
+                if(d.s.absent) {
+                    notes.push([d.s.last, d.s.first, "ABSENT", "", "", ""]);
+                } else {
+                    const note = maxPts > 0 ? (d.pts / maxPts * 20).toFixed(1) : 0;
+                    notes.push([d.s.last, d.s.first, d.s.code, d.pts, d.ratio.toFixed(2), note]);
+                }
+            });
+            
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(notes), "Notes");
             XLSX.writeFile(wb, `OrientShow_${curCl}.xlsx`);
         }
 
+        // 8. SOUS-FONCTIONS (Podium, Stats, Reset)
         function updatePodium() {
             const list = (mapping[curCl] || []).filter(s => !s.absent);
             let stds = list.map(s => {
@@ -202,8 +263,7 @@
                 return { name: `${s.first} ${s.last[0]}.`, score: pts, time: last };
             }).filter(s => s.score > 0).sort((a,b) => b.score - a.score || a.time - b.time);
             
-            const top3 = stds.slice(0,3);
-            const rest = stds.slice(3);
+            const top3 = stds.slice(0,3), rest = stds.slice(3);
             let h = "";
             const hts = ['h-32', 'h-48', 'h-24'], ords = ['order-2', 'order-1', 'order-3'], cls = ['bg-slate-400', 'bg-yellow-500', 'bg-orange-700'];
             top3.forEach((s, i) => {
@@ -224,16 +284,35 @@
                     stats[idx].t++; if(sess[k].score===5) stats[idx].p5++; else if(sess[k].score===2) stats[idx].p2++; else stats[idx].p0++;
                 });
             });
-            document.getElementById('statsBody').innerHTML = Object.entries(stats).map(([i, s]) => `<tr class="border-b border-slate-800"> <td class="p-2">C${i}</td><td>${s.t}</td><td class="text-emerald-400">${s.p5}</td><td class="text-orange-400">${s.p2}</td><td class="text-red-400">${s.p0}</td> </tr>`).join('');
+            document.getElementById('statsBody').innerHTML = Object.entries(stats).map(([i, s]) => `<tr class="border-b border-slate-800"><td class="p-2 font-black">C${i}</td><td>${s.t}</td><td class="text-emerald-400 font-bold">${s.p5}</td><td class="text-orange-400 font-bold">${s.p2}</td><td class="text-red-400 font-bold">${s.p0}</td></tr>`).join('');
         }
 
         function changeCode(id, val) { const s = mapping[curCl].find(x => x.id == id); s.absent = (val === "ABS"); if(!s.absent) s.code = val; localStorage.setItem('os_map_final', JSON.stringify(mapping)); updateUI(); }
         function switchTab(t) { ['viewBilan','viewGroupes','viewCarte','viewStats','viewCodes'].forEach(v => document.getElementById(v).classList.add('hidden')); document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active')); document.getElementById('btnTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('tab-active'); }
-        function resetData() { if(prompt("RNE ?")==="0680013V" && confirm("Purger tout ?")) { db.ref().remove(); localStorage.clear(); location.reload(); } }
+        
+        function resetData() { 
+            if(prompt("Mot de passe (RNE) :")==="0680013V" && confirm("Purger toute la base de données ?")) { 
+                db.ref().remove(); 
+                localStorage.clear(); 
+                location.reload(); 
+            } 
+        }
 
+        // 9. MATRICE DE CODES UI
         db.ref('settings/matrix').on('value', snap => {
-            let m = snap.val() || {}, h = `<tr class="bg-slate-900 text-[10px] text-white"><th>#</th><th colspan="2" class="bg-black">NOIR</th><th colspan="2" class="bg-red-600">ROUGE</th><th colspan="2" class="bg-blue-600">BLEU</th><th colspan="2" class="bg-green-600">VERT</th><th colspan="2" class="bg-yellow-500 text-black">JAUNE</th></tr>`;
-            for(let c=1; c<=12; c++) { h += `<tr class="border-b border-slate-700"><td>C${c}</td>`; colors.forEach(col => { const l = m[c]?.[col] || ["",""]; h += `<td><input class="w-10 bg-slate-900 text-center font-black text-xl text-blue-400 m-1 uppercase outline-none focus:ring-1 focus:ring-blue-500" value="${l[0]}" onchange="db.ref('settings/matrix/${c}/${col}/0').set(this.value.toUpperCase())"></td><td><input class="w-10 bg-slate-900 text-center font-black text-xl text-blue-400 m-1 uppercase outline-none focus:ring-1 focus:ring-blue-500" value="${l[1]}" onchange="db.ref('settings/matrix/${c}/${col}/1').set(this.value.toUpperCase())"></td>`; }); h += `</tr>`; }
+            let m = snap.val() || {};
+            if(Object.keys(m).length === 0) return; // Évite de dessiner un tableau vide avant le chargement
+            
+            let h = `<tr class="bg-slate-900 text-[10px] text-white"><th>#</th><th colspan="2" class="bg-black py-2 rounded-tl-lg">NOIR</th><th colspan="2" class="bg-red-600 py-2">ROUGE</th><th colspan="2" class="bg-blue-600 py-2">BLEU</th><th colspan="2" class="bg-green-600 py-2">VERT</th><th colspan="2" class="bg-yellow-500 text-black py-2 rounded-tr-lg">JAUNE</th></tr>`;
+            for(let c=1; c<=12; c++) { 
+                h += `<tr class="border-b border-slate-700"><td class="font-black text-xl text-slate-500 py-2">C${c}</td>`; 
+                colors.forEach(col => { 
+                    const l = m[c]?.[col] || ["",""]; 
+                    h += `<td><input class="w-12 h-12 bg-slate-900 text-center font-black text-2xl text-blue-400 m-1 uppercase outline-none focus:ring-2 focus:ring-blue-500 rounded-lg shadow-inner" value="${l[0]}" maxlength="1" onchange="db.ref('settings/matrix/${c}/${col}/0').set(this.value.toUpperCase())"></td>
+                          <td class="border-r border-slate-700/50"><input class="w-12 h-12 bg-slate-900 text-center font-black text-2xl text-blue-400 m-1 uppercase outline-none focus:ring-2 focus:ring-blue-500 rounded-lg shadow-inner" value="${l[1]}" maxlength="1" onchange="db.ref('settings/matrix/${c}/${col}/1').set(this.value.toUpperCase())"></td>`; 
+                }); 
+                h += `</tr>`; 
+            }
             document.getElementById('matrixTable').innerHTML = h;
         });
     </script>
