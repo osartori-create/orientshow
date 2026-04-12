@@ -23,11 +23,11 @@
     <header class="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-800 pb-4 italic font-black uppercase text-sm">
         <div class="flex items-center gap-4">
             <h1 class="text-2xl text-blue-500 tracking-tighter">Master PRO</h1>
-            <button id="btnChrono" onclick="toggleChrono()" class="bg-emerald-600 px-6 py-2 rounded-full shadow-[0_0_15px_rgba(5,150,105,0.6)]">🚀 TOP DÉPART</button>
+            <button id="btnChrono" onclick="toggleChrono()" class="bg-emerald-600 px-6 py-2 rounded-full shadow-[0_0_15px_rgba(5,150,105,0.6)] font-black">🚀 TOP DÉPART</button>
             <div id="chronoDisplay" class="hidden text-2xl font-mono text-yellow-400">00:00</div>
         </div>
         <div class="flex items-center gap-2">
-            <select id="activeClasse" onchange="loadClasse()" class="bg-slate-800 p-2 rounded-lg border border-slate-700"></select>
+            <select id="activeClasse" onchange="loadClasse()" class="bg-slate-800 p-2 rounded-lg border border-slate-700 min-w-[150px]"></select>
             <button onclick="exportExcel()" class="bg-green-600 px-4 py-2 rounded-lg text-[10px] font-black uppercase">⬇️ Export Ratio</button>
         </div>
         <div class="flex gap-2">
@@ -47,67 +47,65 @@
 
     <div id="viewBilan" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
     <div id="viewGroupes" class="hidden grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
+    
     <div id="viewCarte" class="hidden bg-slate-800 p-6 rounded-2xl border border-slate-700">
         <div id="podiumContainer" class="flex justify-center items-end gap-4 h-56 mb-10 border-b border-slate-700 pb-4"></div>
         <div id="leaderboardList" class="space-y-2 max-w-2xl mx-auto max-h-[40vh] overflow-y-auto pr-2"></div>
     </div>
+
     <div id="viewStats" class="hidden space-y-6">
         <div class="grid grid-cols-4 gap-4" id="statsResume"></div>
-        <div class="overflow-auto rounded-2xl border border-slate-700"><table class="w-full text-left font-bold text-sm"><thead class="bg-slate-900"><tr><th class="p-4">Circuit</th><th>Tentatives</th><th>Parfait</th><th>Partiel</th><th>Echec</th></tr></thead><tbody id="statsBody"></tbody></table></div>
+        <div class="overflow-auto rounded-2xl border border-slate-700"><table class="w-full text-left font-bold text-sm"><thead class="bg-slate-900"><tr><th class="p-4">Circuit</th><th>Passages</th><th>✅ 5pts</th><th>🆗 2pts</th><th>❌ 0pt</th></tr></thead><tbody id="statsBody"></tbody></table></div>
     </div>
+
     <div id="viewCodes" class="hidden overflow-x-auto bg-slate-800 p-4 border border-slate-700 rounded-xl"><table class="w-full text-center font-bold" id="matrixTable"></table></div>
 
     <div id="modalDetails" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4">
         <div class="bg-slate-800 w-full max-w-2xl rounded-3xl p-6 border border-slate-700">
-            <div class="flex justify-between items-start mb-4 text-blue-400 font-black italic text-xl"><h2 id="mName"></h2><button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl">&times;</button></div>
+            <div class="flex justify-between items-start mb-4 text-blue-400 font-black italic text-xl"><h2 id="mName"></h2><button onclick="document.getElementById('modalDetails').classList.add('hidden')" class="text-4xl text-slate-400">&times;</button></div>
             <div class="bg-slate-900 rounded-xl p-4 mb-4 h-64"><canvas id="detailChart"></canvas></div>
-            <div id="mHistory" class="space-y-2 max-h-[30vh] overflow-auto"></div>
+            <div id="mHistory" class="space-y-2 max-h-[30vh] overflow-auto pr-2"></div>
         </div>
     </div>
 
     <script>
         const firebaseConfig = { databaseURL: "https://orientshow-3a86f-default-rtdb.europe-west1.firebasedatabase.app/" };
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const colors = ["NOIR", "ROUGE", "BLEU", "VERT", "JAUNE"];
         let mapping = JSON.parse(localStorage.getItem('os_map_final') || '{}'), curCl = localStorage.getItem('os_last_cl') || "", results = {};
         let startT = 0, stopT = 0, detailChart = null;
 
-        window.onload = () => {
-            db.ref('settings/classes').on('value', snap => {
-                const clArr = Object.keys(snap.val()||{}).filter(c => c!=="true" && c!=="null");
-                document.getElementById('activeClasse').innerHTML = clArr.map(c => `<option value="${c}" ${c===curCl?'selected':''}>${c}</option>`).join('');
-                if(curCl) loadClasse();
-            });
-        };
+        db.ref('settings/classes').on('value', snap => {
+            const clArr = Object.keys(snap.val()||{}).filter(c => c!=="true" && c!=="null");
+            document.getElementById('activeClasse').innerHTML = clArr.map(c => `<option value="${c}" ${c===curCl?'selected':''}>${c}</option>`).join('');
+            if(curCl) loadClasse();
+        });
 
         function loadClasse() {
             curCl = document.getElementById('activeClasse').value;
+            if(!curCl) return;
             localStorage.setItem('os_last_cl', curCl);
             db.ref(`sessions/${curCl}`).on('value', snap => { results = snap.val() || {}; updateUI(); });
             db.ref(`settings/startTime/${curCl}`).on('value', s => { 
                 startT = s.val(); 
-                db.ref(`settings/endTime/${curCl}`).on('value', e => { 
-                    stopT = e.val(); 
-                    updateChronoUI(); 
-                });
+                db.ref(`settings/endTime/${curCl}`).on('value', e => { stopT = e.val(); updateChronoUI(); });
             });
         }
 
         function toggleChrono() {
             if(!curCl) return;
             if(!startT) db.ref(`settings/startTime/${curCl}`).set(Date.now());
-            else if(!stopT) { if(confirm("Stop course ?")) db.ref(`settings/endTime/${curCl}`).set(Date.now()); }
+            else if(!stopT) { if(confirm("Arrêter la course ?")) db.ref(`settings/endTime/${curCl}`).set(Date.now()); }
         }
 
         function updateChronoUI() {
-            const btn = document.getElementById('btnChrono');
-            const disp = document.getElementById('chronoDisplay');
-            if(!startT) { btn.innerText = "🚀 TOP DÉPART"; btn.className = "bg-emerald-600 px-6 py-2 rounded-full"; disp.classList.add('hidden'); }
+            const btn = document.getElementById('btnChrono'), disp = document.getElementById('chronoDisplay');
+            if(!startT) { btn.innerText = "🚀 TOP DÉPART"; btn.className = "bg-emerald-600 px-6 py-2 rounded-full font-black"; disp.classList.add('hidden'); }
             else if(!stopT) { 
-                btn.innerText = "🛑 STOP SÉANCE"; btn.className = "bg-red-600 px-6 py-2 rounded-full"; disp.classList.remove('hidden');
+                btn.innerText = "🛑 STOP SÉANCE"; btn.className = "bg-red-600 px-6 py-2 rounded-full font-black"; disp.classList.remove('hidden');
                 clearInterval(window.it); window.it = setInterval(() => { const s = Math.floor((Date.now()-startT)/1000); disp.innerText = new Date(s*1000).toISOString().substr(14,5); }, 1000);
-            } else { btn.innerText = "⏱️ TERMINÉ"; btn.className = "bg-slate-600 px-6 py-2 rounded-full"; clearInterval(window.it); }
+            } else { btn.innerText = "⏱️ TERMINÉ"; btn.className = "bg-slate-600 px-6 py-2 rounded-full font-black"; disp.classList.remove('hidden'); clearInterval(window.it); }
         }
 
         function updateUI() {
@@ -115,13 +113,20 @@
             bil.innerHTML = ""; grp.innerHTML = "";
             const list = mapping[curCl] || [];
             list.forEach(s => {
-                const sessionData = results[s.code] || {};
-                const pts = Object.keys(sessionData).reduce((a,k) => a + (k.startsWith('C')?sessionData[k].score:0), 0);
+                const sess = results[s.code] || {};
+                const pts = Object.keys(sess).reduce((a,k) => a + (k.startsWith('C')?sess[k].score:0), 0);
                 const bg = pts > 0 ? "bg-blue-600" : "bg-slate-800";
-                bil.innerHTML += `<div onclick="openModal('${s.first} ${s.last}','${s.code}')" class="${bg} p-4 rounded-xl text-center cursor-pointer"><div class="text-2xl font-black">${pts}</div><p class="font-bold truncate">${s.first}</p></div>`;
-                grp.innerHTML += `<div class="bg-slate-800 p-4 rounded-xl border ${s.absent?'opacity-30 border-dashed':''}"><select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 w-full text-xs font-bold"><option value="ABS" ${s.absent?'selected':''}>ABSENT</option>${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}</select><p class="mt-2 text-[10px] truncate">${s.first} ${s.last}</p></div>`;
+                bil.innerHTML += `<div onclick="openModal('${s.first.replace(/'/g,"\\'")} ${s.last.replace(/'/g,"\\'")}','${s.code}')" class="${bg} p-4 rounded-xl text-center cursor-pointer shadow-lg active:scale-95 transition-transform"><div class="text-2xl font-black">${pts}</div><p class="font-bold truncate">${s.first}</p></div>`;
+                grp.innerHTML += `<div class="bg-slate-800 p-4 rounded-xl border ${s.absent?'opacity-30 grayscale border-dashed border-slate-600':'border-slate-700 shadow-md'}">
+                    <select onchange="changeCode('${s.id}', this.value)" class="bg-slate-900 w-full text-[10px] font-black p-1 rounded border border-slate-700">
+                        <option value="ABS" ${s.absent?'selected':''}>❌ ABSENT</option>
+                        ${colors.flatMap(c => [...Array(10).keys()].map(n => `<option value="${c}_${n+1}" ${s.code==`${c}_${n+1}`?'selected':''}>${c} ${n+1}</option>`)).join('')}
+                    </select>
+                    <p class="mt-2 text-[10px] truncate uppercase font-bold text-slate-500">${s.last}</p>
+                    <p class="text-xs font-black truncate">${s.first}</p>
+                </div>`;
             });
-            updatePodium();
+            updatePodium(); updateStats();
         }
 
         function openModal(name, code) {
@@ -129,22 +134,46 @@
             document.getElementById('modalDetails').classList.remove('hidden');
             const data = results[code] || {};
             const history = Object.keys(data).filter(k => k.startsWith('C')).map(k => ({ p: k, ...data[k] })).sort((a,b) => a.realTime - b.realTime);
-            
-            document.getElementById('mHistory').innerHTML = history.map(h => `<div class="bg-slate-900 p-3 rounded flex justify-between font-bold"><span>${h.p} : ${h.score} pts</span><span class="text-slate-500">${new Date(h.realTime).toLocaleTimeString()}</span></div>`).join('');
+            document.getElementById('mHistory').innerHTML = history.map(h => `<div class="bg-slate-900 p-3 rounded flex justify-between font-bold border border-slate-700 mb-2"><span>${h.p} : ${h.score} pts</span><span class="text-slate-500">${new Date(h.realTime).toLocaleTimeString()}</span></div>`).join('') || "<p class='opacity-50 italic text-center'>Aucun circuit validé</p>";
             
             if(detailChart) detailChart.destroy();
+            if(history.length === 0) return;
             const ctx = document.getElementById('detailChart').getContext('2d');
             detailChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: history.map(h => Math.floor((h.realTime - startT)/60000) + 'm'),
-                    datasets: [{ data: history.map(h => h.score), borderColor: 'white', backgroundColor: 'rgba(255,255,255,0.1)', fill: true, pointRadius: 8, tension: 0.1 }]
+                    datasets: [{ data: history.map(h => h.score), borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.2)', fill: true, pointRadius: 8, pointHoverRadius: 12, tension: 0.3, borderWidth: 4 }]
                 },
                 options: {
-                    scales: { y: { min: 0, max: 5, grid: { color: 'rgba(255,255,255,0.1)' } } },
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { 
+                        y: { min: -0.5, max: 5.5, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { stepSize: 1, color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    },
                     plugins: { legend: { display: false } }
                 }
             });
+        }
+
+        function importCSV(input) {
+            Papa.parse(input.files[0], { header: true, skipEmptyLines: true, complete: res => {
+                const fields = res.meta.fields;
+                const colNom = fields.find(f => f.toLowerCase().includes('name') || f.toLowerCase().includes('nom'));
+                const colPre = fields.find(f => f.toLowerCase().includes('first') || f.toLowerCase().includes('prénom') || f.toLowerCase().includes('prenom'));
+                const data = res.data.filter(r => r[colNom]);
+                const cName = (data[0]['@classe'] || prompt("Nom de la classe ?")).toUpperCase();
+                
+                mapping[cName] = data.map((r, i) => ({ 
+                    id: Date.now()+i, 
+                    last: r[colNom].toUpperCase(), 
+                    first: r[colPre], 
+                    code: `${colors[i % 5]}_${Math.floor(i / 5) + 1}`, 
+                    absent: false 
+                }));
+                localStorage.setItem('os_map_final', JSON.stringify(mapping));
+                db.ref(`settings/classes/${cName}`).set(true).then(() => location.reload());
+            }});
         }
 
         function exportExcel() {
@@ -157,34 +186,54 @@
                 if(pts > maxPts) maxPts = pts;
                 return { s, pts, ratio: pts/duration };
             });
-
             const wb = XLSX.utils.book_new();
             const notes = [["@lastname", "@name", "Dossard", "Score", "Ratio", "Note /20"]];
-            data.forEach(d => {
-                const note = maxPts > 0 ? (d.pts / maxPts * 20).toFixed(1) : 0;
-                notes.push([d.s.last, d.s.first, d.s.code, d.pts, d.ratio.toFixed(2), note]);
-            });
+            data.forEach(d => notes.push([d.s.last, d.s.first, d.s.code, d.pts, d.ratio.toFixed(2), (maxPts > 0 ? (d.pts/maxPts*20).toFixed(1) : 0)]));
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(notes), "Notes");
             XLSX.writeFile(wb, `OrientShow_${curCl}.xlsx`);
         }
 
-        function changeCode(id, val) { const s = (mapping[curCl]||[]).find(x => x.id == id); s.absent = (val === "ABS"); if(!s.absent) s.code = val; localStorage.setItem('os_map_final', JSON.stringify(mapping)); updateUI(); }
-        function switchTab(t) { ['viewBilan','viewGroupes','viewCarte','viewStats','viewCodes'].forEach(v => document.getElementById(v).classList.add('hidden')); document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden'); }
-        function resetData() { if(confirm("Vider tout ?")) { db.ref().remove(); localStorage.clear(); location.reload(); } }
-        
-        function importCSV(input) {
-            Papa.parse(input.files[0], { header: true, complete: res => {
-                const data = res.data.filter(r => r['@lastname']);
-                const cName = (data[0]['@classe'] || prompt("Classe ?")).toUpperCase();
-                mapping[cName] = data.map((r, i) => ({ id: Date.now()+i, last: r['@lastname'], first: r['@name'], code: `${["NOIR","ROUGE","BLEU","VERT","JAUNE"][i % 5]}_${Math.floor(i / 5) + 1}`, absent: false }));
-                localStorage.setItem('os_map_final', JSON.stringify(mapping));
-                db.ref(`settings/classes/${cName}`).set(true).then(() => location.reload());
-            }});
+        function updatePodium() {
+            const list = (mapping[curCl] || []).filter(s => !s.absent);
+            let stds = list.map(s => {
+                const sess = results[s.code] || {};
+                const pts = Object.keys(sess).reduce((a,k) => a + (k.startsWith('C')?sess[k].score:0), 0);
+                let last = 0; Object.keys(sess).forEach(k => { if(k.startsWith('C') && sess[k].realTime > last) last = sess[k].realTime; });
+                return { name: `${s.first} ${s.last[0]}.`, score: pts, time: last };
+            }).filter(s => s.score > 0).sort((a,b) => b.score - a.score || a.time - b.time);
+            
+            const top3 = stds.slice(0,3);
+            const rest = stds.slice(3);
+            let h = "";
+            const hts = ['h-32', 'h-48', 'h-24'], ords = ['order-2', 'order-1', 'order-3'], cls = ['bg-slate-400', 'bg-yellow-500', 'bg-orange-700'];
+            top3.forEach((s, i) => {
+                const idx = i===0?1:(i===1?0:2);
+                h += `<div class="flex flex-col items-center justify-end ${ords[idx]} w-24"><span class="text-[10px] font-bold truncate w-full text-center">${s.name}</span><span class="text-blue-400 font-black">${s.score}</span><div class="w-full ${hts[idx]} ${cls[idx]} rounded-t-lg flex justify-center pt-2 font-black text-2xl">${i+1}</div></div>`;
+            });
+            document.getElementById('podiumContainer').innerHTML = h || "<p class='opacity-50'>En attente de résultats...</p>";
+            document.getElementById('leaderboardList').innerHTML = rest.map((s,i) => `<div class="bg-slate-900 p-2 rounded border border-slate-700 flex justify-between font-bold"><span>${i+4}. ${s.name}</span><span class="text-blue-400">${s.score} pts</span></div>`).join('');
         }
 
+        function updateStats() {
+            const list = (mapping[curCl]||[]).filter(s => !s.absent);
+            let stats = {}; for(let i=1; i<=12; i++) stats[i] = {t:0, p5:0, p2:0, p0:0};
+            list.forEach(s => {
+                const sess = results[s.code] || {};
+                Object.keys(sess).forEach(k => {
+                    const idx = k.replace('C',''); if(!stats[idx]) return;
+                    stats[idx].t++; if(sess[k].score===5) stats[idx].p5++; else if(sess[k].score===2) stats[idx].p2++; else stats[idx].p0++;
+                });
+            });
+            document.getElementById('statsBody').innerHTML = Object.entries(stats).map(([i, s]) => `<tr class="border-b border-slate-800"> <td class="p-2">C${i}</td><td>${s.t}</td><td class="text-emerald-400">${s.p5}</td><td class="text-orange-400">${s.p2}</td><td class="text-red-400">${s.p0}</td> </tr>`).join('');
+        }
+
+        function changeCode(id, val) { const s = mapping[curCl].find(x => x.id == id); s.absent = (val === "ABS"); if(!s.absent) s.code = val; localStorage.setItem('os_map_final', JSON.stringify(mapping)); updateUI(); }
+        function switchTab(t) { ['viewBilan','viewGroupes','viewCarte','viewStats','viewCodes'].forEach(v => document.getElementById(v).classList.add('hidden')); document.getElementById('view'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden'); document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active')); document.getElementById('btnTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('tab-active'); }
+        function resetData() { if(prompt("RNE ?")==="0680013V" && confirm("Purger tout ?")) { db.ref().remove(); localStorage.clear(); location.reload(); } }
+
         db.ref('settings/matrix').on('value', snap => {
-            let m = snap.val() || {}, h = `<tr class="bg-slate-900 text-xs text-white"><th>#</th><th colspan="2" class="bg-black">NOIR</th><th colspan="2" class="bg-red-600">ROUGE</th><th colspan="2" class="bg-blue-600">BLEU</th><th colspan="2" class="bg-green-600">VERT</th><th colspan="2" class="bg-yellow-500 text-black">JAUNE</th></tr>`;
-            for(let c=1; c<=12; c++) { h += `<tr class="border-b border-slate-700"><td>C${c}</td>`; ["NOIR","ROUGE","BLEU","VERT","JAUNE"].forEach(col => { const l = m[c]?.[col] || ["",""]; h += `<td><input class="w-10 bg-slate-900 text-center font-black text-xl text-blue-400 m-1 uppercase" value="${l[0]}" onchange="db.ref('settings/matrix/${c}/${col}/0').set(this.value.toUpperCase())"></td><td><input class="w-10 bg-slate-900 text-center font-black text-xl text-blue-400 m-1 uppercase" value="${l[1]}" onchange="db.ref('settings/matrix/${c}/${col}/1').set(this.value.toUpperCase())"></td>`; }); h += `</tr>`; }
+            let m = snap.val() || {}, h = `<tr class="bg-slate-900 text-[10px] text-white"><th>#</th><th colspan="2" class="bg-black">NOIR</th><th colspan="2" class="bg-red-600">ROUGE</th><th colspan="2" class="bg-blue-600">BLEU</th><th colspan="2" class="bg-green-600">VERT</th><th colspan="2" class="bg-yellow-500 text-black">JAUNE</th></tr>`;
+            for(let c=1; c<=12; c++) { h += `<tr class="border-b border-slate-700"><td>C${c}</td>`; colors.forEach(col => { const l = m[c]?.[col] || ["",""]; h += `<td><input class="w-10 bg-slate-900 text-center font-black text-xl text-blue-400 m-1 uppercase outline-none focus:ring-1 focus:ring-blue-500" value="${l[0]}" onchange="db.ref('settings/matrix/${c}/${col}/0').set(this.value.toUpperCase())"></td><td><input class="w-10 bg-slate-900 text-center font-black text-xl text-blue-400 m-1 uppercase outline-none focus:ring-1 focus:ring-blue-500" value="${l[1]}" onchange="db.ref('settings/matrix/${c}/${col}/1').set(this.value.toUpperCase())"></td>`; }); h += `</tr>`; }
             document.getElementById('matrixTable').innerHTML = h;
         });
     </script>
